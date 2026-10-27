@@ -1,5 +1,7 @@
 # CISC Smart Home
 
+[![Firmware](https://github.com/gustavommcv/cisc-smart-home/actions/workflows/firmware.yml/badge.svg)](https://github.com/gustavommcv/cisc-smart-home/actions/workflows/firmware.yml)
+
 **CISC** vem de **C**asa **I**nteligente **S**egura e **C**onfortável: um sistema que monitora a casa e avisa o morador no celular, com uma maquete física como demonstração.
 
 Um ESP32 lê os sensores e decide sozinho o que fazer. Um aplicativo Android, conectado à rede Wi-Fi do próprio ESP32, mostra o estado da casa, guarda o histórico e emite alertas.
@@ -58,7 +60,7 @@ Esta é a estrutura **planejada**. As pastas aparecem conforme as fases avançam
 
 ```text
 cisc-smart-home/
-├── firmware/    ESP32 em C++ (PlatformIO), com o domínio testável no computador
+├── firmware/    ESP32 em C++ (PlatformIO), com o domínio testável no computador (já existe)
 ├── android/     aplicativo em Kotlin + Jetpack Compose
 ├── hardware/    esquemático (KiCad) e lista de materiais
 └── docs/        arquitetura, decisões (ADRs) e o contrato da API
@@ -77,7 +79,14 @@ cisc-smart-home/
 | App | JDK 21, Android SDK (plataforma 36) e Gradle (pelo wrapper do projeto) |
 | Testar no celular | `adb` e um celular com depuração USB |
 
-Os comandos de compilar, testar e instalar entram aqui quando cada parte for criada.
+Testes do firmware, que rodam no computador e não precisam da placa:
+
+```bash
+cd firmware
+pio test -e native
+```
+
+Os comandos do app e da gravação no ESP32 entram aqui quando essas partes forem criadas.
 
 ## Fases
 
@@ -85,8 +94,8 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 
 | # | Fase | Estado |
 |---|---|---|
-| 1 | README e decisões de arquitetura | em andamento |
-| 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | |
+| 1 | README e decisões de arquitetura | concluída |
+| 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | em andamento |
 | 3 | Firmware: hardware, rede própria e API REST + SSE | |
 | 4 | App: núcleo (modelo de dados, comunicação, histórico) | |
 | 5 | App: telas | |
