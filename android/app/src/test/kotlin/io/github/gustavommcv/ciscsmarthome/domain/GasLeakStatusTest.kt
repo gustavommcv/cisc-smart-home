@@ -1,5 +1,6 @@
 package io.github.gustavommcv.ciscsmarthome.domain
 
+import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -69,8 +70,7 @@ class GasLeakStatusTest {
 
   // ---- when a warned leak is over -------------------------------------------------------
 
-  private fun home(state: String, alerts: Double, boot: String = "aaaa1111") =
-    Home(BootId(boot), 1_000, listOf(Area(AreaId("kitchen"), "Kitchen", listOf(Device(DeviceId("gas-sensor"), "Gas sensor", listOf(state(text(state)), alerts(number(alerts))))))))
+  private fun home(state: String, alerts: Double, boot: String = "aaaa1111") = houseOfTheMaquete(BootId(boot), 1_000, state, alerts.toLong())
 
   private fun warned(count: Long, boot: String = "aaaa1111") = GasAlert(BootId(boot), AreaId("kitchen"), count)
 

@@ -2,6 +2,7 @@ package io.github.gustavommcv.ciscsmarthome
 
 import androidx.annotation.StringRes
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
+import io.github.gustavommcv.ciscsmarthome.domain.AreaIds
 
 /**
  * The name of a room in Portuguese, for the two rooms of the maquete. The board names them in English;
@@ -9,8 +10,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.AreaId
  */
 @StringRes
 fun AreaId.nameRes(): Int? =
-  when (value) {
-    "kitchen" -> R.string.area_kitchen
-    "bedroom" -> R.string.area_bedroom
+  when (this) {
+    AreaIds.Kitchen -> R.string.area_kitchen
+    AreaIds.Bedroom -> R.string.area_bedroom
     else -> null
   }

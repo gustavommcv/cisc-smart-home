@@ -14,13 +14,9 @@ import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
-import io.github.gustavommcv.ciscsmarthome.domain.Device
-import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
-import io.github.gustavommcv.ciscsmarthome.domain.Entity
-import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
-import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
+import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -231,27 +227,7 @@ class HomeServiceTest {
 
   // ---- stopping by itself when the board says the leak is over -------------------------
 
-  private fun house(state: String, alerts: Long, boot: String = "aaaa1111") =
-    Home(
-      BootId(boot),
-      1_000,
-      listOf(
-        Area(
-          AreaId("kitchen"),
-          "Kitchen",
-          listOf(
-            Device(
-              DeviceId("gas-sensor"),
-              "Gas sensor",
-              listOf(
-                Entity.Sensor(EntityId("gas-state"), "Gas state", SensorValue.Text(state)),
-                Entity.Sensor(EntityId("gas-alerts"), "Gas alerts", SensorValue.Number(alerts.toDouble())),
-              ),
-            ),
-          ),
-        ),
-      ),
-    )
+  private fun house(state: String, alerts: Long, boot: String = "aaaa1111") = houseOfTheMaquete(BootId(boot), 1_000, state, alerts)
 
   @Test
   fun `the warning goes away by itself when the board says the leak is over`() {

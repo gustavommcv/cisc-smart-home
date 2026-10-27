@@ -4,15 +4,12 @@ import io.github.gustavommcv.ciscsmarthome.data.remote.BoardError
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardResult
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardStreamUpdate
 import io.github.gustavommcv.ciscsmarthome.data.remote.ErrorCode
-import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
-import io.github.gustavommcv.ciscsmarthome.domain.Device
-import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
@@ -21,8 +18,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.HistorySample
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeEvent
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
-import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
+import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import java.io.IOException
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,27 +65,7 @@ class HomeRepositoryImplTest {
   }
 
   private fun house(boot: BootId = A, uptimeMs: Long = 100_000, state: String = "normal", alerts: Long = 0) =
-    Home(
-      boot,
-      uptimeMs,
-      listOf(
-        Area(
-          KITCHEN,
-          "Kitchen",
-          listOf(
-            Device(
-              DeviceId("gas-sensor"),
-              "Gas sensor",
-              listOf(
-                Entity.Sensor(GAS_STATE, "Gas state", SensorValue.Text(state)),
-                Entity.Sensor(EntityId("gas-alerts"), "Gas alerts", SensorValue.Number(alerts.toDouble())),
-              ),
-            ),
-          ),
-        ),
-        Area(BEDROOM, "Bedroom", listOf(Device(DeviceId("dehumidifier"), "Dehumidifier", listOf(POWER)))),
-      ),
-    )
+    houseOfTheMaquete(boot, uptimeMs, state, alerts, withBedroom = true)
 
   private fun received(home: Home) = BoardStreamUpdate.Received(HomeEvent.HomeUpdated(home))
 

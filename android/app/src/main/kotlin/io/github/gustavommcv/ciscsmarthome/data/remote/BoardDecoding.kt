@@ -1,5 +1,6 @@
 package io.github.gustavommcv.ciscsmarthome.data.remote
 
+import io.github.gustavommcv.ciscsmarthome.domain.AlertTypes
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
@@ -11,7 +12,6 @@ import kotlinx.serialization.decodeFromString
 // What the REST client and the event stream both read from the board.
 
 private const val SUPPORTED_API_VERSION = 1
-private const val GAS_LEAK = "gas-leak"
 
 /** The home in [text], or an [IllegalStateException] when the board speaks another version of the API. */
 internal fun parseHome(text: String): Home {
@@ -43,7 +43,7 @@ internal fun homeEventOrNull(data: String): HomeEvent.HomeUpdated? =
 internal fun alertEventOrNull(data: String, bootId: BootId): HomeEvent.GasLeak? =
   try {
     val alert = BoardJson.decodeFromString<AlertDto>(data)
-    if (alert.type == GAS_LEAK) HomeEvent.GasLeak(bootId, AreaId(alert.areaId), EntityId(alert.entityId), alert.count, alert.uptimeMs) else null
+    if (alert.type == AlertTypes.GasLeak) HomeEvent.GasLeak(bootId, AreaId(alert.areaId), EntityId(alert.entityId), alert.count, alert.uptimeMs) else null
   } catch (e: SerializationException) {
     null
   }
