@@ -25,6 +25,10 @@ class Api {
 
   Response handle(Method method, const std::string& path, const std::string& query, const std::string& body);
 
+  // The answer for a client of the event stream that does not fit: the web server
+  // owns the connections, so it asks for this one when it has to refuse.
+  static Response tooManyClients();
+
  private:
   Response command(const std::string& entityId, const std::string& body);
   Response history(const std::string& query);

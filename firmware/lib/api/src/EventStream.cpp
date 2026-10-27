@@ -16,10 +16,6 @@ bool sameState(const HouseSnapshot& a, const HouseSnapshot& b) {
          a.dehumidifierOn == b.dehumidifierOn && a.dehumidifierMode == b.dehumidifierMode;
 }
 
-std::string frame(const char* event, const std::string& data) {
-  return std::string("event: ") + event + "\ndata: " + data + "\n\n";
-}
-
 }  // namespace
 
 EventStream::EventStream(const HouseController& house, std::string bootId, const EventSettings& settings)
@@ -31,38 +27,38 @@ EventStream::EventStream(const HouseController& house, std::string bootId, const
       lastActivityAt_(lastSent_.uptimeMs),
       lastAlertCount_(lastSent_.gasAlertCount) {}
 
-std::string EventStream::connectFrame() const {
-  return frame("home", homeJson(house_.snapshot(), bootId_));
+Event EventStream::connectEvent() const {
+  return Event{"home", homeJson(house_.snapshot(), bootId_)};
 }
 
-std::string EventStream::poll() {
+std::vector<Event> EventStream::poll() {
   const HouseSnapshot snapshot = house_.snapshot();
   const Millis now = snapshot.uptimeMs;
-  std::string frames;
+  std::vector<Event> events;
 
   // A new leak cannot wait for the minimum interval, and the state that comes
   // with it goes out at once too.
   const bool newAlert = snapshot.gasAlertCount != lastAlertCount_;
   if (newAlert) {
-    frames += frame("alert", alertJson(snapshot));
+    events.push_back(Event{"alert", alertJson(snapshot)});
     lastAlertCount_ = snapshot.gasAlertCount;
   }
 
   const bool changed = !sameState(snapshot, lastSent_);
   const bool due = hasElapsed(now, lastHomeAt_, settings_.homeMinIntervalMs);
   if (newAlert || (changed && due)) {
-    frames += frame("home", homeJson(snapshot, bootId_));
+    events.push_back(Event{"home", homeJson(snapshot, bootId_)});
     lastSent_ = snapshot;
     lastHomeAt_ = now;
   }
 
-  if (!frames.empty()) {
+  if (!events.empty()) {
     lastActivityAt_ = now;
   } else if (hasElapsed(now, lastActivityAt_, settings_.keepaliveMs)) {
-    frames = ": keepalive\n\n";
+    events.push_back(Event{"ping", ""});
     lastActivityAt_ = now;
   }
-  return frames;
+  return events;
 }
 
 }  // namespace api
