@@ -234,6 +234,40 @@ void test_snapshot_uptime_follows_the_last_tick() {
   TEST_ASSERT_EQUAL_UINT32(1230, rig.controller.snapshot().uptimeMs);
 }
 
+void test_snapshot_reports_gas_only_while_it_is_present() {
+  Rig rig;
+  rig.bootToNormal();
+  TEST_ASSERT_FALSE(rig.controller.snapshot().gasDetected);
+  rig.gas.value = 150;
+  rig.run(50);
+  TEST_ASSERT_TRUE(rig.controller.snapshot().gasDetected);
+  rig.gas.value = 50;
+  rig.run(50);
+  TEST_ASSERT_FALSE(rig.controller.snapshot().gasDetected);
+}
+
+void test_snapshot_reports_when_the_button_is_accepted_again() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.gas.value = 150;
+  rig.run(100);
+  rig.gas.value = 50;
+  rig.run(100);  // clean for less than the clear-air wait
+  TEST_ASSERT_FALSE(rig.controller.snapshot().rearmReady);
+  rig.run(200);
+  TEST_ASSERT_TRUE(rig.controller.snapshot().rearmReady);
+}
+
+void test_snapshot_tells_no_sample_yet_from_an_invalid_sample() {
+  Rig rig;
+  rig.climate.reading = {false, 0.0f, 0.0f};
+  rig.controller.begin();
+  TEST_ASSERT_FALSE(rig.controller.snapshot().climateSampled);
+  rig.run(500);
+  TEST_ASSERT_TRUE(rig.controller.snapshot().climateSampled);
+  TEST_ASSERT_FALSE(rig.controller.snapshot().climateValid);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_begin_puts_every_output_in_a_safe_state);
@@ -258,5 +292,8 @@ int main() {
   RUN_TEST(test_history_records_a_sample_at_each_interval);
   RUN_TEST(test_history_marks_samples_without_a_valid_climate_reading);
   RUN_TEST(test_snapshot_uptime_follows_the_last_tick);
+  RUN_TEST(test_snapshot_reports_gas_only_while_it_is_present);
+  RUN_TEST(test_snapshot_reports_when_the_button_is_accepted_again);
+  RUN_TEST(test_snapshot_tells_no_sample_yet_from_an_invalid_sample);
   return UNITY_END();
 }

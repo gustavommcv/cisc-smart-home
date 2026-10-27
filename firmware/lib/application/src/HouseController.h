@@ -77,6 +77,7 @@ class HouseController {
 
   int gasReading_ = 0;
   ClimateReading climate_{false, 0.0f, 0.0f};
+  bool climateSampled_ = false;
   std::uint32_t gasAlertCount_ = 0;
 
   OutputCache valveOut_;
