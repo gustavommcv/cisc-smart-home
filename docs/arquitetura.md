@@ -75,6 +75,7 @@ Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera c
 - **Adaptadores:** implementam as portas com o hardware real. É a única parte que precisa da placa para testar.
 - **Aplicação:** a cada ciclo, lê as portas, chama o domínio e aplica o resultado, e só escreve numa saída quando o valor muda. Guarda o histórico e conta os vazamentos. Recebe os comandos do app. Não sabe nada de HTTP nem de pinos.
 - **API:** traduz entre HTTP e a aplicação. Não tem regra de negócio.
+- **Display local:** o LCD da maquete mostra o estado da casa, para acompanhar sem o celular. A regra do que escrever (`DisplayText`) e o ritmo (`DisplayPresenter`) ficam na aplicação e são testados no computador. Só a escrita no LCD (`I2cLcdDisplay`) toca a placa.
 
 O `Controle.h` da primeira versão da maquete já separava a regra do hardware. Esta estrutura leva a ideia adiante.
 

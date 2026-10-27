@@ -23,9 +23,11 @@ Em [`lib/application/src`](lib/application/src):
 
 | Arquivo | O que faz |
 |---|---|
-| `Ports.h` | As **portas**: o que a aplicação precisa do mundo (relógio, sensor de gás, sensor de clima, botão e saídas liga/desliga). O hardware real as implementa nos adaptadores, e os testes usam versões falsas |
+| `Ports.h` | As **portas**: o que a aplicação precisa do mundo (relógio, sensor de gás, sensor de clima, botão, saídas liga/desliga e display). O hardware real as implementa nos adaptadores, e os testes usam versões falsas |
 | `HouseController` | Roda a casa: lê os sensores no ritmo de cada um, entrega as leituras às regras do domínio, aciona as saídas só quando o valor muda, guarda o histórico, conta os vazamentos e recebe os comandos do app |
 | `HouseSnapshot` | Tudo o que o mundo de fora pode querer saber da casa, em um instante |
+| `DisplayText` | A regra do que escrever em cada linha do display, em português e sem acentos, que o LCD não tem |
+| `DisplayPresenter` | Mantém um display em dia: olha a casa no seu ritmo e só escreve quando o texto mudou, para um barramento lento nunca atrasar o controle |
 | `HouseSettings.h` | O ritmo de cada leitura e o tamanho do histórico |
 
 O `HouseController` ocupa uns 7 KB, quase todos do histórico. Por isso deve ser uma variável global, e não ficar na pilha.
@@ -55,6 +57,7 @@ Em [`lib/adapters/src`](lib/adapters/src): uma classe por peça, cada uma implem
 | `ModuleButton` | O módulo do botão, com o nível que significa "apertado" |
 | `GpioOutput` | O LED, o buzzer e o relé, com o nível que significa "ligado" |
 | `ServoValve` | O servo que faz o papel da válvula |
+| `I2cLcdDisplay` | O LCD 16x2 com módulo I2C. A biblioteca acha o endereço sozinha, e sem LCD o resto continua funcionando |
 
 Os pinos, os níveis e os ângulos da maquete estão todos em [`src/BoardConfig.h`](src/BoardConfig.h). O [`src/main.cpp`](src/main.cpp) monta tudo: é o único lugar que sabe qual adaptador está atrás de cada porta. Ele também imprime uma linha de resumo por segundo no Serial.
 

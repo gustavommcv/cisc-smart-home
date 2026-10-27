@@ -17,6 +17,14 @@ constexpr std::uint8_t kBuzzerPin = 25;
 constexpr std::uint8_t kValveServoPin = 13;
 constexpr std::uint8_t kAlarmLedPin = 2;
 
+// The 16x2 LCD with an I2C backpack. It runs on 5 V, so SDA and SCL go through a
+// 3.3 V <-> 5 V level shifter.
+constexpr std::uint8_t kLcdSdaPin = 21;
+constexpr std::uint8_t kLcdSclPin = 22;
+constexpr std::uint8_t kLcdColumns = 16;
+constexpr std::uint8_t kLcdRows = 2;
+constexpr unsigned long kLcdRefreshMs = 250;
+
 // The 3-pin button module outputs HIGH while pressed.
 constexpr bool kButtonActiveHigh = true;
 // The relay module switches on when its input is pulled LOW.
