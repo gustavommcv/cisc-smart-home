@@ -1,0 +1,6 @@
+{
+  "name": "adapters",
+  "version": "0.1.0",
+  "description": "Hardware adapters: the real implementations of the application ports for the ESP32 board",
+  "platforms": "espressif32"
+}
