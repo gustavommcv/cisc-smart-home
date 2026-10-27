@@ -7,8 +7,6 @@ import io.github.gustavommcv.ciscsmarthome.data.remote.BoardResult
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardStreamUpdate
 import io.github.gustavommcv.ciscsmarthome.data.remote.ErrorCode
 import io.github.gustavommcv.ciscsmarthome.domain.AlertMemory
-import io.github.gustavommcv.ciscsmarthome.domain.AlertTracker
-import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
@@ -20,22 +18,20 @@ import io.github.gustavommcv.ciscsmarthome.domain.HistoryStore
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeEvent
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAnnouncer
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
-import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
-import io.github.gustavommcv.ciscsmarthome.domain.gasLeakStatus
 import java.time.Clock
 import java.time.Instant
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 
 /**
  * Joins what the app has: the REST client, the events of the board, the history kept on the phone
- * and the rules of the domain, into what the screens and the service read.
+ * and the rules of the domain, into what the screens and the service read. It decides what to do
+ * with each thing the board says, and leaves the doing to [LeakAnnouncer] and [HistorySync].
  *
  * Everything that changes the state of the sync (the clock of the board, what was announced) is
  * touched only by [keepSynced], one event at a time, so none of it needs a lock. [send] only changes
@@ -46,21 +42,17 @@ class HomeRepositoryImpl(
   private val events: BoardEvents,
   private val store: HistoryStore,
   private val clock: Clock,
-  private val alertMemory: AlertMemory,
+  alertMemory: AlertMemory,
   private val deviceClock: DeviceClock = DeviceClock(),
 ) : HomeRepository {
   private val homeState = MutableStateFlow<Home?>(null)
   private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Connecting)
-  private val news = Channel<GasAlert>(Channel.UNLIMITED)
-  // Starts from what was announced before the app was last closed, so a leak is not announced twice.
-  private val alertTracker = AlertTracker(alertMemory.load())
-  private var remembered = alertTracker.announced()
+  private val leaks = LeakAnnouncer(alertMemory)
+  private val history = HistorySync(api, store, deviceClock)
 
   override val home: StateFlow<Home?> = homeState.asStateFlow()
   override val connection: StateFlow<ConnectionState> = connectionState.asStateFlow()
-
-  // A leak that nobody collected yet waits here, so it is not lost between the board saying it and the service listening.
-  override val alerts: Flow<GasAlert> = news.receiveAsFlow()
+  override val alerts: Flow<GasAlert> = leaks.alerts
 
   override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> = store.series(entityId, since)
 
@@ -87,10 +79,7 @@ class HomeRepositoryImpl(
           connectionState.value = ConnectionState.Connected
           when (val event = update.event) {
             is HomeEvent.HomeUpdated -> accept(event.home)
-            is HomeEvent.GasLeak -> {
-              if (alertTracker.onAlertEvent(event.bootId, event.count)) news.trySend(GasAlert(event.bootId, event.areaId, event.count))
-              remember()
-            }
+            is HomeEvent.GasLeak -> leaks.onLeakEvent(event)
           }
         }
         is BoardStreamUpdate.Lost -> connectionState.value = ConnectionState.Disconnected(update.error.toProblem())
@@ -106,7 +95,7 @@ class HomeRepositoryImpl(
       is BoardResult.Success -> {
         accept(result.value)
         connectionState.value = ConnectionState.Connected
-        syncHistory(result.value.bootId)
+        history.catchUp(result.value.bootId)
       }
     }
   }
@@ -117,32 +106,7 @@ class HomeRepositoryImpl(
     if (current != null && current.bootId == incoming.bootId && incoming.uptimeMs < current.uptimeMs) return
     deviceClock.observe(incoming.bootId, incoming.uptimeMs, clock.instant())
     homeState.value = incoming
-    val leaks = incoming.gasLeakStatus() ?: return
-    if (alertTracker.onHome(incoming.bootId, leaks.alertCount, leaks.active)) news.trySend(GasAlert(incoming.bootId, leaks.areaId, leaks.alertCount))
-    remember()
-  }
-
-  /** Keeps what was announced, after it was handed to whoever shows it, and only when it changed. */
-  private fun remember() {
-    val now = alertTracker.announced()
-    if (now == remembered) return
-    alertMemory.save(now)
-    remembered = now
-  }
-
-  /** Fetches what the board has that the phone does not, a page at a time, from where the phone's history of this boot ends. */
-  private suspend fun syncHistory(bootId: BootId) {
-    var after = store.latestUptime(bootId)
-    while (true) {
-      val page = (api.getHistory(after, HISTORY_PAGE_SIZE) as? BoardResult.Success)?.value ?: return
-      // The board restarted in between: the connection drops with it, and the next one catches up on the new boot.
-      if (page.bootId != bootId || page.samples.isEmpty()) return
-      store.save(page.samples.mapNotNull { sample -> deviceClock.toInstant(bootId, sample.uptimeMs)?.let { StoredSample(bootId, sample.uptimeMs, it, sample.values) } })
-      val last = page.samples.last().uptimeMs
-      // A short page is the end. So is a page that does not go past where we are, which a board that works never sends.
-      if (page.samples.size < HISTORY_PAGE_SIZE || last <= (after ?: Long.MIN_VALUE)) return
-      after = last
-    }
+    leaks.onHome(incoming)
   }
 
   private fun BoardError.toProblem(): ConnectionProblem =
@@ -151,9 +115,4 @@ class HomeRepositoryImpl(
       is BoardError.Rejected -> if (code == ErrorCode.TooManyClients) ConnectionProblem.TooManyClients else ConnectionProblem.Incompatible
       is BoardError.Unexpected -> ConnectionProblem.Incompatible
     }
-
-  private companion object {
-    // The most the contract lets one request ask for, and what the board keeps: a board that has all of it answers in one page.
-    const val HISTORY_PAGE_SIZE = 360
-  }
 }

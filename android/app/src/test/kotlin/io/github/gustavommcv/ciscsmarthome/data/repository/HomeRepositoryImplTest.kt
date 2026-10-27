@@ -19,6 +19,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeEvent
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
+import io.github.gustavommcv.ciscsmarthome.testing.FakeAlertMemory
 import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import java.io.IOException
 import java.time.Instant

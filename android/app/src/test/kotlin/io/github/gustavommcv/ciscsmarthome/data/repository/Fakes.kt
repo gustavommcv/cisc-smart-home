@@ -5,7 +5,6 @@ import io.github.gustavommcv.ciscsmarthome.data.remote.BoardError
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardEvents
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardResult
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardStreamUpdate
-import io.github.gustavommcv.ciscsmarthome.domain.AlertMemory
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
@@ -40,6 +39,8 @@ internal class FakeBoardApi : BoardApi {
   override suspend fun getHome(): BoardResult<Home> = home()
 
   override suspend fun getHistory(after: Long?, limit: Int?): BoardResult<HistoryPage> {
+    // A loop that never ends would spin the test forever, and fill the memory, instead of failing it.
+    check(historyRequests.size < MAX_HISTORY_REQUESTS) { "the history was asked for $MAX_HISTORY_REQUESTS times, and it is meant to end" }
     historyRequests += after to limit
     return history(after, limit)
   }
@@ -47,6 +48,10 @@ internal class FakeBoardApi : BoardApi {
   override suspend fun sendCommand(entityId: EntityId, value: CommandValue): BoardResult<Entity> {
     commands += entityId to value
     return command(entityId, value)
+  }
+
+  private companion object {
+    const val MAX_HISTORY_REQUESTS = 50
   }
 }
 
@@ -84,19 +89,4 @@ internal class TestClock(var now: Instant) : Clock() {
   override fun withZone(zone: ZoneId): Clock = this
 
   override fun instant(): Instant = now
-}
-
-/** What was announced, kept in memory, with how many times it was saved. */
-internal class FakeAlertMemory(initial: Map<BootId, Long> = emptyMap()) : AlertMemory {
-  var saved: Map<BootId, Long> = initial
-    private set
-  var saves = 0
-    private set
-
-  override fun load(): Map<BootId, Long> = saved
-
-  override fun save(announced: Map<BootId, Long>) {
-    saved = announced
-    saves++
-  }
 }

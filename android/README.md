@@ -52,7 +52,7 @@ Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`
 
 ### O domínio
 
-Kotlin puro, testado só com JUnit. Além da biblioteca padrão, usa apenas as corrotinas, pelo `Flow` do `HistoryStore`:
+Kotlin puro, testado só com JUnit. Além da biblioteca padrão, usa apenas as corrotinas, pelo `Flow` do `HistoryStore` e o `Channel` do `LeakAnnouncer`:
 
 | Arquivo | O que faz |
 |---|---|
@@ -63,6 +63,7 @@ Kotlin puro, testado só com JUnit. Além da biblioteca padrão, usa apenas as c
 | `GasLeakStatus` | O que a casa diz sobre vazamentos de gás: quantos houve desde que a placa ligou e se há um agora, lidos de `gas-state` e `gas-alerts`. Se a casa não diz (falta uma das duas entidades ou a contagem não é legível), não diz nada: sem a contagem, um vazamento não se distingue de um já avisado |
 | `HomeRepository` | O que as telas e o serviço enxergam da casa, venha como vier: a casa (`home`), o estado da conexão (`connection`), os vazamentos que são notícia (`alerts`), a série de uma entidade, o envio de comandos e o `keepSynced`, que o serviço da 4d roda em segundo plano. Os tipos que a acompanham: `ConnectionState`, `ConnectionProblem`, `CommandResult` e `GasAlert` |
 | `AlertTracker` | Decide quando um vazamento é notícia. O par (identificador de partida, contador de vazamentos) dá nome a cada um, então o mesmo vazamento é avisado **uma vez**, chegue pelo evento `alert`, pelo estado da casa ao reconectar, ou pelos dois. Vazamentos que terminaram enquanto o app estava fora não avisam depois. Guarda o que já foi avisado, para não repetir nem depois de o app reiniciar |
+| `LeakAnnouncer` | Põe o `AlertTracker` para trabalhar: recebe cada evento de vazamento e cada estado da casa, avisa em `alerts` os que são notícia e entrega o que já foi avisado ao `AlertMemory`, que o guarda no celular, **só quando muda**. O que ninguém recebeu ainda espera na fila, então um vazamento não se perde entre a placa avisar e o serviço estar ouvindo |
 
 O domínio também tem o `HistorySample` e o `HistoryPage` (as leituras guardadas pela placa), o `CommandValue` (o que o usuário pede a uma entidade: ligar ou desligar, ou escolher uma opção) e o `HomeEvent` (o que a placa anuncia sozinha: a casa mudou, ou um vazamento de gás começou). As interfaces do domínio nascem junto com o primeiro código que as implementa ou usa: o `HistoryStore` nasceu com o banco e o `HomeRepository` com o repositório. Criá-las antes seria código sem uso.
 
@@ -96,20 +97,28 @@ Três decisões que não aparecem no código à primeira vista:
 
 ### O repositório
 
-Em `data/repository`, o `HomeRepositoryImpl` junta o que o app tem (o cliente REST, os eventos, o histórico local e as regras do domínio) no que as telas e o serviço leem.
+Em `data/repository`, o `HomeRepositoryImpl` junta o que o app tem (o cliente REST, os eventos, o histórico local e as regras do domínio) no que as telas e o serviço leem. Ele **decide o que fazer com cada coisa que a placa diz** e deixa o fazer para duas peças pequenas:
+
+| Peça | O que faz |
+|---|---|
+| `HomeRepositoryImpl` | Coordena: guarda a casa e o estado da conexão, reage a cada evento do fluxo e envia os comandos |
+| `HistorySync` | Busca o histórico que o celular não tem, uma página por vez, e o guarda já na hora do celular |
+| `LeakAnnouncer` (no domínio) | Faz de cada vazamento uma notícia, uma vez só, e lembra o que já avisou |
+
+Cada uma tem testes próprios, sem precisar do repositório inteiro; os do repositório conferem que ele as liga do jeito certo.
 
 `BoardClient` e `BoardEventStream` implementam `BoardApi` e `BoardEvents`, duas interfaces pequenas em `data/remote`. É por elas que os testes do repositório usam fakes: a rede já foi testada contra um servidor falso nas partes anteriores, e aqui só importa o que o repositório faz com o que recebe.
 
 O `keepSynced` reage ao que o fluxo de eventos conta, um evento por vez:
 
-- **A placa aceitou a conexão** (`Connected`): pede a casa por REST, o que também mostra se a placa é utilizável (a versão da API que o app não conhece aparece aqui como `Incompatible`), e busca o histórico que falta. O `after` é até onde o app já tem *daquela partida*, então uma partida nova começa do zero mesmo que as antigas estejam guardadas. As páginas são de 360 amostras, que é o que a placa guarda; uma página que não enche é o fim, e uma que não avança também (uma placa que funciona não manda essa).
+- **A placa aceitou a conexão** (`Connected`): pede a casa por REST, o que também mostra se a placa é utilizável (a versão da API que o app não conhece aparece aqui como `Incompatible`), e o `HistorySync` busca o histórico que falta. O `after` é até onde o app já tem *daquela partida*, então uma partida nova começa do zero mesmo que as antigas estejam guardadas. As páginas são de 360 amostras, que é o que a placa guarda; uma página que não enche é o fim, e uma que não avança também (uma placa que funciona não manda essa).
 - **Chegou um evento**: prova que a conexão está viva, então o estado vira `Connected` mesmo que o pedido da casa tenha falhado.
 - **A conexão caiu** (`Lost`): o estado vira `Disconnected` com o motivo, e a última casa continua em `home`. Quem reconecta é o próprio fluxo.
 - **A casa que chega** só vale se não for mais velha que a que o app já tem *da mesma partida*: a resposta REST e o fluxo podem se cruzar. Uma partida nova vale sempre, mesmo com `uptimeMs` menor.
-- **A hora das amostras** é a do celular: o `DeviceClock` aprende a diferença a cada casa que chega, e o repositório a usa para datar o histórico antes de guardá-lo.
-- **Vazamentos** passam pelo `AlertTracker`, venham pelo evento `alert` ou pelo estado da casa. Quem avisa o usuário (a 4d) lê `alerts`, que guarda o que ninguém recebeu ainda, então um vazamento não se perde entre a placa avisar e o serviço estar ouvindo.
+- **A hora das amostras** é a do celular: o `DeviceClock` aprende a diferença a cada casa que chega, e o `HistorySync` a usa para datar o histórico antes de guardá-lo.
+- **Vazamentos** passam pelo `LeakAnnouncer` (e por dentro dele, pelo `AlertTracker`), venham pelo evento `alert` ou pelo estado da casa. Quem avisa o usuário (a 4d) lê `alerts`, que guarda o que ninguém recebeu ainda, então um vazamento não se perde entre a placa avisar e o serviço estar ouvindo.
 
-Só o `keepSynced` mexe no `DeviceClock` e no `AlertTracker`, que não foram feitos para vários fios, então não precisam de trava. O `send`, que roda no fio de quem chama, só troca a entidade em `home`, que aguenta isso.
+Só o `keepSynced` mexe no `DeviceClock` e no `LeakAnnouncer`, que não foram feitos para vários fios, então não precisam de trava. O `send`, que roda no fio de quem chama, só troca a entidade em `home`, que aguenta isso.
 
 ### O histórico local
 
@@ -121,7 +130,7 @@ Em `data/local`, o `RoomHistoryStore` guarda o histórico num banco do Room, no 
 | `RoomHistoryStore` | Implementa o `HistoryStore`: traduz o domínio para as linhas e de volta |
 
 - **A chave é (partida, `uptimeMs`, entidade)**, o par que o contrato manda usar para saber se uma amostra já existe. Salvar uma amostra que já está lá deixa a que estava: o app pode pedir a mesma página duas vezes sem repetir nada.
-- **A hora é gravada, não calculada na leitura.** Quem salva (o repositório, na próxima parte) converte o `uptimeMs` pelo `DeviceClock` e passa a hora do celular. Assim o histórico de uma partida antiga continua certo depois de o app fechar, quando o `DeviceClock` já esqueceu a diferença dela.
+- **A hora é gravada, não calculada na leitura.** Quem salva (o `HistorySync`) converte o `uptimeMs` pelo `DeviceClock` e passa a hora do celular. Assim o histórico de uma partida antiga continua certo depois de o app fechar, quando o `DeviceClock` já esqueceu a diferença dela.
 - **O formato do banco fica no Git**, em [`app/schemas`](app/schemas). O Room o gera a cada compilação, então uma mudança no formato aparece na revisão, e uma versão futura pode ser migrada a partir dele.
 - **Por enquanto o app guarda tudo**: a placa faz uma amostra a cada 10 s e hoje são três entidades no histórico, então uns 26 mil registros por dia, alguns megabytes. Limpar o que for muito antigo entra quando houver a tela do histórico e se souber quanto ele precisa mostrar.
 
