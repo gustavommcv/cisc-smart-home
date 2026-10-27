@@ -38,14 +38,26 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 
 ```text
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
-├── domain/    modelos e regras, sem Android (Area, Device, Entity e as interfaces)
+├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
 ├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios
 ├── ui/        as telas em Compose e um ViewModel por tela
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 └── di/        a montagem das dependências, sem framework
 ```
 
-Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existe só a `ui/`.
+Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/` e `domain/`.
+
+### O domínio
+
+Kotlin puro, testado só com JUnit, sem nenhuma biblioteca:
+
+| Arquivo | O que faz |
+|---|---|
+| `Home` | A casa como a placa a descreve: cômodos, dispositivos e entidades (`Sensor`, `BinarySensor`, `Switch` e `Select`), com um valor nulo quando não há leitura válida. Acha uma entidade pelo `id` e diz em que dispositivo e cômodo ela está |
+| `DeviceClock` | Põe o `uptimeMs` da placa no relógio do celular, como pede a seção "Tempo" de [`docs/api.md`](../docs/api.md). A placa não guarda hora: o celular anota a diferença a cada resposta, uma por partida |
+| `AlertTracker` | Decide quando um vazamento é notícia. O par (identificador de partida, contador de vazamentos) dá nome a cada um, então o mesmo vazamento é avisado **uma vez**, chegue pelo evento `alert`, pelo estado da casa ao reconectar, ou pelos dois. Vazamentos que terminaram enquanto o app estava fora não avisam depois. Guarda o que já foi avisado, para não repetir nem depois de o app reiniciar |
+
+As interfaces do domínio, como a do repositório, nascem junto com o primeiro código que as usa, a partir da 4b2. Criá-las antes seria código sem uso.
 
 ### A regra de dependência é testada
 
