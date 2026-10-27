@@ -2,7 +2,7 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o app fala com a placa e vigia a casa. Ele conecta, mostra a casa como a placa a descreve, numa lista simples, e, com a tela apagada, continua ouvindo a placa num serviço em primeiro plano e **avisa de um vazamento de gás com uma notificação**. As telas de verdade (cômodos, controle do desumidificador, histórico) e a entrada automática na rede da placa chegam nas próximas partes (veja as [fases](../README.md#fases)).
+> **Estado atual:** o app fala com a placa e vigia a casa. Ele conecta, mostra a casa como a placa a descreve, numa lista simples, e, com a tela apagada, continua ouvindo a placa num serviço em primeiro plano e **avisa de um vazamento de gás com uma notificação**. A tela inicial já é a dos cômodos, em português. O controle do desumidificador, o gráfico do histórico e a entrada automática na rede da placa chegam nas próximas partes (veja as [fases](../README.md#fases)).
 
 ## Ferramentas
 
@@ -130,9 +130,24 @@ Os testes usam o **Robolectric**, que roda um Android de verdade no computador, 
 
 O `AppContainer`, em `di/`, monta as peças à mão: o cliente HTTP (com tempo limite de 5 s, porque a placa está na rede do próprio celular e responde em milissegundos ou não responde), o banco do histórico, o cliente REST, o fluxo de eventos e o repositório. É o único lugar onde as camadas se encontram. Um framework de injeção seria mais para ler do que a montagem em si. O container só monta: quem põe o `keepSynced` do repositório para rodar é o serviço (veja abaixo). A `CiscApplication` o cria quando algo o pede pela primeira vez, e **não inicia nada sozinha**.
 
-A tela inicial (`HomeScreen`, com o `HomeViewModel`) mostra o estado da conexão, com o motivo quando cai, e a casa exatamente como a placa a descreve, em lista. Ela é provisória por escolha: serve para ver a conexão funcionando, e a tela dos cômodos, com nomes e controles feitos para cada um, a substitui. O `ViewModel` e o texto da conexão ficam.
 
 A placa fala HTTP sem certificado, então o HTTP puro é **liberado só para `192.168.4.1`** e recusado para todo o resto, em [`network_security_config.xml`](app/src/main/res/xml/network_security_config.xml). O `ManifestTest` guarda isso: a recusa por padrão, o único endereço liberado, e que ele é o mesmo que o app usa (`AppContainer.BOARD_URL`).
+
+### As telas
+
+Há três telas, escolhidas por `HomeContent` a partir do estado do `HomeViewModel` (`HomeState`: a casa, a conexão e qual tela está aberta):
+
+| Tela | Quando aparece | O que mostra |
+|---|---|---|
+| **Cômodos** (`RoomsScreen`) | Há uma casa para mostrar | Um cartão por cômodo, com o nome em português e **até três coisas que importam nele** (na cozinha, o estado e o nível do gás; no quarto, a temperatura, a umidade e o desumidificador). O cartão do cômodo com vazamento fica **vermelho, com um aviso**. No fim, o cartão **bloqueado** "Adicionar cômodo / Em breve" |
+| **Cômodo** (`RoomScreen`) | Toque num cartão | Os dispositivos do cômodo e o que cada um lê, com o cartão bloqueado "Adicionar dispositivo". O botão de voltar do sistema volta para a lista |
+| **Sem casa** (`NoHomeScreen`) | O app ainda não ouviu a placa | Uma espera, ou, se a placa não pode ser alcançada, o que conferir (o texto muda com o motivo: outra rede, conexões demais, versão diferente) |
+
+Quando a conexão cai **com uma casa já lida**, o app não esconde o que sabe: mostra a última leitura, com os cartões mais claros e o aviso "Sem conexão… Mostrando a última leitura". Mentir com um valor velho como se fosse novo seria pior que dizer que é velho.
+
+O que cada cartão diz, os nomes e as palavras da tela ficam em funções puras, testadas sem celular: `Area.highlights()` escolhe o que o cartão mostra, `Home.isInEmergency()` diz qual cômodo está em emergência, e `Labels.kt` traduz o que a placa nomeia em inglês: as entidades (`gas-state` vira "Gás"), os dispositivos (`closet-sensor` vira "Sensor do armário") e as palavras (`emergency` vira "VAZAMENTO"; `automatic` vira "Automático"). **Os números sempre saem no formato português** (`18,4 °C`), mesmo com o celular em inglês: o app é em português, e uma tela que diz "Temperatura" ao lado de "18.4" parece um erro. Foi o que o primeiro teste no celular mostrou. **O que o app não conhece aparece como a placa o nomeou**, então uma entidade ou um cômodo novo da placa aparece mesmo sem tradução. Os nomes dos cômodos (`AreaId.nameRes()`) são os mesmos da tela e da notificação do vazamento.
+
+**A navegação não usa biblioteca**: são duas telas e um botão de voltar, então o `HomeViewModel` guarda qual está aberta (`Screen`). Um cômodo que deixa de existir na casa fecha sozinho. Uma biblioteca de navegação entra quando houver mais telas do que isso justifique.
 
 ### O serviço e o aviso de vazamento
 

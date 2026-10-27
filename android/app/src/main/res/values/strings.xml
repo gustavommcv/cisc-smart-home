@@ -14,6 +14,33 @@
     <string name="area_kitchen">Cozinha</string>
     <string name="area_bedroom">Quarto</string>
 
+    <string name="rooms_add">Adicionar cômodo</string>
+    <string name="device_add">Adicionar dispositivo</string>
+    <string name="add_soon">Em breve</string>
+    <string name="back">Voltar</string>
+    <string name="room_empty">Este cômodo ainda não tem dispositivos.</string>
+    <string name="no_connection_title">Sem conexão com a placa</string>
+    <string name="stale_note">Mostrando a última leitura.</string>
+
+    <string name="device_gas_sensor">Sensor de gás</string>
+    <string name="device_gas_valve">Válvula de gás</string>
+    <string name="device_closet_sensor">Sensor do armário</string>
+    <string name="device_dehumidifier">Desumidificador</string>
+
+    <string name="label_gas_level">Nível de gás</string>
+    <string name="label_gas_state">Gás</string>
+    <string name="label_gas_alerts">Vazamentos desde que ligou</string>
+    <string name="label_valve_open">Válvula aberta</string>
+    <string name="label_temperature">Temperatura</string>
+    <string name="label_humidity">Umidade</string>
+    <string name="label_dehumidifier_power">Desumidificador</string>
+    <string name="label_dehumidifier_mode">Modo</string>
+    <string name="gas_starting">Aquecendo o sensor</string>
+    <string name="gas_normal">Normal</string>
+    <string name="gas_emergency">VAZAMENTO</string>
+    <string name="option_automatic">Automático</string>
+    <string name="option_manual">Manual</string>
+
     <string name="channel_monitoring">Monitoramento da casa</string>
     <string name="channel_gas_alert">Alerta de vazamento de gás</string>
     <string name="channel_connection_lost">Perda de conexão com a placa</string>

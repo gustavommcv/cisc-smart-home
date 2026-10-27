@@ -118,7 +118,7 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 | 1 | README e decisões de arquitetura | concluída |
 | 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
 | 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | concluída |
-| 4 | App Android. Em quatro partes: **4a** esqueleto e CI (concluída), **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas, **4d** conexão ao ESP32 e alertas | 4a e 4b concluídas (modelo, cliente REST, eventos, histórico local e repositório); 4c em andamento: o app já conecta na placa e mostra a casa (4c1); o serviço em primeiro plano e o aviso de vazamento (4d1) estão prontos, faltam as telas e a ligação à rede da placa (4d2) |
+| 4 | App Android. Em quatro partes: **4a** esqueleto e CI (concluída), **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas, **4d** conexão ao ESP32 e alertas | 4a e 4b concluídas (modelo, cliente REST, eventos, histórico local e repositório); 4c em andamento: o app conecta na placa e mostra os cômodos em português (4c1 e 4c2a); o serviço em primeiro plano e o aviso de vazamento (4d1) estão prontos; faltam o controle do desumidificador, o gráfico do histórico e a ligação à rede da placa (4d2) |
 | 5 | Esquemático, tabela de custos e material da apresentação | |
 
 ## Licença
