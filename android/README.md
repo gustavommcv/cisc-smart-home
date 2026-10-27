@@ -2,7 +2,7 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o esqueleto. Há uma tela provisória, o teste que protege a arquitetura e o CI. As camadas e as telas chegam nas próximas partes (veja as [fases](../README.md#fases)).
+> **Estado atual:** o app já fala com a placa. Ele abre, conecta e mostra a casa como a placa a descreve, numa lista simples, com o estado da conexão. As telas de verdade (cômodos, controle do desumidificador, histórico), a entrada automática na rede da placa, o serviço em segundo plano e os alertas chegam nas próximas partes (veja as [fases](../README.md#fases)).
 
 ## Ferramentas
 
@@ -42,10 +42,11 @@ app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/local` com o histórico e `data/repository` com o repositório
 ├── ui/        as telas em Compose e um ViewModel por tela
 ├── service/   o serviço que mantém a conexão e dispara as notificações
-└── di/        a montagem das dependências, sem framework
+├── di/        a montagem das dependências, sem framework
+└── CiscApplication.kt   cria a montagem quando o app começa e liga a sincronização com a placa
 ```
 
-Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`, `domain/` e `data/`.
+Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`, `domain/`, `data/` e `di/`.
 
 ### O domínio
 
@@ -123,6 +124,21 @@ Em `data/local`, o `RoomHistoryStore` guarda o histórico num banco do Room, no 
 - **Por enquanto o app guarda tudo**: a placa faz uma amostra a cada 10 s e hoje são três entidades no histórico, então uns 26 mil registros por dia, alguns megabytes. Limpar o que for muito antigo entra quando houver a tela do histórico e se souber quanto ele precisa mostrar.
 
 Os testes usam o **Robolectric**, que roda um Android de verdade no computador, para o Room trabalhar com o banco de verdade, sem celular e sem emulador. Dois detalhes: o Robolectric só roda o Android 16 (SDK 36) no Java 21, e o app compila com o 17, então estes testes rodam no SDK 35 (veja `robolectric.properties`); e na primeira vez ele baixa o Android para `~/.m2` (uns 200 MB), o que a próxima execução não repete.
+
+### A montagem e a primeira conexão
+
+O `AppContainer`, em `di/`, monta as peças à mão: o cliente HTTP (com tempo limite de 5 s, porque a placa está na rede do próprio celular e responde em milissegundos ou não responde), o banco do histórico, o cliente REST, o fluxo de eventos e o repositório. É o único lugar onde as camadas se encontram. Um framework de injeção seria mais para ler do que a montagem em si. A `CiscApplication` o cria quando o processo começa e chama `start()`, que põe o `keepSynced` do repositório para rodar enquanto o app viver; na 4d isso passa para o serviço.
+
+A tela inicial (`HomeScreen`, com o `HomeViewModel`) mostra o estado da conexão, com o motivo quando cai, e a casa exatamente como a placa a descreve, em lista. Ela é provisória por escolha: serve para ver a conexão funcionando, e a tela dos cômodos, com nomes e controles feitos para cada um, a substitui. O `ViewModel` e o texto da conexão ficam.
+
+O app pede **uma permissão só, a de internet**, e a placa fala HTTP sem certificado, então o HTTP puro é **liberado só para `192.168.4.1`** e recusado para todo o resto, em [`network_security_config.xml`](app/src/main/res/xml/network_security_config.xml). O `ManifestTest` guarda isso: a lista exata de permissões, a recusa por padrão, o único endereço liberado, e que ele é o mesmo que o app usa (`AppContainer.BOARD_URL`).
+
+**Para ver funcionando no celular, com a maquete ligada:**
+
+1. Entre no Wi-Fi `cisc-smart-home` e escolha **manter conectado** quando o Android avisar que não há internet.
+2. **Desligue os dados móveis.** O Android prefere o 4G a um Wi-Fi sem internet, e o app ainda não se prende à rede da placa (isso é a 4d).
+3. Instale o app (`adb install -r ...`) e abra. Em poucos segundos deve aparecer **Conectado à placa** e a lista de cômodos com os valores. Aproximar o gás do isqueiro (sem acender) ou soprar no DHT11 muda os números na tela.
+4. Com a tela apagada, o Android pode cortar a rede do app: ele ainda não é um serviço em primeiro plano (4d).
 
 ### A regra de dependência é testada
 
