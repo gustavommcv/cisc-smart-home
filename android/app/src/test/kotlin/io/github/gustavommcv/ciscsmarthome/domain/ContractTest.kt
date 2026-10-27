@@ -41,7 +41,7 @@ class ContractTest {
 
   @Test
   fun `the devices the app knows are the devices of the document`() {
-    assertInContract("device", listOf(DeviceIds.GasSensor, DeviceIds.GasValve, DeviceIds.ClosetSensor, DeviceIds.Dehumidifier).map { it.value })
+    assertInContract("device", listOf(DeviceIds.GasMonitor, DeviceIds.ClosetMonitor).map { it.value })
   }
 
   @Test
@@ -63,7 +63,7 @@ class ContractTest {
   fun `nothing is written twice`() {
     val entities = listOf(EntityIds.GasLevel, EntityIds.GasState, EntityIds.GasAlerts, EntityIds.ValveOpen, EntityIds.Temperature, EntityIds.Humidity, EntityIds.DehumidifierPower, EntityIds.DehumidifierMode)
     assertEquals(entities.size, entities.toSet().size)
-    val devices = listOf(DeviceIds.GasSensor, DeviceIds.GasValve, DeviceIds.ClosetSensor, DeviceIds.Dehumidifier)
+    val devices = listOf(DeviceIds.GasMonitor, DeviceIds.ClosetMonitor)
     assertEquals(devices.size, devices.toSet().size)
     assertEquals(setOf("starting", "normal", "emergency"), setOf(GasStates.Starting, GasStates.Normal, GasStates.Emergency))
   }

@@ -30,10 +30,8 @@ internal fun EntityId.labelRes(): Int? =
 @StringRes
 internal fun DeviceId.nameRes(): Int? =
   when (this) {
-    DeviceIds.GasSensor -> R.string.device_gas_sensor
-    DeviceIds.GasValve -> R.string.device_gas_valve
-    DeviceIds.ClosetSensor -> R.string.device_closet_sensor
-    DeviceIds.Dehumidifier -> R.string.device_dehumidifier
+    DeviceIds.GasMonitor -> R.string.device_gas_monitor
+    DeviceIds.ClosetMonitor -> R.string.device_closet_monitor
     else -> null
   }
 

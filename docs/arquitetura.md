@@ -33,7 +33,7 @@ O app e o firmware falam a mesma língua, copiada da forma como o Home Assistant
 | Conceito | No código | Significado | Exemplo |
 |---|---|---|---|
 | **Cômodo** | `Area` | Um lugar da casa | Cozinha, Quarto |
-| **Dispositivo** | `Device` | Uma peça física ou lógica dentro de um cômodo | Sensor de gás, desumidificador |
+| **Dispositivo** | `Device` | A unidade que se compra e se instala num cômodo, com uma ou mais entidades | Monitor de gás, monitor do armário |
 | **Entidade** | `Entity` | Uma informação ou um controle de um dispositivo | Nível de gás, umidade, liga/desliga |
 
 No código, o cômodo se chama `Area` para não colidir com o `Room`, o banco de dados do Android.
@@ -44,9 +44,10 @@ Na maquete:
 
 | Cômodo | Dispositivo | Entidades |
 |---|---|---|
-| Cozinha | Sensor de gás (MQ-2) | nível de gás (sensor), vazamento (sensor binário), válvula (somente leitura) |
-| Quarto | Sensor do armário (DHT11) | temperatura, umidade |
-| Quarto | Desumidificador (relé) | ligado (chave com comando), modo Automático ou Manual |
+| Cozinha | Monitor de gás (sensor MQ-2, válvula e alarme) | nível de gás, estado, vazamentos desde que ligou, válvula (somente leitura) |
+| Quarto | Monitor do armário (sensor DHT11 e relé do desumidificador) | temperatura, umidade, desumidificador (chave com comando), modo Automático ou Manual |
+
+O sensor, a válvula e o relé **não são dispositivos**: são partes de um. Um dispositivo é o que se compra e se instala. Na maquete, um ESP32 só roda os dois porque o trabalho pede; numa casa real, cada um seria uma placa própria, e o app não perceberia a diferença.
 
 O botão de rearme **não é uma entidade**: ele é físico e só existe no ESP32.
 

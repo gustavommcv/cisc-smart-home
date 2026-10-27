@@ -27,7 +27,7 @@ class LabelsTest {
     assertNull(EntityId("smoke").labelRes())
   }
 
-  private val devices = listOf("gas-sensor", "gas-valve", "closet-sensor", "dehumidifier")
+  private val devices = listOf("gas-monitor", "closet-monitor")
 
   @Test
   fun `every device of the maquete has a name in Portuguese`() {

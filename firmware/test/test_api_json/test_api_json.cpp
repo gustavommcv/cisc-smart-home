@@ -85,16 +85,33 @@ void test_the_house_has_a_kitchen_and_a_bedroom() {
   TEST_ASSERT_EQUAL_STRING("bedroom", areas[1]["id"].as<const char*>());
 }
 
-void test_the_devices_are_grouped_by_area() {
+// A device is a unit someone would buy and install, and its entities are what it senses and what it controls. In
+// the maquete one ESP32 runs the unit of each room; in a real house each would be a board of its own.
+void test_each_room_has_one_device_that_is_a_unit_and_not_a_component() {
   JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
   JsonArray kitchen = home["areas"][0]["devices"];
   JsonArray bedroom = home["areas"][1]["devices"];
-  TEST_ASSERT_EQUAL_UINT(2, kitchen.size());
-  TEST_ASSERT_EQUAL_STRING("gas-sensor", kitchen[0]["id"].as<const char*>());
-  TEST_ASSERT_EQUAL_STRING("gas-valve", kitchen[1]["id"].as<const char*>());
-  TEST_ASSERT_EQUAL_UINT(2, bedroom.size());
-  TEST_ASSERT_EQUAL_STRING("closet-sensor", bedroom[0]["id"].as<const char*>());
-  TEST_ASSERT_EQUAL_STRING("dehumidifier", bedroom[1]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_UINT(1, kitchen.size());
+  TEST_ASSERT_EQUAL_STRING("gas-monitor", kitchen[0]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("Gas monitor", kitchen[0]["name"].as<const char*>());
+  TEST_ASSERT_EQUAL_UINT(1, bedroom.size());
+  TEST_ASSERT_EQUAL_STRING("closet-monitor", bedroom[0]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("Closet monitor", bedroom[0]["name"].as<const char*>());
+}
+
+std::string idsOf(JsonArray entities) {
+  std::string ids;
+  for (JsonObject item : entities) {
+    if (!ids.empty()) ids += ",";
+    ids += item["id"].as<const char*>();
+  }
+  return ids;
+}
+
+void test_a_device_holds_everything_its_unit_senses_and_controls() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  TEST_ASSERT_EQUAL_STRING("gas-level,gas-state,gas-alerts,valve-open", idsOf(home["areas"][0]["devices"][0]["entities"]).c_str());
+  TEST_ASSERT_EQUAL_STRING("temperature,humidity,dehumidifier-power,dehumidifier-mode", idsOf(home["areas"][1]["devices"][0]["entities"]).c_str());
 }
 
 void test_every_entity_id_is_unique_across_the_house() {
@@ -218,7 +235,8 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_the_home_envelope_carries_version_boot_and_uptime);
   RUN_TEST(test_the_house_has_a_kitchen_and_a_bedroom);
-  RUN_TEST(test_the_devices_are_grouped_by_area);
+  RUN_TEST(test_each_room_has_one_device_that_is_a_unit_and_not_a_component);
+  RUN_TEST(test_a_device_holds_everything_its_unit_senses_and_controls);
   RUN_TEST(test_every_entity_id_is_unique_across_the_house);
   RUN_TEST(test_the_gas_level_is_a_sensor_in_adc_units);
   RUN_TEST(test_the_gas_state_uses_the_names_of_the_contract);

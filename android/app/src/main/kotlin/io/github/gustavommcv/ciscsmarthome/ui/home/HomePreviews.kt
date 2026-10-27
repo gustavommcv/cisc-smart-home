@@ -25,12 +25,13 @@ private fun previewHome(gasState: String) =
         "Kitchen",
         listOf(
           Device(
-            DeviceId("gas-sensor"),
-            "Gas sensor",
+            DeviceId("gas-monitor"),
+            "Gas monitor",
             listOf(
               Entity.Sensor(EntityId("gas-level"), "Gas level", SensorValue.Number(142.0), "adc"),
               Entity.Sensor(EntityId("gas-state"), "Gas state", SensorValue.Text(gasState)),
               Entity.Sensor(EntityId("gas-alerts"), "Gas alerts since boot", SensorValue.Number(if (gasState == "emergency") 1.0 else 0.0)),
+              Entity.BinarySensor(EntityId("valve-open"), "Valve open", gasState != "emergency"),
             ),
           ),
         ),
@@ -40,14 +41,15 @@ private fun previewHome(gasState: String) =
         "Bedroom",
         listOf(
           Device(
-            DeviceId("closet-sensor"),
-            "Closet sensor",
+            DeviceId("closet-monitor"),
+            "Closet monitor",
             listOf(
               Entity.Sensor(EntityId("temperature"), "Temperature", SensorValue.Number(21.4), "°C"),
               Entity.Sensor(EntityId("humidity"), "Humidity", SensorValue.Unavailable, "%"),
+              Entity.Switch(EntityId("dehumidifier-power"), "Power", on = false, commandable = true),
+              Entity.Select(EntityId("dehumidifier-mode"), "Mode", "automatic", listOf("automatic", "manual"), commandable = true),
             ),
           ),
-          Device(DeviceId("dehumidifier"), "Dehumidifier", listOf(Entity.Switch(EntityId("dehumidifier-power"), "Power", on = false, commandable = true))),
         ),
       ),
     ),
