@@ -61,13 +61,14 @@ firmware/
 ├── lib/
 │   ├── domain/        regras puras, sem Arduino: roda e é testada no computador
 │   ├── application/   liga sensores, regras e atuadores; mantém o histórico
+│   ├── conversions/   contas puras dos adaptadores (escala do MQ-2, leitura plausível do DHT11)
 │   ├── adapters/      uma classe por peça: MQ-2, DHT11, relé, servo, buzzer, LED, botão
 │   └── api/           REST + SSE, conversão para JSON
 ├── src/main.cpp       monta tudo (único lugar que conhece as classes concretas)
 └── test/              testes do domínio e da aplicação, rodando no computador
 ```
 
-Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera código reutilizável e testável. Por enquanto existem `domain` e `application`.
+Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera código reutilizável e testável. Por enquanto existem `domain`, `application`, `conversions` e `adapters`. As contas dos adaptadores que não dependem de hardware ficam em `conversions`, para serem testadas no computador.
 
 - **Domínio:** máquina de estados do gás (`GasGuard`), controle de umidade com dois limites e modo Automático/Manual (`HumidityController`), tratamento do botão (`ButtonDebouncer`) e a estrutura do histórico (`RingBuffer`). Não inclui `Arduino.h`.
 - **Portas:** interfaces pequenas, definidas pelo que a aplicação precisa (ler gás, ler clima, ligar uma chave, ler o relógio). Ficam junto com a aplicação, que é quem as usa.
@@ -148,12 +149,13 @@ O desenvolvimento é guiado por testes: primeiro o teste que falha, depois o có
 |---|---|---|
 | Regras do domínio do firmware | Testes unitários (Unity) pelo PlatformIO, ambiente `native` | No computador |
 | Aplicação do firmware | O mesmo, com portas falsas no lugar do hardware | No computador |
-| Adaptadores e API do firmware | Verificação manual com a placa e o contrato escrito | Na placa |
+| Contas dos adaptadores | Testes unitários no computador | No computador |
+| Adaptadores e API do firmware | [Roteiro manual](roteiro-maquete.md) com a placa, e o contrato escrito | Na placa |
 | Domínio e dados do app | Testes JVM (JUnit) com um servidor HTTP falso no lugar do ESP32 | No computador |
 | Telas do app | Testes de interface do Compose | No computador |
 | Sistema inteiro | Roteiro manual com o celular conectado ao ESP32 | Maquete |
 
-Cada pull request traz os testes da mudança, e o **CI** (GitHub Actions) os roda sozinho a cada PR. Hoje ele cobre os testes do firmware. A compilação para o ESP32 entra na fase 3, e o app, quando ele existir.
+Cada pull request traz os testes da mudança, e o **CI** (GitHub Actions) os roda sozinho a cada PR. Hoje ele roda os testes do firmware e compila o firmware para o ESP32. O app entra quando ele existir.
 
 ## Fluxo de trabalho
 

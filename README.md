@@ -70,13 +70,14 @@ cisc-smart-home/
 
 - [Arquitetura](docs/arquitetura.md): camadas do firmware e do app, modelo de dados, conexão, alertas e testes
 - [API](docs/api.md): o contrato entre o app e o ESP32
+- [Roteiro de teste da maquete](docs/roteiro-maquete.md): o que conferir na placa depois de gravar o firmware
 - [Decisões de arquitetura](docs/decisoes): o porquê de cada escolha, com as alternativas descartadas
 
 ## Ferramentas de desenvolvimento
 
 | Para quê | O quê |
 |---|---|
-| Firmware | PlatformIO 6 e um compilador C++ no computador, para os testes |
+| Firmware | PlatformIO 6 e um compilador C++ no computador, para os testes. A placa usa o núcleo Arduino-ESP32 3.3.12, que o PlatformIO baixa sozinho |
 | App | JDK 21, Android SDK (plataforma 36) e Gradle (pelo wrapper do projeto) |
 | Testar no celular | `adb` e um celular com depuração USB |
 
@@ -87,7 +88,15 @@ cd firmware
 pio test -e native
 ```
 
-Os comandos do app e da gravação no ESP32 entram aqui quando essas partes forem criadas.
+Compilar, gravar no ESP32 e acompanhar o Serial:
+
+```bash
+cd firmware
+pio run -e esp32dev -t upload
+pio device monitor
+```
+
+Os comandos do app entram aqui quando ele for criado.
 
 ## Fases
 
@@ -97,7 +106,7 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 |---|---|---|
 | 1 | README e decisões de arquitetura | concluída |
 | 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
-| 3 | Firmware: aplicação, hardware, rede própria e API REST + SSE. Em três partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** rede e servidor | 3a em andamento |
+| 3 | Firmware: aplicação, hardware, rede própria e API REST + SSE. Em três partes: **3a** contrato da API e camada de aplicação (concluída), **3b** hardware, **3c** rede e servidor | 3b em andamento |
 | 4 | App: núcleo (modelo de dados, comunicação, histórico) | |
 | 5 | App: telas | |
 | 6 | App: conexão ao ESP32 e alertas | |
