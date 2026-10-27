@@ -84,6 +84,14 @@ bool isOption(JsonArray options, const std::string& value) {
 
 }  // namespace
 
+Response Api::tooManyClients() {
+  return error(503, "too-many-clients", "Too many clients are listening to the events");
+}
+
+Response Api::notAcceptable() {
+  return error(406, "not-acceptable", "This route streams events: send the header \"Accept: text/event-stream\"");
+}
+
 Response Api::handle(Method method, const std::string& path, const std::string& query, const std::string& body) {
   if (path == "/api/v1/home") {
     if (method != Method::Get) return methodNotAllowed();

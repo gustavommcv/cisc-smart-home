@@ -169,12 +169,13 @@ Sem `limit`, a resposta traz **no máximo 100 amostras**, para caber na memória
 
 ## Eventos em tempo real: `GET /api/v1/events`
 
-Uma conexão **SSE** (`Content-Type: text/event-stream`) que fica aberta. O ESP32 envia:
+Uma conexão **SSE** (`Content-Type: text/event-stream`) que fica aberta. A requisição precisa do cabeçalho `Accept: text/event-stream`, que qualquer cliente SSE já envia; sem ele a resposta é `406`. O ESP32 envia:
 
 | Evento | Quando | Conteúdo |
 |---|---|---|
 | `home` | Logo ao conectar, e depois quando algo mudou (no máximo uma vez por segundo) | O mesmo JSON de `GET /api/v1/home` |
 | `alert` | Quando começa um vazamento de gás | Veja abaixo |
+| `ping` | Depois de 15 segundos sem enviar nada | Vazio. Serve só para o app saber que a conexão está viva, e ele a ignora |
 
 ```text
 event: home
@@ -186,7 +187,7 @@ data: {"type":"gas-leak","areaId":"kitchen","entityId":"gas-state","count":1,"up
 
 - `count` é o valor de `gas-alerts` naquele momento. O app o usa, junto com o `bootId`, para **não avisar duas vezes** do mesmo vazamento, mesmo que reconecte.
 - Se o app estava desconectado quando o vazamento começou, ele vê `gas-state` em `emergency` e `gas-alerts` maior que o último que conhecia, e avisa ao reconectar.
-- A cada 15 segundos sem novidade, o ESP32 manda uma linha de comentário (`: keepalive`). **Se o app ficar 20 segundos sem receber nada, deve reconectar.**
+- A cada 15 segundos sem novidade, o ESP32 manda um evento `ping`, sem dados. **Se o app ficar 20 segundos sem receber nada (nem `ping`), deve reconectar.**
 - O evento `home` só sai quando algo mudou (o `uptimeMs` sozinho não conta) e, no máximo, **uma vez por segundo**. O `alert` não espera esse intervalo: sai na hora, **antes** do `home` do mesmo instante.
 - Quem conecta depois de um vazamento não recebe o `alert` antigo, só o estado atual. Para saber se perdeu algum, compare o `count` de `gas-alerts` com o último que conhecia.
 - O ESP32 aceita poucas conexões de eventos ao mesmo tempo. Com o limite atingido, responde `503`.
@@ -226,6 +227,7 @@ Qualquer resposta de erro tem este formato. A entidade é verificada **antes** d
 | 400 | `invalid-query` | O `after` ou o `limit` do histórico não é um número válido |
 | 403 | `not-commandable` | A entidade não aceita comandos |
 | 404 | `not-found` | A entidade ou a rota não existe |
+| 406 | `not-acceptable` | A rota de eventos foi pedida sem `Accept: text/event-stream` |
 | 405 | `method-not-allowed` | A rota existe, mas não aceita esse método |
 | 503 | `too-many-clients` | Conexões de eventos demais |
 
@@ -243,5 +245,5 @@ curl -X PUT -H 'Content-Type: application/json' -d '{"value": true}' \
 ```
 
 ```bash
-curl -N http://192.168.4.1/api/v1/events
+curl -N -H 'Accept: text/event-stream' http://192.168.4.1/api/v1/events
 ```
