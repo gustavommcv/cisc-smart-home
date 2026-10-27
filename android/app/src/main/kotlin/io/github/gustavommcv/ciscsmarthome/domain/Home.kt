@@ -27,6 +27,20 @@ data class Home(val bootId: BootId, val uptimeMs: Long, val areas: List<Area>) {
   }
 
   fun findEntity(id: EntityId): Entity? = locate(id)?.entity
+
+  /**
+   * The same house with [entity] in place of the one that has its id, as when the board answers a
+   * command with the entity as it ended up. A house without such an entity is returned as it is.
+   */
+  fun withEntity(entity: Entity): Home {
+    if (locate(entity.id) == null) return this
+    return copy(
+      areas =
+        areas.map { area ->
+          area.copy(devices = area.devices.map { device -> device.copy(entities = device.entities.map { if (it.id == entity.id) entity else it }) })
+        },
+    )
+  }
 }
 
 data class Placement(val area: Area, val device: Device, val entity: Entity)

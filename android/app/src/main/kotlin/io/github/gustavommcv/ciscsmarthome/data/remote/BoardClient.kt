@@ -24,14 +24,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * It does not choose the network, the timeouts or the address: [http] and [baseUrl] come from
  * outside, so a test can point it at a fake board.
  */
-class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) {
+class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) : BoardApi {
   private val json: Json = BoardJson
 
-  suspend fun getHome(): BoardResult<Home> =
+  override suspend fun getHome(): BoardResult<Home> =
     call(request("api/v1/home"), ::parseHome)
 
-  /** Asks an entity to become [value]. The result is the entity as the board says it ended up. */
-  suspend fun sendCommand(entityId: EntityId, value: CommandValue): BoardResult<Entity> {
+  override suspend fun sendCommand(entityId: EntityId, value: CommandValue): BoardResult<Entity> {
     val url = baseUrl.newBuilder().addPathSegments("api/v1/entities").addPathSegment(entityId.value).addPathSegment("value").build()
     val body = buildJsonObject {
       put(
@@ -48,8 +47,7 @@ class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) 
     }
   }
 
-  /** The stored samples, oldest first. [after] keeps only those with a greater uptime; [limit] caps how many. */
-  suspend fun getHistory(after: Long? = null, limit: Int? = null): BoardResult<HistoryPage> {
+  override suspend fun getHistory(after: Long?, limit: Int?): BoardResult<HistoryPage> {
     val url =
       baseUrl.newBuilder().addPathSegments("api/v1/history").apply {
         if (after != null) addQueryParameter("after", after.toString())
