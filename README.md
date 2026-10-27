@@ -118,7 +118,7 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 | 1 | README e decisões de arquitetura | concluída |
 | 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
 | 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | concluída |
-| 4 | App Android. Em quatro partes: **4a** esqueleto e CI (concluída), **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas, **4d** conexão ao ESP32 e alertas | 4b em andamento: modelo e cliente REST prontos; faltam os eventos e o histórico |
+| 4 | App Android. Em quatro partes: **4a** esqueleto e CI (concluída), **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas, **4d** conexão ao ESP32 e alertas | 4b em andamento: modelo, cliente REST e eventos prontos; falta o histórico local |
 | 5 | Esquemático, tabela de custos e material da apresentação | |
 
 ## Licença
