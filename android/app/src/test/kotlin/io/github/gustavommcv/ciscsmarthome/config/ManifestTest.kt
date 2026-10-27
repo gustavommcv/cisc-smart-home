@@ -29,9 +29,34 @@ class ManifestTest {
   private val application get() = manifest.getElementsByTagName("application").elements().single()
 
   @Test
-  fun `the app asks for the internet and for nothing else`() {
+  fun `the app asks for what reaching the board and watching it in the background need, and for nothing else`() {
     val permissions = manifest.getElementsByTagName("uses-permission").elements().map { it.android("name") }
-    assertEquals(listOf("android.permission.INTERNET"), permissions)
+    assertEquals(
+      setOf(
+        "android.permission.INTERNET",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CHANGE_NETWORK_STATE",
+      ),
+      permissions.toSet(),
+    )
+    assertEquals("a permission is asked for twice", permissions.size, permissions.toSet().size)
+  }
+
+  @Test
+  fun `the service is the one that watches the board, declared as a connected device and kept private`() {
+    val service = manifest.getElementsByTagName("service").elements().single()
+    assertEquals(".service.HomeService", service.android("name"))
+    assertEquals("connectedDevice", service.android("foregroundServiceType"))
+    assertEquals("false", service.android("exported"))
+  }
+
+  @Test
+  fun `the only part of the app another app can start is the screen`() {
+    val exported = manifest.getElementsByTagName("activity").elements().filter { it.android("exported") == "true" }
+    assertEquals(listOf(".ui.MainActivity"), exported.map { it.android("name") })
+    assertEquals(0, manifest.getElementsByTagName("receiver").length + manifest.getElementsByTagName("provider").length)
   }
 
   @Test

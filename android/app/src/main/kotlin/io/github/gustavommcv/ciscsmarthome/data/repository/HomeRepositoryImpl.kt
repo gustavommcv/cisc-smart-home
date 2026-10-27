@@ -6,6 +6,7 @@ import io.github.gustavommcv.ciscsmarthome.data.remote.BoardEvents
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardResult
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardStreamUpdate
 import io.github.gustavommcv.ciscsmarthome.data.remote.ErrorCode
+import io.github.gustavommcv.ciscsmarthome.domain.AlertMemory
 import io.github.gustavommcv.ciscsmarthome.domain.AlertTracker
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
@@ -45,12 +46,15 @@ class HomeRepositoryImpl(
   private val events: BoardEvents,
   private val store: HistoryStore,
   private val clock: Clock,
-  private val alertTracker: AlertTracker,
+  private val alertMemory: AlertMemory,
   private val deviceClock: DeviceClock = DeviceClock(),
 ) : HomeRepository {
   private val homeState = MutableStateFlow<Home?>(null)
   private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Connecting)
   private val news = Channel<GasAlert>(Channel.UNLIMITED)
+  // Starts from what was announced before the app was last closed, so a leak is not announced twice.
+  private val alertTracker = AlertTracker(alertMemory.load())
+  private var remembered = alertTracker.announced()
 
   override val home: StateFlow<Home?> = homeState.asStateFlow()
   override val connection: StateFlow<ConnectionState> = connectionState.asStateFlow()
@@ -83,7 +87,10 @@ class HomeRepositoryImpl(
           connectionState.value = ConnectionState.Connected
           when (val event = update.event) {
             is HomeEvent.HomeUpdated -> accept(event.home)
-            is HomeEvent.GasLeak -> if (alertTracker.onAlertEvent(event.bootId, event.count)) news.trySend(GasAlert(event.bootId, event.areaId, event.count))
+            is HomeEvent.GasLeak -> {
+              if (alertTracker.onAlertEvent(event.bootId, event.count)) news.trySend(GasAlert(event.bootId, event.areaId, event.count))
+              remember()
+            }
           }
         }
         is BoardStreamUpdate.Lost -> connectionState.value = ConnectionState.Disconnected(update.error.toProblem())
@@ -112,6 +119,15 @@ class HomeRepositoryImpl(
     homeState.value = incoming
     val leaks = incoming.gasLeakStatus() ?: return
     if (alertTracker.onHome(incoming.bootId, leaks.alertCount, leaks.active)) news.trySend(GasAlert(incoming.bootId, leaks.areaId, leaks.alertCount))
+    remember()
+  }
+
+  /** Keeps what was announced, after it was handed to whoever shows it, and only when it changed. */
+  private fun remember() {
+    val now = alertTracker.announced()
+    if (now == remembered) return
+    alertMemory.save(now)
+    remembered = now
   }
 
   /** Fetches what the board has that the phone does not, a page at a time, from where the phone's history of this boot ends. */
