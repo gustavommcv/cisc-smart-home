@@ -6,11 +6,9 @@ import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.Device
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
-import io.github.gustavommcv.ciscsmarthome.domain.EntityId
+import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
 import io.github.gustavommcv.ciscsmarthome.nameRes
-
-private val GAS_STATE = EntityId("gas-state")
 
 /** The name of a room: ours in Portuguese for the rooms we know, the board's otherwise. */
 @Composable
@@ -32,7 +30,7 @@ internal fun entityValue(entity: Entity): String {
     is Entity.Sensor ->
       when (val value = entity.value) {
         is SensorValue.Number -> formatNumber(value.value) + (entity.unit?.let { " $it" } ?: "")
-        is SensorValue.Text -> if (entity.id == GAS_STATE) gasStateRes(value.value)?.let { stringResource(it) } ?: value.value else value.value
+        is SensorValue.Text -> if (entity.id == EntityIds.GasState) gasStateRes(value.value)?.let { stringResource(it) } ?: value.value else value.value
         SensorValue.Unavailable -> unavailable
       }
     is Entity.BinarySensor -> entity.value?.let { stringResource(if (it) R.string.value_yes else R.string.value_no) } ?: unavailable

@@ -35,8 +35,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
-
-private val DEHUMIDIFIER_MODE = EntityId("dehumidifier-mode")
+import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
 
 /** One room: its devices, what each reads, and the controls of what can be commanded. The history chart comes to it next. */
 @Composable
@@ -122,7 +121,7 @@ private fun SelectRow(entity: Entity.Select, enabled: Boolean, onChoose: (String
         )
       }
     }
-    if (entity.id == DEHUMIDIFIER_MODE) {
+    if (entity.id == EntityIds.DehumidifierMode) {
       Text(stringResource(R.string.hint_dehumidifier_mode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
   }

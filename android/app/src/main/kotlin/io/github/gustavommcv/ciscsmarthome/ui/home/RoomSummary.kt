@@ -1,13 +1,13 @@
 package io.github.gustavommcv.ciscsmarthome.ui.home
 
 import io.github.gustavommcv.ciscsmarthome.domain.Area
-import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
+import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.gasLeakStatus
 
 // What matters most about a room, in the order it is shown. A card of the list has room for few things.
-private val HIGHLIGHTS = listOf("gas-state", "gas-level", "temperature", "humidity", "dehumidifier-power").map(::EntityId)
+private val HIGHLIGHTS = listOf(EntityIds.GasState, EntityIds.GasLevel, EntityIds.Temperature, EntityIds.Humidity, EntityIds.DehumidifierPower)
 private const val MOST_ON_A_CARD = 3
 
 /**
