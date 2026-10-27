@@ -1,7 +1,10 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
+#include "HouseController.h"
 #include "HouseSnapshot.h"
 
 // JSON for the API contract in docs/api.md. Everything here is a pure function of
@@ -20,6 +23,12 @@ bool entityJson(const HouseSnapshot& snapshot, const std::string& entityId, std:
 
 // The data of the SSE "alert" event, sent when a gas leak starts.
 std::string alertJson(const HouseSnapshot& snapshot);
+
+// The stored samples, oldest first (GET /api/v1/history). When `hasAfter` is set,
+// only samples with an uptime greater than `after` are included, and at most
+// `limit` of them are returned.
+std::string historyJson(const HouseController::History& history, const std::string& bootId, bool hasAfter,
+                        std::uint32_t after, std::size_t limit);
 
 }  // namespace api
 }  // namespace cisc

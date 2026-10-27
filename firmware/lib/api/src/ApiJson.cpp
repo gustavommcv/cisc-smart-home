@@ -119,6 +119,31 @@ bool entityJson(const HouseSnapshot& snapshot, const std::string& entityId, std:
   return false;
 }
 
+std::string historyJson(const HouseController::History& history, const std::string& bootId, bool hasAfter,
+                        std::uint32_t after, std::size_t limit) {
+  JsonDocument document;
+  document["bootId"] = bootId;
+  JsonArray samples = document["samples"].to<JsonArray>();
+  for (std::size_t i = 0; i < history.size() && samples.size() < limit; ++i) {
+    const Sample& sample = history.at(i);
+    if (hasAfter && sample.timestampMs <= after) continue;
+    JsonObject entry = samples.add<JsonObject>();
+    entry["uptimeMs"] = sample.timestampMs;
+    JsonObject values = entry["values"].to<JsonObject>();
+    values["gas-level"] = sample.gasReading;
+    if (sample.climateValid) {
+      values["temperature"] = oneDecimal(sample.temperatureC);
+      values["humidity"] = oneDecimal(sample.humidityPercent);
+    } else {
+      values["temperature"] = nullptr;
+      values["humidity"] = nullptr;
+    }
+  }
+  std::string json;
+  serializeJson(document, json);
+  return json;
+}
+
 std::string alertJson(const HouseSnapshot& snapshot) {
   JsonDocument alert;
   alert["type"] = "gas-leak";
