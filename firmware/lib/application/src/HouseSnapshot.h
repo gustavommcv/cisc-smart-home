@@ -14,10 +14,13 @@ struct HouseSnapshot {
 
   int gasReading;  // 0-1023 scale
   GasState gasState;
+  bool gasDetected;  // gas above the threshold right now
   bool valveOpen;
+  bool rearmReady;  // the air has been clean long enough for the button to be accepted
   std::uint32_t gasAlertCount;  // leaks since boot; one per emergency
 
-  bool climateValid;  // false until the first good reading
+  bool climateSampled;  // false until the sensor has been read once, good or not
+  bool climateValid;    // false when the last reading was missing or implausible
   float temperatureC;
   float humidityPercent;
 

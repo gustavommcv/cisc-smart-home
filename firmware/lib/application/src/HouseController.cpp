@@ -69,8 +69,11 @@ HouseSnapshot HouseController::snapshot() const {
       now_,
       gasReading_,
       gasGuard_.state(),
+      gasGuard_.gasDetected(),
       gasGuard_.valveOpen(),
+      gasGuard_.canRearm(now_),
       gasAlertCount_,
+      climateSampled_,
       climate_.valid,
       climate_.temperatureC,
       climate_.humidityPercent,
@@ -81,6 +84,7 @@ HouseSnapshot HouseController::snapshot() const {
 
 void HouseController::readClimate() {
   climate_ = hardware_.climateSensor.read();
+  climateSampled_ = true;
   humidity_.update(climate_.humidityPercent, climate_.valid);
 }
 

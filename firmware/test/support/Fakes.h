@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+
 #include "HouseController.h"
 #include "Ports.h"
 
@@ -41,6 +43,17 @@ struct Output : cisc::Output {
   void set(bool on) override {
     value = on;
     ++writes;
+  }
+};
+
+struct Display : cisc::Display {
+  char top[17] = "";
+  char bottom[17] = "";
+  int shows = 0;
+  void show(const char* topLine, const char* bottomLine) override {
+    std::snprintf(top, sizeof(top), "%s", topLine);
+    std::snprintf(bottom, sizeof(bottom), "%s", bottomLine);
+    ++shows;
   }
 };
 

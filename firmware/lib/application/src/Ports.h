@@ -47,4 +47,12 @@ class Output {
   virtual void set(bool on) = 0;
 };
 
+// A two-line character display, 16 columns wide. The lines are plain text without
+// padding; a display that needs padding or has fewer columns handles it itself.
+class Display {
+ public:
+  virtual ~Display() = default;
+  virtual void show(const char* topLine, const char* bottomLine) = 0;
+};
+
 }  // namespace cisc
