@@ -65,6 +65,43 @@ Os limites atuais estão em [`Settings.h`](../firmware/lib/domain/src/Settings.h
 
 O botão deste módulo dá nível alto quando apertado, então **o rearme acontece ao apertar**, e não ao soltar.
 
+## Rede e API
+
+O ESP32 cria o Wi-Fi `cisc-smart-home` (a senha está no seu `firmware/src/WifiSecrets.h`, que o Git não guarda). Logo depois de ligar, o Serial diz:
+
+```text
+wifi: network "cisc-smart-home" at 192.168.4.1, boot id 8c77dd9e
+```
+
+O `boot id` muda a cada reinício. Se o Serial disser `wifi: could not start the access point`, a casa continua funcionando sem a API: confira se a senha tem de 8 a 63 caracteres.
+
+### Com o celular (só olhar)
+
+1. Entre no Wi-Fi `cisc-smart-home`. O Android avisa que a rede **não tem internet**: escolha **manter conectado**.
+2. No navegador, abra `http://192.168.4.1/api/v1/home`. Deve aparecer o JSON da casa, com o gás, a umidade e o desumidificador.
+3. Abra `http://192.168.4.1/api/v1/history`. Deve vir uma lista de amostras (vazia nos primeiros 10 s).
+4. Abra `http://192.168.4.1/api/v1/events`. O navegador não pede eventos, então deve vir um JSON de erro com `not-acceptable`. É o certo.
+5. Com um vazamento (passo 3 do roteiro), recarregue `home`: `gas-state` mostra `emergency` e `gas-alerts` sobe.
+
+### Com o computador (teste completo)
+
+O script [`tools/check_api.py`](../tools/check_api.py) confere as rotas, os erros e o fluxo de eventos contra a placa de verdade, em uns 30 segundos. Ele só fala HTTP. **Mas o computador precisa entrar no Wi-Fi do ESP32, e fica sem internet enquanto isso.** Os três comandos juntos:
+
+```bash
+nmcli device wifi connect cisc-smart-home password 'SUA-SENHA'
+python3 tools/check_api.py | tee ~/cisc-api-check.txt
+nmcli connection up SUA-REDE-DE-CASA
+```
+
+O último volta para a sua rede de casa (troque `SUA-REDE-DE-CASA` pelo nome dela). Para o computador não entrar sozinho no Wi-Fi do ESP32 no futuro, apague o perfil: `nmcli connection delete cisc-smart-home`.
+
+Peça uma coisa de cada vez ao ESP32 enquanto o script roda: ele espera uns 18 s sem mexer na maquete para ver o `ping`. Se algo falhar, o script diz qual verificação e o que recebeu, e avisa se a placa reiniciou no meio.
+
+### O que observar no Serial durante o teste
+
+- A leitura do gás (`gas=`) deve continuar em **44 a uns 60** com o Wi-Fi ligado e clientes conectados. O rádio pode somar ruído ao sensor analógico; se `gas` pular para perto de 160, me avise.
+- O LCD e o alarme continuam respondendo normalmente.
+
 ## Anotar
 
 Se algum passo falhar, anote o número do passo e copie 3 ou 4 linhas do monitor perto do problema. Com isso dá para saber se a causa é o fio, o sensor ou o código.

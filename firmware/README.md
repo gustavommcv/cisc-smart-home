@@ -46,7 +46,7 @@ Em [`lib/api/src`](lib/api/src): tudo o que o contrato de [`docs/api.md`](../doc
 | `Api` | O roteador REST: recebe método, caminho, parâmetros e corpo, age na casa e devolve o status e o JSON, com os códigos de erro do contrato |
 | `EventStream` | O que o fluxo SSE envia a cada instante: o estado quando muda (no máximo uma vez por segundo), o alerta de vazamento na hora e um sinal de vida a cada 15 s |
 
-O servidor web, que carrega esses textos pela rede, entra na parte 3d.
+Os eventos são entregues como pares nome e dados: quem formata o `event:` e o `data:` é o servidor web.
 
 ## Conversões
 
@@ -71,8 +71,24 @@ Em [`lib/adapters/src`](lib/adapters/src): uma classe por peça, cada uma implem
 | `OpenDrainOutput` | O relé. "Ligado" puxa o pino para o GND e "desligado" **solta** o pino. O módulo não desliga de forma confiável com o pino em 3,3 V |
 | `ServoValve` | O servo que faz o papel da válvula |
 | `I2cLcdDisplay` | O LCD 16x2 com módulo I2C. A biblioteca acha o endereço sozinha, e sem LCD o resto continua funcionando |
+| `AccessPoint` | O Wi-Fi da maquete. A placa cria a própria rede, em um endereço fixo (`192.168.4.1`) |
+| `ApiServer` | Leva a API por HTTP com a ESPAsyncWebServer: lê a requisição, pergunta à `Api` o que responder e escreve a resposta, e entrega os eventos do `EventStream` aos clientes. Não tem regra própria |
 
 Os pinos, os níveis e os ângulos da maquete estão todos em [`src/BoardConfig.h`](src/BoardConfig.h). O [`src/main.cpp`](src/main.cpp) monta tudo: é o único lugar que sabe qual adaptador está atrás de cada porta. Ele também imprime uma linha de resumo por segundo no Serial.
+
+### A senha do Wi-Fi
+
+O nome da rede (`cisc-smart-home`) é público e fica em [`src/WifiConfig.h`](src/WifiConfig.h). A **senha** fica em `src/WifiSecrets.h`, que o Git ignora. Para criar o seu:
+
+```bash
+cp src/WifiSecrets.example.h src/WifiSecrets.h
+```
+
+e troque a senha dentro (de 8 a 63 caracteres; o código não compila com menos). Sem esse arquivo, o firmware compila com a senha do exemplo e um aviso. É o que acontece no CI.
+
+### Duas tarefas ao mesmo tempo
+
+O servidor web roda em uma tarefa própria, enquanto o laço principal controla a casa. Um `std::mutex` impede os dois de mexerem na casa ao mesmo tempo: o laço o segura durante o `tick()` e o servidor, durante cada resposta. O laço também espera 1 ms por volta, para dar a vez ao servidor. O **alarme de gás não depende da rede**: se o Wi-Fi não subir, a casa continua funcionando.
 
 ## Rodar os testes
 
@@ -100,4 +116,4 @@ O que conferir depois de gravar está no [roteiro de teste da maquete](../docs/r
 
 ## O que vem depois
 
-Na parte 3c, a rede própria do ESP32 e o servidor da API.
+Na fase 4, o aplicativo Android que conversa com essa API.

@@ -106,7 +106,7 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 |---|---|---|
 | 1 | README e decisões de arquitetura | concluída |
 | 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
-| 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação (concluída), **3b** hardware (concluída), **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | 3c em andamento |
+| 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | 3c concluída, 3d em andamento |
 | 4 | App: núcleo (modelo de dados, comunicação, histórico) | |
 | 5 | App: telas | |
 | 6 | App: conexão ao ESP32 e alertas | |
