@@ -15,6 +15,10 @@ struct Mq2Wiring {
 
 // Turns the voltage measured at the pin into the 0-1023 scale the gas rules use,
 // which is the scale of the original Arduino sketch. Out-of-range values are clamped.
+//
+// The ESP32 ADC does not measure below about 140 mV at the pin, so with this
+// divider the lowest reading is 44, not 0. In clean air the MQ-2 of the maquete
+// sits right there; the gas threshold is far above it, so detection is not affected.
 inline int mq2ReadingFromPinMillivolts(float pinMillivolts, const Mq2Wiring& wiring = Mq2Wiring{}) {
   const float sensorMillivolts = pinMillivolts * (wiring.upperOhms + wiring.lowerOhms) / wiring.lowerOhms;
   const float reading = sensorMillivolts * 1023.0f / wiring.supplyMillivolts;
