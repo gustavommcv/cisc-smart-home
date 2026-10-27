@@ -1,0 +1,17 @@
+# Build outputs and tool caches
+build/
+.gradle/
+.pio/
+.kotlin/
+
+# Local configuration
+local.properties
+*.iml
+.idea/
+
+# Android signing
+*.jks
+*.keystore
+
+# OS noise
+.DS_Store
