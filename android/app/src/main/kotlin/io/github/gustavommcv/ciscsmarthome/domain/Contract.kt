@@ -20,11 +20,10 @@ object AreaIds {
   val Bedroom = AreaId("bedroom")
 }
 
+/** The devices of the maquete. A device is a unit someone would buy and install, and it has the entities it senses and controls. */
 object DeviceIds {
-  val GasSensor = DeviceId("gas-sensor")
-  val GasValve = DeviceId("gas-valve")
-  val ClosetSensor = DeviceId("closet-sensor")
-  val Dehumidifier = DeviceId("dehumidifier")
+  val GasMonitor = DeviceId("gas-monitor")
+  val ClosetMonitor = DeviceId("closet-monitor")
 }
 
 /** What `gas-state` says. */

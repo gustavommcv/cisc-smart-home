@@ -22,10 +22,8 @@
     <string name="no_connection_title">Sem conexão com a placa</string>
     <string name="stale_note">Mostrando a última leitura.</string>
 
-    <string name="device_gas_sensor">Sensor de gás</string>
-    <string name="device_gas_valve">Válvula de gás</string>
-    <string name="device_closet_sensor">Sensor do armário</string>
-    <string name="device_dehumidifier">Desumidificador</string>
+    <string name="device_gas_monitor">Monitor de gás</string>
+    <string name="device_closet_monitor">Monitor do armário</string>
 
     <string name="command_refused">A placa não aceitou o comando.</string>
     <string name="command_unreachable">Não foi possível falar com a placa. Confira a conexão e tente de novo.</string>

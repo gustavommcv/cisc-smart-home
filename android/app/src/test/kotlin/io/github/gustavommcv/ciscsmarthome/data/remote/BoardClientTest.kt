@@ -87,13 +87,23 @@ class BoardClientTest {
   }
 
   @Test
+  fun `a device holds everything its unit senses and controls`() {
+    reply(200, CONTRACT_HOME)
+    val home = runBlocking { client.getHome() }.value()
+    val ids = { area: Int -> home.areas[area].devices.single().entities.map { it.id.value } }
+    assertEquals(listOf("gas-level", "gas-state", "gas-alerts", "valve-open"), ids(0))
+    assertEquals(listOf("temperature", "humidity", "dehumidifier-power", "dehumidifier-mode"), ids(1))
+  }
+
+  @Test
   fun `the whole example of the contract becomes the model of the house`() {
     reply(200, CONTRACT_HOME)
     val home = runBlocking { client.getHome() }.value()
     assertEquals(BootId("5f3a9c21"), home.bootId)
     assertEquals(183_450L, home.uptimeMs)
     assertEquals(listOf(AreaId("kitchen"), AreaId("bedroom")), home.areas.map { it.id })
-    assertEquals(listOf(DeviceId("gas-sensor"), DeviceId("gas-valve")), home.areas[0].devices.map { it.id })
+    assertEquals(listOf(DeviceId("gas-monitor")), home.areas[0].devices.map { it.id })
+    assertEquals(listOf(DeviceId("closet-monitor")), home.areas[1].devices.map { it.id })
     assertEquals(
       Entity.Sensor(EntityId("gas-level"), "Gas level", SensorValue.Number(142.0), unit = "adc"),
       home.findEntity(EntityId("gas-level")),
@@ -404,17 +414,15 @@ class BoardClientTest {
       "apiVersion": 1, "bootId": "5f3a9c21", "uptimeMs": 183450,
       "areas": [
         {"id": "kitchen", "name": "Kitchen", "devices": [
-          {"id": "gas-sensor", "name": "Gas sensor", "entities": [
+          {"id": "gas-monitor", "name": "Gas monitor", "entities": [
             {"id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc"},
             {"id": "gas-state", "kind": "sensor", "name": "Gas state", "value": "normal"},
-            {"id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0}]},
-          {"id": "gas-valve", "name": "Gas valve", "entities": [
+            {"id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0},
             {"id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true}]}]},
         {"id": "bedroom", "name": "Bedroom", "devices": [
-          {"id": "closet-sensor", "name": "Closet sensor", "entities": [
+          {"id": "closet-monitor", "name": "Closet monitor", "entities": [
             {"id": "temperature", "kind": "sensor", "name": "Temperature", "value": 21.4, "unit": "°C"},
-            {"id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%"}]},
-          {"id": "dehumidifier", "name": "Dehumidifier", "entities": [
+            {"id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%"},
             {"id": "dehumidifier-power", "kind": "switch", "name": "Power", "value": false, "commandable": true},
             {"id": "dehumidifier-mode", "kind": "select", "name": "Mode", "value": "automatic",
              "options": ["automatic", "manual"], "commandable": true}]}]}]}"""

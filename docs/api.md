@@ -35,18 +35,12 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
       "name": "Kitchen",
       "devices": [
         {
-          "id": "gas-sensor",
-          "name": "Gas sensor",
+          "id": "gas-monitor",
+          "name": "Gas monitor",
           "entities": [
             { "id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc" },
             { "id": "gas-state", "kind": "sensor", "name": "Gas state", "value": "normal" },
-            { "id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0 }
-          ]
-        },
-        {
-          "id": "gas-valve",
-          "name": "Gas valve",
-          "entities": [
+            { "id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0 },
             { "id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true }
           ]
         }
@@ -57,17 +51,11 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
       "name": "Bedroom",
       "devices": [
         {
-          "id": "closet-sensor",
-          "name": "Closet sensor",
+          "id": "closet-monitor",
+          "name": "Closet monitor",
           "entities": [
             { "id": "temperature", "kind": "sensor", "name": "Temperature", "value": 21.4, "unit": "°C" },
-            { "id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%" }
-          ]
-        },
-        {
-          "id": "dehumidifier",
-          "name": "Dehumidifier",
-          "entities": [
+            { "id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%" },
             { "id": "dehumidifier-power", "kind": "switch", "name": "Power", "value": false, "commandable": true },
             { "id": "dehumidifier-mode", "kind": "select", "name": "Mode", "value": "automatic",
               "options": ["automatic", "manual"], "commandable": true }
@@ -107,14 +95,16 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 
 | Cômodo | Dispositivo | Entidade | Tipo | Valores |
 |---|---|---|---|---|
-| `kitchen` | `gas-sensor` | `gas-level` | `sensor` | 0 a 1023, unidade `adc` |
+| `kitchen` | `gas-monitor` | `gas-level` | `sensor` | 0 a 1023, unidade `adc` |
 | | | `gas-state` | `sensor` | `starting`, `normal` ou `emergency` |
 | | | `gas-alerts` | `sensor` | quantos vazamentos desde que o ESP32 ligou |
-| | `gas-valve` | `valve-open` | `binary_sensor` | `true` quando aberta. **Somente leitura**: só o botão físico a reabre |
-| `bedroom` | `closet-sensor` | `temperature` | `sensor` | graus Celsius, ou `null` |
+| | | `valve-open` | `binary_sensor` | `true` quando aberta. **Somente leitura**: só o botão físico a reabre |
+| `bedroom` | `closet-monitor` | `temperature` | `sensor` | graus Celsius, ou `null` |
 | | | `humidity` | `sensor` | porcentagem, ou `null` |
-| | `dehumidifier` | `dehumidifier-power` | `switch` | ligado ou desligado |
+| | | `dehumidifier-power` | `switch` | ligado ou desligado |
 | | | `dehumidifier-mode` | `select` | `automatic` ou `manual` |
+
+Um **dispositivo** é a unidade que se compra e se instala, como o monitor de gás ou o monitor do armário, e as **entidades** são o que ele lê e o que ele controla. O sensor, a válvula e o relé não são dispositivos: são partes de um. Na maquete, um ESP32 só roda os dois dispositivos porque o trabalho pede; numa casa real, cada um seria uma placa. O app não precisa saber disso: ele só vê cômodos, dispositivos e entidades.
 
 Os valores decimais têm uma casa.
 

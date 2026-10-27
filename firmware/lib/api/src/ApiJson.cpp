@@ -39,8 +39,10 @@ JsonArray addDevice(JsonArray devices, const char* id, const char* name) {
   return device["entities"].to<JsonArray>();
 }
 
-// The maquete: a kitchen with the gas system and a bedroom with the closet climate
-// and the dehumidifier. Entity ids and units are part of the contract.
+// The maquete: a kitchen with a gas monitor and a bedroom with a closet monitor. A device is
+// the unit someone would buy and install, and its entities are what it senses and controls:
+// here one ESP32 runs both units, because the maquete asks for it, and in a real house each
+// would be a board of its own. Entity ids and units are part of the contract.
 void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bootId) {
   home["apiVersion"] = kApiVersion;
   home["bootId"] = bootId;
@@ -49,27 +51,25 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
 
   JsonArray kitchen = addArea(areas, "kitchen", "Kitchen");
 
-  JsonArray gasSensor = addDevice(kitchen, "gas-sensor", "Gas sensor");
-  JsonObject level = addEntity(gasSensor, "gas-level", "sensor", "Gas level");
+  JsonArray gasMonitor = addDevice(kitchen, "gas-monitor", "Gas monitor");
+  JsonObject level = addEntity(gasMonitor, "gas-level", "sensor", "Gas level");
   level["value"] = s.gasReading;
   level["unit"] = "adc";
-  addEntity(gasSensor, "gas-state", "sensor", "Gas state")["value"] = toString(s.gasState);
-  addEntity(gasSensor, "gas-alerts", "sensor", "Gas alerts since boot")["value"] = s.gasAlertCount;
-
-  JsonArray gasValve = addDevice(kitchen, "gas-valve", "Gas valve");
-  addEntity(gasValve, "valve-open", "binary_sensor", "Valve open")["value"] = s.valveOpen;
+  addEntity(gasMonitor, "gas-state", "sensor", "Gas state")["value"] = toString(s.gasState);
+  addEntity(gasMonitor, "gas-alerts", "sensor", "Gas alerts since boot")["value"] = s.gasAlertCount;
+  addEntity(gasMonitor, "valve-open", "binary_sensor", "Valve open")["value"] = s.valveOpen;
 
   JsonArray bedroom = addArea(areas, "bedroom", "Bedroom");
 
-  JsonArray closet = addDevice(bedroom, "closet-sensor", "Closet sensor");
-  JsonObject temperature = addEntity(closet, "temperature", "sensor", "Temperature");
+  JsonArray closetMonitor = addDevice(bedroom, "closet-monitor", "Closet monitor");
+  JsonObject temperature = addEntity(closetMonitor, "temperature", "sensor", "Temperature");
   if (s.climateValid) {
     temperature["value"] = oneDecimal(s.temperatureC);
   } else {
     temperature["value"] = nullptr;
   }
   temperature["unit"] = "°C";
-  JsonObject humidity = addEntity(closet, "humidity", "sensor", "Humidity");
+  JsonObject humidity = addEntity(closetMonitor, "humidity", "sensor", "Humidity");
   if (s.climateValid) {
     humidity["value"] = oneDecimal(s.humidityPercent);
   } else {
@@ -77,11 +77,10 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
   }
   humidity["unit"] = "%";
 
-  JsonArray dehumidifier = addDevice(bedroom, "dehumidifier", "Dehumidifier");
-  JsonObject power = addEntity(dehumidifier, "dehumidifier-power", "switch", "Power");
+  JsonObject power = addEntity(closetMonitor, "dehumidifier-power", "switch", "Power");
   power["value"] = s.dehumidifierOn;
   power["commandable"] = true;
-  JsonObject mode = addEntity(dehumidifier, "dehumidifier-mode", "select", "Mode");
+  JsonObject mode = addEntity(closetMonitor, "dehumidifier-mode", "select", "Mode");
   mode["value"] = toString(s.dehumidifierMode);
   JsonArray options = mode["options"].to<JsonArray>();
   options.add(toString(ControlMode::Automatic));

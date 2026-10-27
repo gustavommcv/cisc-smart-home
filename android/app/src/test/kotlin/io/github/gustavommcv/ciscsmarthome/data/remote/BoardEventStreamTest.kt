@@ -140,7 +140,7 @@ class BoardEventStreamTest {
 
   private fun home(boot: String = BOOT, apiVersion: Int = 1, alerts: Long = 0) =
     """{"apiVersion":$apiVersion,"bootId":"$boot","uptimeMs":183450,"areas":[{"id":"kitchen","name":"Kitchen","devices":[""" +
-      """{"id":"gas-sensor","name":"Gas sensor","entities":[{"id":"gas-state","kind":"sensor","name":"Gas state","value":"normal"},""" +
+      """{"id":"gas-monitor","name":"Gas monitor","entities":[{"id":"gas-state","kind":"sensor","name":"Gas state","value":"normal"},""" +
       """{"id":"gas-alerts","kind":"sensor","name":"Gas alerts since boot","value":$alerts}]}]}]}"""
 
   private fun homeEvent(boot: String = BOOT, apiVersion: Int = 1, alerts: Long = 0) = "event: home\ndata: ${home(boot, apiVersion, alerts)}\n\n"
@@ -158,8 +158,8 @@ class BoardEventStreamTest {
           "Kitchen",
           listOf(
             Device(
-              DeviceId("gas-sensor"),
-              "Gas sensor",
+              DeviceId("gas-monitor"),
+              "Gas monitor",
               listOf(
                 Entity.Sensor(EntityId("gas-state"), "Gas state", SensorValue.Text("normal")),
                 Entity.Sensor(EntityId("gas-alerts"), "Gas alerts since boot", SensorValue.Number(alerts.toDouble())),

@@ -28,8 +28,8 @@ fun houseOfTheMaquete(
       "Kitchen",
       listOf(
         Device(
-          DeviceId("gas-sensor"),
-          "Gas sensor",
+          DeviceId("gas-monitor"),
+          "Gas monitor",
           listOf(
             Entity.Sensor(EntityId("gas-state"), "Gas state", SensorValue.Text(gasState)),
             Entity.Sensor(EntityId("gas-alerts"), "Gas alerts", SensorValue.Number(gasAlerts.toDouble())),
@@ -41,7 +41,7 @@ fun houseOfTheMaquete(
     Area(
       AreaId("bedroom"),
       "Bedroom",
-      listOf(Device(DeviceId("dehumidifier"), "Dehumidifier", listOf(Entity.Switch(EntityId("dehumidifier-power"), "Power", on = false, commandable = true)))),
+      listOf(Device(DeviceId("closet-monitor"), "Closet monitor", listOf(Entity.Switch(EntityId("dehumidifier-power"), "Power", on = false, commandable = true)))),
     )
   return Home(boot, uptimeMs, if (withBedroom) listOf(kitchen, bedroom) else listOf(kitchen))
 }
