@@ -2,6 +2,7 @@ package io.github.gustavommcv.ciscsmarthome.ui.home
 
 import androidx.annotation.StringRes
 import io.github.gustavommcv.ciscsmarthome.R
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 
 // The words of the screen for what the board names in English. What the app does not know is shown as the board says it.
@@ -18,6 +19,17 @@ internal fun EntityId.labelRes(): Int? =
     "humidity" -> R.string.label_humidity
     "dehumidifier-power" -> R.string.label_dehumidifier_power
     "dehumidifier-mode" -> R.string.label_dehumidifier_mode
+    else -> null
+  }
+
+/** The name of a device of the maquete, or null for one the app does not know. */
+@StringRes
+internal fun DeviceId.nameRes(): Int? =
+  when (value) {
+    "gas-sensor" -> R.string.device_gas_sensor
+    "gas-valve" -> R.string.device_gas_valve
+    "closet-sensor" -> R.string.device_closet_sensor
+    "dehumidifier" -> R.string.device_dehumidifier
     else -> null
   }
 

@@ -22,6 +22,11 @@
     <string name="no_connection_title">Sem conexão com a placa</string>
     <string name="stale_note">Mostrando a última leitura.</string>
 
+    <string name="device_gas_sensor">Sensor de gás</string>
+    <string name="device_gas_valve">Válvula de gás</string>
+    <string name="device_closet_sensor">Sensor do armário</string>
+    <string name="device_dehumidifier">Desumidificador</string>
+
     <string name="label_gas_level">Nível de gás</string>
     <string name="label_gas_state">Gás</string>
     <string name="label_gas_alerts">Vazamentos desde que ligou</string>

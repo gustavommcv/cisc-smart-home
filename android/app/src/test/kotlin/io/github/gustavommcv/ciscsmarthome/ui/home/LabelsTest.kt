@@ -1,6 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.ui.home
 
 import io.github.gustavommcv.ciscsmarthome.R
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -24,6 +25,24 @@ class LabelsTest {
   @Test
   fun `an entity the app does not know has no label of its own`() {
     assertNull(EntityId("smoke").labelRes())
+  }
+
+  private val devices = listOf("gas-sensor", "gas-valve", "closet-sensor", "dehumidifier")
+
+  @Test
+  fun `every device of the maquete has a name in Portuguese`() {
+    devices.forEach { assertNotEquals("no name for $it", null, DeviceId(it).nameRes()) }
+  }
+
+  @Test
+  fun `the names of the devices are all different`() {
+    val names = devices.map { DeviceId(it).nameRes() }
+    assertEquals(names.size, names.toSet().size)
+  }
+
+  @Test
+  fun `a device the app does not know has no name of its own`() {
+    assertNull(DeviceId("camera").nameRes())
   }
 
   @Test

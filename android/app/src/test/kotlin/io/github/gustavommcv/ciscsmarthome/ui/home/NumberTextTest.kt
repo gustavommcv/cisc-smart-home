@@ -27,6 +27,18 @@ class NumberTextTest {
   }
 
   @Test
+  fun `by default numbers are written the Portuguese way, whatever the language of the phone`() {
+    val before = Locale.getDefault()
+    try {
+      Locale.setDefault(Locale.US)
+      assertEquals("21,4", formatNumber(21.4))
+      assertEquals("142", formatNumber(142.0))
+    } finally {
+      Locale.setDefault(before)
+    }
+  }
+
+  @Test
   fun `thousands are not grouped`() {
     assertEquals("1023", formatNumber(1023.0, portuguese))
     assertEquals("12345.6", formatNumber(12345.6, Locale.ROOT))

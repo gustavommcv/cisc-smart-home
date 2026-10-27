@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
+import io.github.gustavommcv.ciscsmarthome.domain.Device
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
@@ -14,6 +15,10 @@ private val GAS_STATE = EntityId("gas-state")
 /** The name of a room: ours in Portuguese for the rooms we know, the board's otherwise. */
 @Composable
 internal fun roomName(area: Area): String = area.id.nameRes()?.let { stringResource(it) } ?: area.name
+
+/** The name of a device: ours in Portuguese for the ones we know, the board's otherwise. */
+@Composable
+internal fun deviceName(device: Device): String = device.id.nameRes()?.let { stringResource(it) } ?: device.name
 
 /** The label of an entity: ours in Portuguese for the ones we know, the board's otherwise. */
 @Composable

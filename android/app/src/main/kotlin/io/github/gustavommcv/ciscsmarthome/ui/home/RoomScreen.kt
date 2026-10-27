@@ -38,7 +38,7 @@ internal fun RoomScreen(area: Area, connection: ConnectionState, onBack: () -> U
       item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = 8.dp)) }
       if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
       area.devices.forEach { device ->
-        item { Text(device.name, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp)) }
+        item { Text(deviceName(device), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp)) }
         items(device.entities, key = { it.id.value }) { entity -> EntityRow(entity) }
       }
       item { LockedCard(R.string.device_add, modifier = Modifier.padding(top = 16.dp)) }
