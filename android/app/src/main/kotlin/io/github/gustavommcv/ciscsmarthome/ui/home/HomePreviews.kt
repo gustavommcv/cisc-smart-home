@@ -58,30 +58,30 @@ private val unreachable = ConnectionState.Disconnected(ConnectionProblem.Unreach
 @Preview(showBackground = true)
 @Composable
 private fun RoomsPreview() {
-  CiscTheme { HomeContent(HomeState(previewHome("normal"), ConnectionState.Connected), onOpenRoom = {}, onBack = {}) }
+  CiscTheme { HomeContent(HomeState(previewHome("normal"), ConnectionState.Connected), onOpenRoom = {}, onBack = {}, onCommand = { _, _ -> }, onNoticeShown = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun RoomsInEmergencyPreview() {
-  CiscTheme { HomeContent(HomeState(previewHome("emergency"), ConnectionState.Connected), onOpenRoom = {}, onBack = {}) }
+  CiscTheme { HomeContent(HomeState(previewHome("emergency"), ConnectionState.Connected), onOpenRoom = {}, onBack = {}, onCommand = { _, _ -> }, onNoticeShown = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun RoomsWithoutConnectionPreview() {
-  CiscTheme { HomeContent(HomeState(previewHome("normal"), unreachable), onOpenRoom = {}, onBack = {}) }
+  CiscTheme { HomeContent(HomeState(previewHome("normal"), unreachable), onOpenRoom = {}, onBack = {}, onCommand = { _, _ -> }, onNoticeShown = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun NoConnectionPreview() {
-  CiscTheme { HomeContent(HomeState(null, unreachable), onOpenRoom = {}, onBack = {}) }
+  CiscTheme { HomeContent(HomeState(null, unreachable), onOpenRoom = {}, onBack = {}, onCommand = { _, _ -> }, onNoticeShown = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun RoomPreview() {
   val home = previewHome("normal")
-  CiscTheme { HomeContent(HomeState(home, ConnectionState.Connected, Screen.Room(AreaId("bedroom"))), onOpenRoom = {}, onBack = {}) }
+  CiscTheme { HomeContent(HomeState(home, ConnectionState.Connected, Screen.Room(AreaId("bedroom"))), onOpenRoom = {}, onBack = {}, onCommand = { _, _ -> }, onNoticeShown = {}) }
 }

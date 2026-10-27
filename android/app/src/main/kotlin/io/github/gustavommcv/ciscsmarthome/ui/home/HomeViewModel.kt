@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
+import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
+import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
+import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +15,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** The screens of the app: the list of rooms, and one room. */
 sealed interface Screen {
@@ -20,18 +25,31 @@ sealed interface Screen {
   data class Room(val areaId: AreaId) : Screen
 }
 
-/** What the home screen shows: the house as last heard, whether the board is being heard now, and which screen is open. */
-data class HomeState(val home: Home?, val connection: ConnectionState, val screen: Screen = Screen.Rooms) {
+/**
+ * What the home screen shows: the house as last heard, whether the board is being heard now, which screen is open,
+ * which entities are waiting for the answer to a command, and what to tell the user about a command that failed.
+ */
+data class HomeState(
+  val home: Home?,
+  val connection: ConnectionState,
+  val screen: Screen = Screen.Rooms,
+  val pending: Set<EntityId> = emptySet(),
+  val notice: CommandNotice? = null,
+) {
   /** The room that is open, or null on the list. */
   val openRoom: Area?
     get() = (screen as? Screen.Room)?.let { room -> home?.areas?.firstOrNull { it.id == room.areaId } }
 }
 
-class HomeViewModel(repository: HomeRepository) : ViewModel() {
+class HomeViewModel(private val repository: HomeRepository) : ViewModel() {
   private val screen = MutableStateFlow<Screen>(Screen.Rooms)
+  private val pending = MutableStateFlow<Set<EntityId>>(emptySet())
+  private val notice = MutableStateFlow<CommandNotice?>(null)
 
   val state: StateFlow<HomeState> =
-    combine(repository.home, repository.connection, screen) { home, connection, screen -> HomeState(home, connection, visible(screen, home)) }
+    combine(repository.home, repository.connection, screen, pending, notice) { home, connection, screen, pending, notice ->
+        HomeState(home, connection, visible(screen, home), pending, notice)
+      }
       // Stops following the repository a few seconds after the screen is gone, so a rotation does not restart anything.
       .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value))
 
@@ -44,6 +62,29 @@ class HomeViewModel(repository: HomeRepository) : ViewModel() {
     if (screen.value == Screen.Rooms) return false
     screen.value = Screen.Rooms
     return true
+  }
+
+  /** Asks the board to change an entity. One command at a time for each entity: while it waits for its answer, another is not sent. */
+  fun send(entityId: EntityId, value: CommandValue) {
+    if (entityId in pending.value) return
+    pending.update { it + entityId }
+    viewModelScope.launch {
+      try {
+        notice.value =
+          when (val result = repository.send(entityId, value)) {
+            is CommandResult.Applied -> null
+            CommandResult.Refused -> CommandNotice.Refused
+            is CommandResult.Failed -> CommandNotice.Failed(result.problem)
+          }
+      } finally {
+        pending.update { it - entityId }
+      }
+    }
+  }
+
+  /** The user has seen what the notice said. */
+  fun dismissNotice() {
+    notice.value = null
   }
 
   // A room that is no longer in the house cannot stay open.

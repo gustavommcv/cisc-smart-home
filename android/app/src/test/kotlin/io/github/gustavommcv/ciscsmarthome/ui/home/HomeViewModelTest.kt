@@ -3,13 +3,19 @@ package io.github.gustavommcv.ciscsmarthome.ui.home
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
+import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
+import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
+import io.github.gustavommcv.ciscsmarthome.domain.Entity
+import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -142,5 +148,122 @@ class HomeViewModelTest {
     assertEquals("Bedroom", viewModel.state.value.openRoom?.name)
     viewModel.back()
     assertNull(viewModel.state.value.openRoom)
+  }
+
+  // ---- commands ------------------------------------------------------------------------------
+
+  private val power = EntityId("dehumidifier-power")
+  private val mode = EntityId("dehumidifier-mode")
+  private val powerOn = Entity.Switch(power, "Power", on = true, commandable = true)
+
+  private fun TestScope.following(viewModel: HomeViewModel) = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect {} }
+
+  @Test
+  fun `a command goes to the repository`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Applied(powerOn) }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    assertEquals(listOf(power to CommandValue.Flag(true)), repository.sent)
+  }
+
+  @Test
+  fun `the entity waits for the answer, and is free again when it comes`() = runTest {
+    val answer = CompletableDeferred<CommandResult>()
+    repository.sendHandler = { _, _ -> answer.await() }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+
+    viewModel.send(power, CommandValue.Flag(true))
+    assertEquals(setOf(power), viewModel.state.value.pending)
+
+    answer.complete(CommandResult.Applied(powerOn))
+    assertEquals(emptySet<EntityId>(), viewModel.state.value.pending)
+  }
+
+  @Test
+  fun `a second command for an entity that is waiting is not sent`() = runTest {
+    val answer = CompletableDeferred<CommandResult>()
+    repository.sendHandler = { _, _ -> answer.await() }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+
+    viewModel.send(power, CommandValue.Flag(true))
+    viewModel.send(power, CommandValue.Flag(false))
+
+    assertEquals(1, repository.sent.size)
+  }
+
+  @Test
+  fun `a command for another entity is not held by the one that waits`() = runTest {
+    val answer = CompletableDeferred<CommandResult>()
+    repository.sendHandler = { _, _ -> answer.await() }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+
+    viewModel.send(power, CommandValue.Flag(true))
+    viewModel.send(mode, CommandValue.Choice("manual"))
+
+    assertEquals(2, repository.sent.size)
+    assertEquals(setOf(power, mode), viewModel.state.value.pending)
+  }
+
+  @Test
+  fun `an entity can be commanded again once the answer came`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Applied(powerOn) }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    viewModel.send(power, CommandValue.Flag(false))
+    assertEquals(2, repository.sent.size)
+  }
+
+  @Test
+  fun `a command that was done says nothing`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Applied(powerOn) }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    assertNull(viewModel.state.value.notice)
+  }
+
+  @Test
+  fun `a command the board refused says so`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Refused }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    assertEquals(CommandNotice.Refused, viewModel.state.value.notice)
+  }
+
+  @Test
+  fun `a command that could not be sent says why`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Failed(ConnectionProblem.Unreachable) }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    assertEquals(CommandNotice.Failed(ConnectionProblem.Unreachable), viewModel.state.value.notice)
+  }
+
+  @Test
+  fun `the notice goes away when it has been seen`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Refused }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    viewModel.dismissNotice()
+    assertNull(viewModel.state.value.notice)
+  }
+
+  @Test
+  fun `a command that works takes an old notice away`() = runTest {
+    var answer: CommandResult = CommandResult.Refused
+    repository.sendHandler = { _, _ -> answer }
+    val viewModel = HomeViewModel(repository)
+    following(viewModel)
+    viewModel.send(power, CommandValue.Flag(true))
+    answer = CommandResult.Applied(powerOn)
+    viewModel.send(power, CommandValue.Flag(true))
+    assertNull(viewModel.state.value.notice)
   }
 }
