@@ -39,13 +39,13 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 ```text
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
-├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios
+├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST
 ├── ui/        as telas em Compose e um ViewModel por tela
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 └── di/        a montagem das dependências, sem framework
 ```
 
-Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/` e `domain/`.
+Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`, `domain/` e `data/`.
 
 ### O domínio
 
@@ -57,7 +57,19 @@ Kotlin puro, testado só com JUnit, sem nenhuma biblioteca:
 | `DeviceClock` | Põe o `uptimeMs` da placa no relógio do celular, como pede a seção "Tempo" de [`docs/api.md`](../docs/api.md). A placa não guarda hora: o celular anota a diferença a cada resposta, uma por partida |
 | `AlertTracker` | Decide quando um vazamento é notícia. O par (identificador de partida, contador de vazamentos) dá nome a cada um, então o mesmo vazamento é avisado **uma vez**, chegue pelo evento `alert`, pelo estado da casa ao reconectar, ou pelos dois. Vazamentos que terminaram enquanto o app estava fora não avisam depois. Guarda o que já foi avisado, para não repetir nem depois de o app reiniciar |
 
-As interfaces do domínio, como a do repositório, nascem junto com o primeiro código que as usa, a partir da 4b2. Criá-las antes seria código sem uso.
+O domínio também tem o `HistorySample` e o `HistoryPage` (as leituras guardadas pela placa) e o `CommandValue` (o que o usuário pede a uma entidade: ligar ou desligar, ou escolher uma opção). As interfaces do domínio, como a do repositório, nascem junto com o primeiro código que as usa, a partir da 4b4. Criá-las antes seria código sem uso.
+
+### O cliente REST
+
+Em `data/remote`, o lado REST do contrato de [`docs/api.md`](../docs/api.md). Usa OkHttp para a rede e `kotlinx.serialization` para o JSON.
+
+| Arquivo | O que faz |
+|---|---|
+| `BoardClient` | Lê a casa, manda um comando a uma entidade e busca o histórico (com `after` e `limit`). Cada chamada **devolve** o que deu, em vez de lançar exceção. Não escolhe a rede, o endereço nem os tempos limite: quem o cria os dá, e por isso os testes o apontam para um servidor falso. Se a corrotina for cancelada, a chamada à placa é cancelada junto |
+| `BoardResult` e `BoardError` | O resultado: a resposta, ou por que não houve. A placa **não respondeu** (`Unreachable`: sem rede, rede errada, lenta demais), **respondeu com um erro do contrato** (`Rejected`, com o código reconhecido) ou **respondeu o que o app não entende** (`Unexpected`) |
+| `BoardDtos` e `BoardMapping` | O JSON como ele viaja, e a tradução para o domínio. O app é **tolerante**, como o contrato pede: ignora campos desconhecidos, descarta entidades de um tipo que não conhece, e um valor que não combina com o tipo conta como "sem leitura válida" |
+
+O app ainda não pede a permissão de internet nem liberar o tráfego HTTP para o endereço da placa: isso entra na 4d, quando o cliente for ligado ao app.
 
 ### A regra de dependência é testada
 

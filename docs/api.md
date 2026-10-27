@@ -8,7 +8,7 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 
 - **HTTP/1.1 sem criptografia**, JSON em UTF-8. O ESP32 fica sempre em `http://192.168.4.1`.
 - **Versionada** no caminho: `/api/v1`. Acrescentar campos ou entidades não muda a versão. Mudar ou remover algo existente exige `/api/v2`.
-- **O app é tolerante:** ignora campos que não conhece. O firmware é rigoroso com o que recebe.
+- **O app é tolerante:** ignora campos que não conhece e entidades de um `kind` que não conhece. Um `value` que não combina com o `kind` conta como leitura inválida (`null`). O firmware é rigoroso com o que recebe.
 - **O modelo é genérico:** o app desenha a tela a partir de cômodos, dispositivos e entidades, sem conhecer o gás nem a umidade. Veja o [modelo de dados](arquitetura.md#modelo-de-dados).
 - **Sem autenticação.** A proteção é a senha da rede Wi-Fi do ESP32 (WPA2). É uma limitação aceita para um projeto de demonstração.
 - **Sem estado de hora.** O ESP32 só conhece o tempo desde que ligou (`uptimeMs`). Quem converte para a hora real é o app (veja [Tempo](#tempo)).
