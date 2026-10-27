@@ -140,8 +140,18 @@ Há três telas, escolhidas por `HomeContent` a partir do estado do `HomeViewMod
 | Tela | Quando aparece | O que mostra |
 |---|---|---|
 | **Cômodos** (`RoomsScreen`) | Há uma casa para mostrar | Um cartão por cômodo, com o nome em português e **até três coisas que importam nele** (na cozinha, o estado e o nível do gás; no quarto, a temperatura, a umidade e o desumidificador). O cartão do cômodo com vazamento fica **vermelho, com um aviso**. No fim, o cartão **bloqueado** "Adicionar cômodo / Em breve" |
-| **Cômodo** (`RoomScreen`) | Toque num cartão | Os dispositivos do cômodo e o que cada um lê, com o cartão bloqueado "Adicionar dispositivo". O botão de voltar do sistema volta para a lista |
+| **Cômodo** (`RoomScreen`) | Toque num cartão | Os dispositivos do cômodo e o que cada um lê, com **os controles do que a placa aceita comandar** (no quarto, um interruptor para ligar e desligar o desumidificador e a escolha entre Automático e Manual) e o cartão bloqueado "Adicionar dispositivo". O botão de voltar do sistema volta para a lista |
 | **Sem casa** (`NoHomeScreen`) | O app ainda não ouviu a placa | Uma espera, ou, se a placa não pode ser alcançada, o que conferir (o texto muda com o motivo: outra rede, conexões demais, versão diferente) |
+
+**Os controles** seguem poucas regras, todas em funções puras e no `HomeViewModel`, testadas sem celular:
+
+- **Só funcionam com a placa ouvida.** Sem conexão ficam desativados: um comando mandado ao vazio só diria que falhou (`Entity.controlEnabled`).
+- **Um comando de cada vez por entidade.** Enquanto o anterior espera a resposta, o controle fica desativado e um segundo toque não manda nada, então um toque duplo é um comando, não dois.
+- **A tela não adivinha.** O interruptor só muda quando a placa responde: o repositório troca a entidade pela resposta da placa. Se o comando falhar, o controle continua como estava e **uma mensagem aparece uma vez** (a placa não aceitou, não foi possível falar com ela, ou ela respondeu algo que o app não entende); ela não fica na tela como se fosse um estado do cômodo.
+- **Ligar ou desligar à mão passa a placa para o modo manual**, como diz o contrato (`docs/api.md`). A tela avisa isso embaixo da escolha do modo, e a mudança do modo chega pelo fluxo de eventos em cerca de um segundo. Para a placa voltar a decidir pela umidade, é só escolher Automático.
+- **Tocar no modo que já está escolhido não manda nada.**
+
+Os textos do app são em português; `tools:locale="pt"` no `strings.xml` diz isso ao lint, que senão trata o texto padrão como inglês e acusa palavras em português como erro de digitação.
 
 Quando a conexão cai **com uma casa já lida**, o app não esconde o que sabe: mostra a última leitura, com os cartões mais claros e o aviso "Sem conexão… Mostrando a última leitura". Mentir com um valor velho como se fosse novo seria pior que dizer que é velho.
 
