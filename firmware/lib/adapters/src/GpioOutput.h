@@ -6,9 +6,8 @@
 
 namespace adapters {
 
-// A digital output: the LED, the buzzer, the relay module. `activeHigh` says
-// which level turns the load on (a relay module that switches on with LOW has
-// it false). begin() leaves the output off.
+// A digital output that drives the pin both ways: the LED and the buzzer.
+// `activeHigh` says which level turns the load on. begin() leaves the output off.
 class GpioOutput : public cisc::Output {
  public:
   GpioOutput(std::uint8_t pin, bool activeHigh) : pin_(pin), activeHigh_(activeHigh) {}

@@ -11,6 +11,7 @@
 #include "I2cLcdDisplay.h"
 #include "ModuleButton.h"
 #include "Mq2GasSensor.h"
+#include "OpenDrainOutput.h"
 #include "ServoValve.h"
 #include "StatusPrinter.h"
 
@@ -23,7 +24,7 @@ adapters::ModuleButton button(board::kButtonPin, board::kButtonActiveHigh);
 adapters::ServoValve valve(board::kValveServoPin, board::kValveOpenDegrees, board::kValveClosedDegrees);
 adapters::GpioOutput alarmLed(board::kAlarmLedPin, board::kAlarmLedActiveHigh);
 adapters::GpioOutput buzzer(board::kBuzzerPin, board::kBuzzerActiveHigh);
-adapters::GpioOutput dehumidifier(board::kDehumidifierRelayPin, board::kRelayActiveHigh);
+adapters::OpenDrainOutput dehumidifier(board::kDehumidifierRelayPin);
 adapters::I2cLcdDisplay lcd(board::kLcdSdaPin, board::kLcdSclPin, board::kLcdColumns, board::kLcdRows);
 
 // A global, not a local: it keeps the whole history (about 7 KB).

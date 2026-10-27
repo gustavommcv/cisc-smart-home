@@ -55,7 +55,8 @@ Em [`lib/adapters/src`](lib/adapters/src): uma classe por peça, cada uma implem
 | `Mq2GasSensor` | O sensor de gás, lido pelo ADC |
 | `Dht11ClimateSensor` | O sensor de temperatura e umidade |
 | `ModuleButton` | O módulo do botão, com o nível que significa "apertado" |
-| `GpioOutput` | O LED, o buzzer e o relé, com o nível que significa "ligado" |
+| `GpioOutput` | O LED e o buzzer, com o nível que significa "ligado" |
+| `OpenDrainOutput` | O relé. "Ligado" puxa o pino para o GND e "desligado" **solta** o pino. O módulo não desliga de forma confiável com o pino em 3,3 V |
 | `ServoValve` | O servo que faz o papel da válvula |
 | `I2cLcdDisplay` | O LCD 16x2 com módulo I2C. A biblioteca acha o endereço sozinha, e sem LCD o resto continua funcionando |
 

@@ -27,8 +27,9 @@ constexpr unsigned long kLcdRefreshMs = 250;
 
 // The 3-pin button module outputs HIGH while pressed.
 constexpr bool kButtonActiveHigh = true;
-// The relay module switches on when its input is pulled LOW.
-constexpr bool kRelayActiveHigh = false;
+// The relay module switches on when its input is pulled LOW and does not release
+// reliably when the pin is driven to 3.3 V (measured on the maquete: pin HIGH after
+// LOW keeps it on, a floating pin turns it off). So the relay pin is open-drain.
 constexpr bool kBuzzerActiveHigh = true;
 constexpr bool kAlarmLedActiveHigh = true;
 
