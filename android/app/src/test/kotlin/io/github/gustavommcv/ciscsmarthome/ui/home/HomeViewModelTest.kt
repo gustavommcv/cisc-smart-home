@@ -3,22 +3,12 @@ package io.github.gustavommcv.ciscsmarthome.ui.home
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
-import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
-import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
-import io.github.gustavommcv.ciscsmarthome.domain.EntityId
-import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
-import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
-import io.github.gustavommcv.ciscsmarthome.domain.Reading
-import java.time.Instant
+import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -31,18 +21,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
-  private class FakeHomeRepository : HomeRepository {
-    override val home = MutableStateFlow<Home?>(null)
-    override val connection = MutableStateFlow<ConnectionState>(ConnectionState.Connecting)
-    override val alerts: Flow<GasAlert> = emptyFlow()
-
-    override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> = emptyFlow()
-
-    override suspend fun send(entityId: EntityId, value: CommandValue): CommandResult = CommandResult.Refused
-
-    override suspend fun keepSynced(): Nothing = awaitCancellation()
-  }
-
   private val repository = FakeHomeRepository()
   private val house = Home(BootId("aaaa1111"), 1_000, listOf(Area(AreaId("kitchen"), "Kitchen", emptyList())))
 

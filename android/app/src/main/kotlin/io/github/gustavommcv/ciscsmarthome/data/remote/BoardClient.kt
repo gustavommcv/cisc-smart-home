@@ -6,6 +6,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.HistoryPage
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -61,7 +63,8 @@ class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) 
   private suspend fun <T> call(request: Request, parse: (String) -> T): BoardResult<T> {
     val answer =
       try {
-        http.newCall(request).await().use { response -> response.code to response.body.string() }
+        // Reading the body waits on the network, so all of it is done off the caller's thread, which may be the main one.
+        withContext(Dispatchers.IO) { http.newCall(request).await().use { response -> response.code to response.body.string() } }
       } catch (e: IOException) {
         return BoardResult.Failure(BoardError.Unreachable(e))
       }

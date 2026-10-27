@@ -19,6 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.gustavommcv.ciscsmarthome.R
+import io.github.gustavommcv.ciscsmarthome.messageRes
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
@@ -66,18 +67,13 @@ internal fun HomeContent(state: HomeState, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ConnectionText(connection: ConnectionState, modifier: Modifier = Modifier) {
-  val (text, color) =
+  val color =
     when (connection) {
-      ConnectionState.Connecting -> R.string.connection_connecting to MaterialTheme.colorScheme.onSurfaceVariant
-      ConnectionState.Connected -> R.string.connection_connected to MaterialTheme.colorScheme.primary
-      is ConnectionState.Disconnected ->
-        when (connection.problem) {
-          ConnectionProblem.Unreachable -> R.string.connection_unreachable
-          ConnectionProblem.TooManyClients -> R.string.connection_too_many_clients
-          ConnectionProblem.Incompatible -> R.string.connection_incompatible
-        } to MaterialTheme.colorScheme.error
+      ConnectionState.Connecting -> MaterialTheme.colorScheme.onSurfaceVariant
+      ConnectionState.Connected -> MaterialTheme.colorScheme.primary
+      is ConnectionState.Disconnected -> MaterialTheme.colorScheme.error
     }
-  Text(stringResource(text), color = color, style = MaterialTheme.typography.bodyLarge, modifier = modifier)
+  Text(stringResource(connection.messageRes()), color = color, style = MaterialTheme.typography.bodyLarge, modifier = modifier)
 }
 
 @Composable

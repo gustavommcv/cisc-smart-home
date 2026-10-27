@@ -4,7 +4,6 @@ import io.github.gustavommcv.ciscsmarthome.data.remote.BoardError
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardResult
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardStreamUpdate
 import io.github.gustavommcv.ciscsmarthome.data.remote.ErrorCode
-import io.github.gustavommcv.ciscsmarthome.domain.AlertTracker
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
@@ -44,10 +43,11 @@ class HomeRepositoryImplTest {
   private val events = FakeBoardEvents()
   private val store = FakeHistoryStore()
   private val clock = TestClock(Instant.parse("2026-10-27T12:00:00Z"))
+  private val memory = FakeAlertMemory()
 
   // ---- helpers ------------------------------------------------------------------
 
-  private fun repository(tracker: AlertTracker = AlertTracker()) = HomeRepositoryImpl(api, events, store, clock, tracker)
+  private fun repository(memory: FakeAlertMemory = this.memory, events: FakeBoardEvents = this.events) = HomeRepositoryImpl(api, events, store, clock, memory)
 
   /** Starts the repository the way the service will: in the background, for as long as the test lasts. */
   private fun TestScope.start(repository: HomeRepositoryImpl) {
@@ -383,7 +383,7 @@ class HomeRepositoryImplTest {
   @Test
   fun `a leak that was already announced stays quiet after the app restarts`() = runTest {
     boardHas(house(state = "emergency", alerts = 1))
-    val repository = repository(AlertTracker(mapOf(A to 1L)))
+    val repository = repository(FakeAlertMemory(mapOf(A to 1L)))
     val alerts = collectAlerts(repository)
     start(repository)
     feed(BoardStreamUpdate.Connected)
@@ -398,6 +398,62 @@ class HomeRepositoryImplTest {
     feed(BoardStreamUpdate.Connected, leak(count = 1))
     val alerts = collectAlerts(repository)
     assertEquals(listOf(GasAlert(A, KITCHEN, 1)), alerts)
+  }
+
+  @Test
+  fun `a leak that was announced is remembered`() = runTest {
+    boardHas(house())
+    val repository = repository()
+    start(repository)
+    feed(BoardStreamUpdate.Connected, leak(count = 1))
+    assertEquals(mapOf(A to 1L), memory.saved)
+  }
+
+  @Test
+  fun `a leak announced by the home is remembered`() = runTest {
+    boardHas(house())
+    val repository = repository()
+    start(repository)
+    feed(BoardStreamUpdate.Connected, received(house(uptimeMs = 120_000, state = "emergency", alerts = 2)))
+    assertEquals(mapOf(A to 2L), memory.saved)
+  }
+
+  @Test
+  fun `leaks that ended while the app was away are remembered, so they are not announced later`() = runTest {
+    boardHas(house(state = "normal", alerts = 4))
+    val repository = repository()
+    start(repository)
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(mapOf(A to 4L), memory.saved)
+  }
+
+  @Test
+  fun `it saves only when what was announced changes`() = runTest {
+    boardHas(house(alerts = 1))
+    val repository = repository()
+    start(repository)
+    feed(BoardStreamUpdate.Connected)
+    val savesAfterTheFirstHome = memory.saves
+    feed(received(house(uptimeMs = 101_000, alerts = 1)), received(house(uptimeMs = 102_000, alerts = 1)), leak(count = 1))
+    assertEquals(savesAfterTheFirstHome, memory.saves)
+  }
+
+  @Test
+  fun `what was saved is what a restart needs to stay quiet about the same leak`() = runTest {
+    boardHas(house(state = "emergency", alerts = 1))
+    val first = repository()
+    start(first)
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(mapOf(A to 1L), memory.saved)
+
+    // The next run of the app: a repository of its own over what was saved. The same leak is not news to it.
+    val secondEvents = FakeBoardEvents()
+    val second = repository(memory, secondEvents)
+    val alerts = collectAlerts(second)
+    backgroundScope.launch { second.keepSynced() }
+    secondEvents.feed.trySend(BoardStreamUpdate.Connected)
+    runCurrent()
+    assertEquals(emptyList<GasAlert>(), alerts)
   }
 
   // ---- commands ---------------------------------------------------------------------------

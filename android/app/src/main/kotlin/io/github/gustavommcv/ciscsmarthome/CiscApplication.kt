@@ -1,14 +1,18 @@
 package io.github.gustavommcv.ciscsmarthome
 
 import android.app.Application
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import io.github.gustavommcv.ciscsmarthome.di.AppContainer
+import io.github.gustavommcv.ciscsmarthome.service.HomeService
 
-/** Builds the container when the process starts and sets the sync with the board going. */
-class CiscApplication : Application() {
-  val container: AppContainer by lazy { AppContainer(this) }
+/** Builds the container when something first needs it. The sync with the board is the service's, and it starts when the screen asks. */
+class CiscApplication : Application(), AppDependencies {
+  private val container: AppContainer by lazy { AppContainer(this) }
 
-  override fun onCreate() {
-    super.onCreate()
-    container.start()
+  override val homeRepository get() = container.homeRepository
+
+  override fun startMonitoring() {
+    ContextCompat.startForegroundService(this, Intent(this, HomeService::class.java))
   }
 }

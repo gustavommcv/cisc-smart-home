@@ -8,8 +8,15 @@ import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
@@ -365,6 +372,30 @@ class BoardClientTest {
     error(400, "invalid-query")
     val failure = runBlocking { client.getHistory(limit = 0) }.error() as BoardError.Rejected
     assertEquals(ErrorCode.InvalidQuery, failure.code)
+  }
+
+  // ---- the thread that calls ---------------------------------------------------------
+
+  @Test
+  fun `a call does not hold the thread that made it while the board takes its time to send the body`() {
+    // The headers come at once and the body 600 ms later: reading it is a wait on the network.
+    server.enqueue(
+      MockResponse.Builder().addHeader("Content-Type", "application/json").bodyDelay(600, TimeUnit.MILLISECONDS).body(CONTRACT_HOME).build(),
+    )
+    val caller = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    try {
+      val ticks = AtomicInteger()
+      runBlocking {
+        val call = async(caller) { client.getHome() }
+        // Another job on the same single thread: it can only run if the call has let go of the thread.
+        val ticker = launch(caller) { while (isActive) { ticks.incrementAndGet(); delay(20) } }
+        call.await().value()
+        ticker.cancelAndJoin()
+      }
+      assertTrue("the thread of the caller was held by the call ($ticks ticks in 600 ms)", ticks.get() >= 5)
+    } finally {
+      caller.close()
+    }
   }
 
   private companion object {
