@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The interface is in Portuguese, the language of its users. Code and comments are in English. -->
+<resources>
+    <string name="app_name">CISC Casa</string>
+    <string name="home_title">CISC Casa</string>
+    <string name="home_subtitle">Casa Inteligente Segura e Confortável</string>
+    <string name="home_under_construction">Em construção</string>
+</resources>

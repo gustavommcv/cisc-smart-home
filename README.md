@@ -61,7 +61,7 @@ Esta é a estrutura **planejada**. As pastas aparecem conforme as fases avançam
 ```text
 cisc-smart-home/
 ├── firmware/    ESP32 em C++ (PlatformIO), com o domínio testável no computador (já existe)
-├── android/     aplicativo em Kotlin + Jetpack Compose
+├── android/     aplicativo em Kotlin + Jetpack Compose (já existe)
 ├── hardware/    esquemático (KiCad) e lista de materiais
 └── docs/        arquitetura, decisões (ADRs) e o contrato da API
 ```
@@ -78,7 +78,7 @@ cisc-smart-home/
 | Para quê | O quê |
 |---|---|
 | Firmware | PlatformIO 6 e um compilador C++ no computador, para os testes. A placa usa o núcleo Arduino-ESP32 3.3.12, que o PlatformIO baixa sozinho |
-| App | JDK 21, Android SDK (plataforma 36) e Gradle (pelo wrapper do projeto) |
+| App | Android SDK com a plataforma 37 e o JDK 21 (o Gradle o encontra sozinho). O Gradle vem pelo wrapper do projeto |
 | Testar no celular | `adb` e um celular com depuração USB |
 
 Testes do firmware, que rodam no computador e não precisam da placa:
@@ -96,7 +96,18 @@ pio run -e esp32dev -t upload
 pio device monitor
 ```
 
-Os comandos do app entram aqui quando ele for criado.
+Testes do app, que também rodam no computador, e o APK de teste:
+
+```bash
+cd android
+./gradlew testDebugUnitTest assembleDebug
+```
+
+Instalar no celular (com a depuração USB ligada):
+
+```bash
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
 
 ## Fases
 
@@ -106,11 +117,9 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 |---|---|---|
 | 1 | README e decisões de arquitetura | concluída |
 | 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
-| 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | 3c concluída, 3d em andamento |
-| 4 | App: núcleo (modelo de dados, comunicação, histórico) | |
-| 5 | App: telas | |
-| 6 | App: conexão ao ESP32 e alertas | |
-| 7 | Esquemático, tabela de custos e material da apresentação | |
+| 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | concluída |
+| 4 | App Android. Em quatro partes: **4a** esqueleto e CI, **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas, **4d** conexão ao ESP32 e alertas | 4a em andamento |
+| 5 | Esquemático, tabela de custos e material da apresentação | |
 
 ## Licença
 

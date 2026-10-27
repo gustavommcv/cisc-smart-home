@@ -1,0 +1,60 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test, lint and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v7
+
+      # Gradle itself runs on JDK 21 (see gradle/gradle-daemon-jvm.properties); the
+      # code is compiled with JDK 17, which the runner already has.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run the unit tests, the lint and build the debug APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+
+      - name: Keep the debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: cisc-casa-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Keep the reports when something fails
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-reports
+          path: |
+            android/app/build/reports
+            android/app/build/test-results
+          if-no-files-found: ignore
+          retention-days: 7
