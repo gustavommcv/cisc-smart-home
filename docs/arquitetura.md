@@ -154,6 +154,7 @@ O desenvolvimento é guiado por testes: primeiro o teste que falha, depois o có
 | Contas dos adaptadores | Testes unitários no computador | No computador |
 | Adaptadores e servidor web do firmware | [Roteiro manual](roteiro-maquete.md) e o script [`tools/check_api.py`](../tools/check_api.py), que confere a API contra a placa | Na placa |
 | Domínio e dados do app | Testes JVM (JUnit) com um servidor HTTP falso no lugar do ESP32 | No computador |
+| Regras de camadas do app | Um teste que lê os imports de cada arquivo e falha se uma camada depender de outra que não deve | No computador |
 | Telas do app | Testes de interface do Compose | No computador |
 | Sistema inteiro | Roteiro manual com o celular conectado ao ESP32 | Maquete |
 
