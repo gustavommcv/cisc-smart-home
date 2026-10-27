@@ -16,6 +16,8 @@
 
     <string name="channel_monitoring">Monitoramento da casa</string>
     <string name="channel_gas_alert">Alerta de vazamento de gás</string>
+    <string name="channel_connection_lost">Perda de conexão com a placa</string>
+    <string name="alert_lost_title">A casa não está sendo vigiada</string>
     <string name="alert_gas_title">Vazamento de gás!</string>
     <string name="alert_gas_text">Local: %1$s. Ventile o ambiente e evite chamas ou faíscas.</string>
 

@@ -16,7 +16,9 @@ import io.github.gustavommcv.ciscsmarthome.messageRes
 internal object Notices {
   const val MONITORING_CHANNEL = "monitoring"
   const val GAS_ALERT_CHANNEL = "gas_alert"
+  const val CONNECTION_LOST_CHANNEL = "connection_lost"
   const val MONITORING_ID = 1
+  const val CONNECTION_LOST_ID = 2
 
   /** Creates the channels, which Android does once: what the user later changes in them is theirs. */
   fun createChannels(context: Context) {
@@ -31,6 +33,8 @@ internal object Notices {
         lockscreenVisibility = Notification.VISIBILITY_PUBLIC
       }
     manager.createNotificationChannel(gasAlert)
+    // Loud, so it is noticed, but not the alarm: a house nobody watches is serious, and it is not gas.
+    manager.createNotificationChannel(NotificationChannel(CONNECTION_LOST_CHANNEL, context.getString(R.string.channel_connection_lost), NotificationManager.IMPORTANCE_HIGH))
   }
 
   /** The notice that stays while the service works: it says whether the board is being heard. */
@@ -53,6 +57,22 @@ internal object Notices {
       .setContentText(context.getString(R.string.alert_gas_text, areaName))
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setAutoCancel(true)
+      .setContentIntent(openApp(context))
+      .build()
+      // The sound goes on until the warning is opened or cancelled, which the board's own rearming does: a leak
+      // is not a thing to miss because the sound played once while someone slept. The builder has no setter for it.
+      .apply { flags = flags or Notification.FLAG_INSISTENT }
+
+  /** The warning that the board has been out of reach for a while, so nothing is watching the house. */
+  fun connectionLost(context: Context, connection: ConnectionState.Disconnected): Notification =
+    NotificationCompat.Builder(context, CONNECTION_LOST_CHANNEL)
+      .setSmallIcon(R.drawable.ic_notification)
+      .setContentTitle(context.getString(R.string.alert_lost_title))
+      .setContentText(context.getString(connection.messageRes()))
+      .setPriority(NotificationCompat.PRIORITY_HIGH)
+      .setCategory(NotificationCompat.CATEGORY_ERROR)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setAutoCancel(true)
       .setContentIntent(openApp(context))

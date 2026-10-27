@@ -1,7 +1,9 @@
 package io.github.gustavommcv.ciscsmarthome.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GasLeakStatusTest {
@@ -63,5 +65,48 @@ class GasLeakStatusTest {
   fun `an entity with the id of the gas state that is not a sensor is not a gas state`() {
     val wrong = Entity.BinarySensor(EntityId("gas-state"), "Gas state", true)
     assertNull(kitchen(wrong, alerts(number(1.0))).gasLeakStatus())
+  }
+
+  // ---- when a warned leak is over -------------------------------------------------------
+
+  private fun home(state: String, alerts: Double, boot: String = "aaaa1111") =
+    Home(BootId(boot), 1_000, listOf(Area(AreaId("kitchen"), "Kitchen", listOf(Device(DeviceId("gas-sensor"), "Gas sensor", listOf(state(text(state)), alerts(number(alerts))))))))
+
+  private fun warned(count: Long, boot: String = "aaaa1111") = GasAlert(BootId(boot), AreaId("kitchen"), count)
+
+  @Test
+  fun `a leak is over when its boot says there is no emergency and the count has reached it`() {
+    assertTrue(warned(count = 3).isOverIn(home("normal", alerts = 3.0)))
+  }
+
+  @Test
+  fun `a leak is not over while the house is still in emergency`() {
+    assertFalse(warned(count = 3).isOverIn(home("emergency", alerts = 3.0)))
+  }
+
+  @Test
+  fun `a leak is not over because of a home from before it began`() {
+    // The home counted two leaks and says normal; the leak warned of is the third.
+    assertFalse(warned(count = 3).isOverIn(home("normal", alerts = 2.0)))
+  }
+
+  @Test
+  fun `a leak is over when a later leak has also ended`() {
+    assertTrue(warned(count = 3).isOverIn(home("normal", alerts = 4.0)))
+  }
+
+  @Test
+  fun `a leak of another boot is not ended by this boot`() {
+    assertFalse(warned(count = 1, boot = "aaaa1111").isOverIn(home("normal", alerts = 5.0, boot = "bbbb2222")))
+  }
+
+  @Test
+  fun `a house that says nothing about gas does not end a leak`() {
+    assertFalse(warned(count = 1).isOverIn(Home(BootId("aaaa1111"), 1_000, emptyList())))
+  }
+
+  @Test
+  fun `the sensor warming up counts as no emergency, so it ends the leak of its boot`() {
+    assertTrue(warned(count = 1).isOverIn(home("starting", alerts = 1.0)))
   }
 }
