@@ -39,7 +39,7 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 ```text
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
-├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, e `data/local` com o histórico
+├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/local` com o histórico e `data/repository` com o repositório
 ├── ui/        as telas em Compose e um ViewModel por tela
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 └── di/        a montagem das dependências, sem framework
@@ -56,9 +56,11 @@ Kotlin puro, testado só com JUnit. Além da biblioteca padrão, usa apenas as c
 | `Home` | A casa como a placa a descreve: cômodos, dispositivos e entidades (`Sensor`, `BinarySensor`, `Switch` e `Select`), com um valor nulo quando não há leitura válida. Acha uma entidade pelo `id` e diz em que dispositivo e cômodo ela está |
 | `DeviceClock` | Põe o `uptimeMs` da placa no relógio do celular, como pede a seção "Tempo" de [`docs/api.md`](../docs/api.md). A placa não guarda hora: o celular anota a diferença a cada resposta, uma por partida |
 | `HistoryStore` | O histórico que o app guarda e continua tendo depois de fechado: salva amostras (cada uma já na hora do celular), diz até onde o histórico de uma partida vai, para perguntar à placa só o que é mais novo, e devolve a série de uma entidade, que se renova quando chegam amostras |
+| `GasLeakStatus` | O que a casa diz sobre vazamentos de gás: quantos houve desde que a placa ligou e se há um agora, lidos de `gas-state` e `gas-alerts`. Se a casa não diz (falta uma das duas entidades ou a contagem não é legível), não diz nada: sem a contagem, um vazamento não se distingue de um já avisado |
+| `HomeRepository` | O que as telas e o serviço enxergam da casa, venha como vier: a casa (`home`), o estado da conexão (`connection`), os vazamentos que são notícia (`alerts`), a série de uma entidade, o envio de comandos e o `keepSynced`, que o serviço da 4d roda em segundo plano. Os tipos que a acompanham: `ConnectionState`, `ConnectionProblem`, `CommandResult` e `GasAlert` |
 | `AlertTracker` | Decide quando um vazamento é notícia. O par (identificador de partida, contador de vazamentos) dá nome a cada um, então o mesmo vazamento é avisado **uma vez**, chegue pelo evento `alert`, pelo estado da casa ao reconectar, ou pelos dois. Vazamentos que terminaram enquanto o app estava fora não avisam depois. Guarda o que já foi avisado, para não repetir nem depois de o app reiniciar |
 
-O domínio também tem o `HistorySample` e o `HistoryPage` (as leituras guardadas pela placa), o `CommandValue` (o que o usuário pede a uma entidade: ligar ou desligar, ou escolher uma opção) e o `HomeEvent` (o que a placa anuncia sozinha: a casa mudou, ou um vazamento de gás começou). As interfaces do domínio nascem junto com o primeiro código que as implementa ou usa: o `HistoryStore` nasceu com o banco; a do repositório virá com o repositório. Criá-las antes seria código sem uso.
+O domínio também tem o `HistorySample` e o `HistoryPage` (as leituras guardadas pela placa), o `CommandValue` (o que o usuário pede a uma entidade: ligar ou desligar, ou escolher uma opção) e o `HomeEvent` (o que a placa anuncia sozinha: a casa mudou, ou um vazamento de gás começou). As interfaces do domínio nascem junto com o primeiro código que as implementa ou usa: o `HistoryStore` nasceu com o banco e o `HomeRepository` com o repositório. Criá-las antes seria código sem uso.
 
 ### O cliente REST
 
@@ -88,6 +90,23 @@ Três decisões que não aparecem no código à primeira vista:
 - **O que o app não consegue ler é pulado, e o fluxo continua.** Todo `home` traz o estado inteiro, então o próximo conserta o que se perdeu. Até um `alert` perdido não passa em branco: o vazamento aparece no `home` seguinte, por `gas-state` e `gas-alerts`, e o `AlertTracker` avisa por ali.
 
 O app ainda não pede a permissão de internet nem liberar o tráfego HTTP para o endereço da placa: isso entra na 4d, quando os clientes forem ligados ao app.
+
+### O repositório
+
+Em `data/repository`, o `HomeRepositoryImpl` junta o que o app tem (o cliente REST, os eventos, o histórico local e as regras do domínio) no que as telas e o serviço leem.
+
+`BoardClient` e `BoardEventStream` implementam `BoardApi` e `BoardEvents`, duas interfaces pequenas em `data/remote`. É por elas que os testes do repositório usam fakes: a rede já foi testada contra um servidor falso nas partes anteriores, e aqui só importa o que o repositório faz com o que recebe.
+
+O `keepSynced` reage ao que o fluxo de eventos conta, um evento por vez:
+
+- **A placa aceitou a conexão** (`Connected`): pede a casa por REST, o que também mostra se a placa é utilizável (a versão da API que o app não conhece aparece aqui como `Incompatible`), e busca o histórico que falta. O `after` é até onde o app já tem *daquela partida*, então uma partida nova começa do zero mesmo que as antigas estejam guardadas. As páginas são de 360 amostras, que é o que a placa guarda; uma página que não enche é o fim, e uma que não avança também (uma placa que funciona não manda essa).
+- **Chegou um evento**: prova que a conexão está viva, então o estado vira `Connected` mesmo que o pedido da casa tenha falhado.
+- **A conexão caiu** (`Lost`): o estado vira `Disconnected` com o motivo, e a última casa continua em `home`. Quem reconecta é o próprio fluxo.
+- **A casa que chega** só vale se não for mais velha que a que o app já tem *da mesma partida*: a resposta REST e o fluxo podem se cruzar. Uma partida nova vale sempre, mesmo com `uptimeMs` menor.
+- **A hora das amostras** é a do celular: o `DeviceClock` aprende a diferença a cada casa que chega, e o repositório a usa para datar o histórico antes de guardá-lo.
+- **Vazamentos** passam pelo `AlertTracker`, venham pelo evento `alert` ou pelo estado da casa. Quem avisa o usuário (a 4d) lê `alerts`, que guarda o que ninguém recebeu ainda, então um vazamento não se perde entre a placa avisar e o serviço estar ouvindo.
+
+Só o `keepSynced` mexe no `DeviceClock` e no `AlertTracker`, que não foram feitos para vários fios, então não precisam de trava. O `send`, que roda no fio de quem chama, só troca a entidade em `home`, que aguenta isso.
 
 ### O histórico local
 
