@@ -2,7 +2,7 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o app já fala com a placa. Ele abre, conecta e mostra a casa como a placa a descreve, numa lista simples, com o estado da conexão. As telas de verdade (cômodos, controle do desumidificador, histórico), a entrada automática na rede da placa, o serviço em segundo plano e os alertas chegam nas próximas partes (veja as [fases](../README.md#fases)).
+> **Estado atual:** o app fala com a placa e vigia a casa. Ele conecta, mostra a casa como a placa a descreve, numa lista simples, e, com a tela apagada, continua ouvindo a placa num serviço em primeiro plano e **avisa de um vazamento de gás com uma notificação**. As telas de verdade (cômodos, controle do desumidificador, histórico) e a entrada automática na rede da placa chegam nas próximas partes (veja as [fases](../README.md#fases)).
 
 ## Ferramentas
 
@@ -43,10 +43,12 @@ app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── ui/        as telas em Compose e um ViewModel por tela
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 ├── di/        a montagem das dependências, sem framework
-└── CiscApplication.kt   cria a montagem quando o app começa e liga a sincronização com a placa
+├── CiscApplication.kt    cria a montagem quando algo a pede pela primeira vez e inicia o serviço
+├── AppDependencies.kt    o que a tela e o serviço pedem à aplicação (elas não podem se importar)
+└── ConnectionMessages.kt o texto de cada estado da conexão, na tela e na notificação
 ```
 
-Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`, `domain/`, `data/` e `di/`.
+Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`, `domain/`, `data/`, `di/` e `service/`.
 
 ### O domínio
 
@@ -90,7 +92,6 @@ Três decisões que não aparecem no código à primeira vista:
 - **O `alert` não diz de qual partida da placa é.** O app usa o `bootId` do `home` que a placa envia logo ao conectar, na mesma conexão. Uma conexão não atravessa um reinício, então esse `bootId` vale para todos os alertas dela. Um `alert` que chegue antes de qualquer `home` é descartado.
 - **O que o app não consegue ler é pulado, e o fluxo continua.** Todo `home` traz o estado inteiro, então o próximo conserta o que se perdeu. Até um `alert` perdido não passa em branco: o vazamento aparece no `home` seguinte, por `gas-state` e `gas-alerts`, e o `AlertTracker` avisa por ali.
 
-O app ainda não pede a permissão de internet nem liberar o tráfego HTTP para o endereço da placa: isso entra na 4d, quando os clientes forem ligados ao app.
 
 ### O repositório
 
@@ -127,18 +128,42 @@ Os testes usam o **Robolectric**, que roda um Android de verdade no computador, 
 
 ### A montagem e a primeira conexão
 
-O `AppContainer`, em `di/`, monta as peças à mão: o cliente HTTP (com tempo limite de 5 s, porque a placa está na rede do próprio celular e responde em milissegundos ou não responde), o banco do histórico, o cliente REST, o fluxo de eventos e o repositório. É o único lugar onde as camadas se encontram. Um framework de injeção seria mais para ler do que a montagem em si. A `CiscApplication` o cria quando o processo começa e chama `start()`, que põe o `keepSynced` do repositório para rodar enquanto o app viver; na 4d isso passa para o serviço.
+O `AppContainer`, em `di/`, monta as peças à mão: o cliente HTTP (com tempo limite de 5 s, porque a placa está na rede do próprio celular e responde em milissegundos ou não responde), o banco do histórico, o cliente REST, o fluxo de eventos e o repositório. É o único lugar onde as camadas se encontram. Um framework de injeção seria mais para ler do que a montagem em si. O container só monta: quem põe o `keepSynced` do repositório para rodar é o serviço (veja abaixo). A `CiscApplication` o cria quando algo o pede pela primeira vez, e **não inicia nada sozinha**.
 
 A tela inicial (`HomeScreen`, com o `HomeViewModel`) mostra o estado da conexão, com o motivo quando cai, e a casa exatamente como a placa a descreve, em lista. Ela é provisória por escolha: serve para ver a conexão funcionando, e a tela dos cômodos, com nomes e controles feitos para cada um, a substitui. O `ViewModel` e o texto da conexão ficam.
 
-O app pede **uma permissão só, a de internet**, e a placa fala HTTP sem certificado, então o HTTP puro é **liberado só para `192.168.4.1`** e recusado para todo o resto, em [`network_security_config.xml`](app/src/main/res/xml/network_security_config.xml). O `ManifestTest` guarda isso: a lista exata de permissões, a recusa por padrão, o único endereço liberado, e que ele é o mesmo que o app usa (`AppContainer.BOARD_URL`).
+A placa fala HTTP sem certificado, então o HTTP puro é **liberado só para `192.168.4.1`** e recusado para todo o resto, em [`network_security_config.xml`](app/src/main/res/xml/network_security_config.xml). O `ManifestTest` guarda isso: a recusa por padrão, o único endereço liberado, e que ele é o mesmo que o app usa (`AppContainer.BOARD_URL`).
+
+### O serviço e o aviso de vazamento
+
+Com a tela apagada, o Android corta a rede dos apps que estão em segundo plano, e um vazamento é justamente o que não pode passar em branco com o celular no bolso. Por isso o app tem o `HomeService`, um **serviço em primeiro plano** do tipo "dispositivo conectado" (o tipo que o Android reserva para quem fala com um aparelho e que não tem limite de tempo). A tela o inicia ao abrir (de uma tela à frente o Android permite; do segundo plano, não), e ele:
+
+- **põe o `keepSynced` do repositório para rodar**, uma vez só, e o cancela quando é destruído;
+- mantém uma **notificação fixa** que diz se a placa está sendo ouvida (os mesmos textos da tela, por `ConnectionMessages`), num canal discreto;
+- **avisa de cada vazamento** que o repositório manda em `alerts`, num canal de **alta importância, com o som e o volume de alarme** e vibração. Cada vazamento é uma notificação própria, nomeada pela partida da placa e pela contagem, então um vazamento novo avisa de novo em vez de trocar o texto do anterior. Tocar nela abre o app. O texto diz o cômodo em português (`kitchen` vira Cozinha, `bedroom` vira Quarto; um cômodo sem nome em português sai com o nome que a placa deu).
+- Se o Android o encerrar por falta de memória, ele é iniciado de novo (`START_STICKY`).
+
+O que já foi avisado fica guardado (`PreferencesAlertMemory`, um arquivo de preferências com um número por partida da placa) e é regravado só quando muda, logo depois de entregue a quem mostra. Assim, abrir o app de novo com o mesmo vazamento ainda ativo não avisa outra vez.
+
+Como a `ui/` não pode importar o `service/` (nem o contrário), os dois se encontram em `AppDependencies`, que a `CiscApplication` implementa: a tela pede `startMonitoring()` e o serviço pega o `homeRepository`. É por isso também que os testes do serviço rodam com uma aplicação de mentira.
+
+O app pede cinco permissões, cada uma por um motivo:
+
+| Permissão | Para quê |
+|---|---|
+| `INTERNET` | Falar com a placa |
+| `FOREGROUND_SERVICE` e `FOREGROUND_SERVICE_CONNECTED_DEVICE` | O serviço em primeiro plano, do tipo dispositivo conectado |
+| `POST_NOTIFICATIONS` | Sem ela, o Android (13 em diante) esconde toda notificação do app, o aviso de vazamento incluído. A tela a pede ao abrir |
+| `CHANGE_NETWORK_STATE` | O Android exige uma de poucas permissões, esta entre elas, de um serviço desse tipo; a ligação do app à rede da placa (4d2) também a usa |
+
+O `ManifestTest` guarda a lista exata, que o serviço é privado e declarado como dispositivo conectado, e que a única peça que outro app pode iniciar é a tela.
 
 **Para ver funcionando no celular, com a maquete ligada:**
 
 1. Entre no Wi-Fi `cisc-smart-home` e escolha **manter conectado** quando o Android avisar que não há internet.
-2. **Desligue os dados móveis.** O Android prefere o 4G a um Wi-Fi sem internet, e o app ainda não se prende à rede da placa (isso é a 4d).
-3. Instale o app (`adb install -r ...`) e abra. Em poucos segundos deve aparecer **Conectado à placa** e a lista de cômodos com os valores. Aproximar o gás do isqueiro (sem acender) ou soprar no DHT11 muda os números na tela.
-4. Com a tela apagada, o Android pode cortar a rede do app: ele ainda não é um serviço em primeiro plano (4d).
+2. **Desligue os dados móveis.** O Android prefere o 4G a um Wi-Fi sem internet, e o app ainda não se prende à rede da placa (isso é a 4d2).
+3. Instale o app (`adb install -r ...`) e abra. O Android pergunta se o app pode enviar notificações: **permita**. Em poucos segundos deve aparecer **Conectado à placa** e a lista de cômodos com os valores, e na barra de notificações a notificação fixa "Conectado à placa".
+4. **Teste do vazamento, com a tela apagada:** aproxime o gás do isqueiro (sem acender) do MQ-2 e espere passar do limite. O celular deve tocar o alarme e mostrar **Vazamento de gás!** com o local. Depois afaste o gás e aperte o botão da maquete para rearmar: se você abrir o app de novo com o mesmo vazamento, ele **não** avisa outra vez.
 
 ### A regra de dependência é testada
 
