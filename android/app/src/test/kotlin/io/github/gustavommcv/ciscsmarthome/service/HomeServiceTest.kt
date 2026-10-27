@@ -14,8 +14,14 @@ import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
+import io.github.gustavommcv.ciscsmarthome.domain.Device
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
+import io.github.gustavommcv.ciscsmarthome.domain.Entity
+import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,8 +33,8 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ServiceController
-import org.robolectric.shadows.ShadowService
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowService
 
 /** The service that keeps the app in touch with the board, against a fake repository. */
 @RunWith(RobolectricTestRunner::class)
@@ -211,6 +217,213 @@ class HomeServiceTest {
     repository.announce(leak(count = 1))
     idle()
     assertTrue(leakNotifications().single().flags and Notification.FLAG_AUTO_CANCEL != 0)
+  }
+
+  // ---- repeating until someone acts ----------------------------------------------------
+
+  @Test
+  fun `the warning of a leak repeats its sound until it is opened or cancelled`() {
+    start()
+    repository.announce(leak(count = 1))
+    idle()
+    assertTrue(leakNotifications().single().flags and Notification.FLAG_INSISTENT != 0)
+  }
+
+  // ---- stopping by itself when the board says the leak is over -------------------------
+
+  private fun house(state: String, alerts: Long, boot: String = "aaaa1111") =
+    Home(
+      BootId(boot),
+      1_000,
+      listOf(
+        Area(
+          AreaId("kitchen"),
+          "Kitchen",
+          listOf(
+            Device(
+              DeviceId("gas-sensor"),
+              "Gas sensor",
+              listOf(
+                Entity.Sensor(EntityId("gas-state"), "Gas state", SensorValue.Text(state)),
+                Entity.Sensor(EntityId("gas-alerts"), "Gas alerts", SensorValue.Number(alerts.toDouble())),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+
+  @Test
+  fun `the warning goes away by itself when the board says the leak is over`() {
+    start()
+    repository.announce(leak(count = 1))
+    repository.home.value = house("emergency", alerts = 1)
+    idle()
+    assertEquals(1, leakNotifications().size)
+
+    // Someone pressed the button of the maquete once the gas was gone.
+    repository.home.value = house("normal", alerts = 1)
+    idle()
+    assertEquals(0, leakNotifications().size)
+  }
+
+  @Test
+  fun `the warning stays while the board still says emergency`() {
+    start()
+    repository.announce(leak(count = 1))
+    repository.home.value = house("emergency", alerts = 1)
+    idle()
+    repository.home.value = house("emergency", alerts = 1).copy(uptimeMs = 2_000)
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `a home from before the leak does not take its warning away`() {
+    start()
+    repository.home.value = house("normal", alerts = 0)
+    idle()
+    repository.announce(leak(count = 1))
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `a house that says nothing about gas leaves the warning alone`() {
+    start()
+    repository.announce(leak(count = 1))
+    idle()
+    repository.home.value = Home(BootId("aaaa1111"), 1_000, emptyList())
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `the warnings of all the leaks that ended go away`() {
+    start()
+    repository.announce(leak(count = 1))
+    repository.announce(leak(count = 2))
+    idle()
+    assertEquals(2, leakNotifications().size)
+    repository.home.value = house("normal", alerts = 2)
+    idle()
+    assertEquals(0, leakNotifications().size)
+  }
+
+  @Test
+  fun `a new leak is warned of again after the last one ended`() {
+    start()
+    repository.announce(leak(count = 1))
+    repository.home.value = house("normal", alerts = 1)
+    idle()
+    repository.announce(leak(count = 2))
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `a warning of another boot is left alone`() {
+    start()
+    repository.announce(leak(count = 1, boot = "aaaa1111"))
+    idle()
+    repository.home.value = house("normal", alerts = 5, boot = "bbbb2222")
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `the notice that stays is not taken away with the warning`() {
+    val service = start()
+    repository.announce(leak(count = 1))
+    repository.home.value = house("normal", alerts = 1)
+    idle()
+    assertNotNull(shadowNotifications.getNotification(shadowOf(service).lastForegroundNotificationId))
+  }
+
+  // ---- a house nobody is watching ----------------------------------------------------------
+
+  private fun lostNotifications(): List<Notification> = shadowNotifications.allNotifications.filter { it.channelId == "connection_lost" }
+
+  private fun pass(seconds: Long) = shadowOf(Looper.getMainLooper()).idleFor(seconds, TimeUnit.SECONDS)
+
+  @Test
+  fun `a board that stays out of reach for a minute is a house nobody is watching`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(61)
+    val notice = lostNotifications().single()
+    assertEquals(text(R.string.alert_lost_title), notice.title())
+    assertEquals(text(R.string.connection_unreachable), notice.body())
+  }
+
+  @Test
+  fun `it does not warn before the minute is over`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(50)
+    assertEquals(0, lostNotifications().size)
+  }
+
+  @Test
+  fun `a board that comes back in time is not warned about`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(40)
+    repository.connection.value = ConnectionState.Connected
+    pass(120)
+    assertEquals(0, lostNotifications().size)
+  }
+
+  @Test
+  fun `a board that goes away again starts the minute again`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(40)
+    repository.connection.value = ConnectionState.Connected
+    pass(5)
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    // 70 s since the first time it went away, but only 25 s since the last time it did.
+    pass(25)
+    assertEquals(0, lostNotifications().size)
+  }
+
+  @Test
+  fun `the warning goes away when the board is heard again`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(61)
+    assertEquals(1, lostNotifications().size)
+    repository.connection.value = ConnectionState.Connected
+    idle()
+    assertEquals(0, lostNotifications().size)
+  }
+
+  @Test
+  fun `the warning says why the board is out of reach`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.TooManyClients)
+    pass(61)
+    assertEquals(text(R.string.connection_too_many_clients), lostNotifications().single().body())
+  }
+
+  @Test
+  fun `the channel of that warning is loud, but it is not the alarm of a leak`() {
+    start()
+    val channel = notificationManager.getNotificationChannel("connection_lost")
+    assertEquals(NotificationManager.IMPORTANCE_HIGH, channel.importance)
+    assertEquals(AudioAttributes.USAGE_NOTIFICATION, channel.audioAttributes.usage)
+    assertEquals(text(R.string.channel_connection_lost), channel.name.toString())
+  }
+
+  @Test
+  fun `stopping the service takes the countdown with it`() {
+    start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    idle()
+    running!!.destroy()
+    running = null
+    pass(120)
+    assertEquals(0, lostNotifications().size)
   }
 
   // ---- the channels --------------------------------------------------------------------

@@ -18,3 +18,14 @@ fun Home.gasLeakStatus(): GasLeakStatus? {
   val active = ((state.entity as Entity.Sensor).value as? SensorValue.Text)?.value == EMERGENCY
   return GasLeakStatus(state.area.id, count, active)
 }
+
+/**
+ * Whether the board says this leak is over: a home of the same boot that is not in emergency and whose
+ * count has reached this leak's. A home from before the leak (a lower count) says nothing about it, and
+ * neither does one from another boot, which is a board that restarted and has to find the gas again.
+ */
+fun GasAlert.isOverIn(home: Home): Boolean {
+  if (home.bootId != bootId) return false
+  val status = home.gasLeakStatus() ?: return false
+  return !status.active && status.alertCount >= count
+}
