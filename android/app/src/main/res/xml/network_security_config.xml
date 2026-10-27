@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The board speaks plain HTTP on its own network (it has no certificate), so HTTP is allowed to its
+    address and refused everywhere else. The address is AppContainer.BOARD_URL; a test keeps them equal.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.4.1</domain>
+    </domain-config>
+</network-security-config>

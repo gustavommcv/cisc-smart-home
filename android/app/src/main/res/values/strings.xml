@@ -4,5 +4,16 @@
     <string name="app_name">CISC Casa</string>
     <string name="home_title">CISC Casa</string>
     <string name="home_subtitle">Casa Inteligente Segura e Confortável</string>
-    <string name="home_under_construction">Em construção</string>
+
+    <string name="connection_connecting">Conectando à placa…</string>
+    <string name="connection_connected">Conectado à placa</string>
+    <string name="connection_unreachable">Sem conexão com a placa. Confira se o celular está no Wi-Fi cisc-smart-home e com os dados móveis desligados.</string>
+    <string name="connection_too_many_clients">A placa já tem conexões demais. Feche o app em outros celulares.</string>
+    <string name="connection_incompatible">A placa respondeu algo que este app não entende. Confira se o app e a placa estão na mesma versão.</string>
+
+    <string name="value_unavailable">sem leitura</string>
+    <string name="value_yes">sim</string>
+    <string name="value_no">não</string>
+    <string name="value_on">ligado</string>
+    <string name="value_off">desligado</string>
 </resources>
