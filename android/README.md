@@ -39,7 +39,7 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 ```text
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
-├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos
+├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, e `data/local` com o histórico
 ├── ui/        as telas em Compose e um ViewModel por tela
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 └── di/        a montagem das dependências, sem framework
@@ -49,15 +49,16 @@ Cada pasta nasce junto com o primeiro arquivo que ela guarda. Hoje existem `ui/`
 
 ### O domínio
 
-Kotlin puro, testado só com JUnit, sem nenhuma biblioteca:
+Kotlin puro, testado só com JUnit. Além da biblioteca padrão, usa apenas as corrotinas, pelo `Flow` do `HistoryStore`:
 
 | Arquivo | O que faz |
 |---|---|
 | `Home` | A casa como a placa a descreve: cômodos, dispositivos e entidades (`Sensor`, `BinarySensor`, `Switch` e `Select`), com um valor nulo quando não há leitura válida. Acha uma entidade pelo `id` e diz em que dispositivo e cômodo ela está |
 | `DeviceClock` | Põe o `uptimeMs` da placa no relógio do celular, como pede a seção "Tempo" de [`docs/api.md`](../docs/api.md). A placa não guarda hora: o celular anota a diferença a cada resposta, uma por partida |
+| `HistoryStore` | O histórico que o app guarda e continua tendo depois de fechado: salva amostras (cada uma já na hora do celular), diz até onde o histórico de uma partida vai, para perguntar à placa só o que é mais novo, e devolve a série de uma entidade, que se renova quando chegam amostras |
 | `AlertTracker` | Decide quando um vazamento é notícia. O par (identificador de partida, contador de vazamentos) dá nome a cada um, então o mesmo vazamento é avisado **uma vez**, chegue pelo evento `alert`, pelo estado da casa ao reconectar, ou pelos dois. Vazamentos que terminaram enquanto o app estava fora não avisam depois. Guarda o que já foi avisado, para não repetir nem depois de o app reiniciar |
 
-O domínio também tem o `HistorySample` e o `HistoryPage` (as leituras guardadas pela placa) o `CommandValue` (o que o usuário pede a uma entidade: ligar ou desligar, ou escolher uma opção) e o `HomeEvent` (o que a placa anuncia sozinha: a casa mudou, ou um vazamento de gás começou). As interfaces do domínio, como a do repositório, nascem junto com o primeiro código que as usa, a partir da 4b4. Criá-las antes seria código sem uso.
+O domínio também tem o `HistorySample` e o `HistoryPage` (as leituras guardadas pela placa), o `CommandValue` (o que o usuário pede a uma entidade: ligar ou desligar, ou escolher uma opção) e o `HomeEvent` (o que a placa anuncia sozinha: a casa mudou, ou um vazamento de gás começou). As interfaces do domínio nascem junto com o primeiro código que as implementa ou usa: o `HistoryStore` nasceu com o banco; a do repositório virá com o repositório. Criá-las antes seria código sem uso.
 
 ### O cliente REST
 
@@ -87,6 +88,22 @@ Três decisões que não aparecem no código à primeira vista:
 - **O que o app não consegue ler é pulado, e o fluxo continua.** Todo `home` traz o estado inteiro, então o próximo conserta o que se perdeu. Até um `alert` perdido não passa em branco: o vazamento aparece no `home` seguinte, por `gas-state` e `gas-alerts`, e o `AlertTracker` avisa por ali.
 
 O app ainda não pede a permissão de internet nem liberar o tráfego HTTP para o endereço da placa: isso entra na 4d, quando os clientes forem ligados ao app.
+
+### O histórico local
+
+Em `data/local`, o `RoomHistoryStore` guarda o histórico num banco do Room, no celular.
+
+| Arquivo | O que faz |
+|---|---|
+| `HistoryDatabase` | O banco: uma tabela, `reading`, com **uma linha por entidade de cada amostra**. Uma entidade nova (um terceiro sensor, por exemplo) não precisa de coluna nova nem de migração |
+| `RoomHistoryStore` | Implementa o `HistoryStore`: traduz o domínio para as linhas e de volta |
+
+- **A chave é (partida, `uptimeMs`, entidade)**, o par que o contrato manda usar para saber se uma amostra já existe. Salvar uma amostra que já está lá deixa a que estava: o app pode pedir a mesma página duas vezes sem repetir nada.
+- **A hora é gravada, não calculada na leitura.** Quem salva (o repositório, na próxima parte) converte o `uptimeMs` pelo `DeviceClock` e passa a hora do celular. Assim o histórico de uma partida antiga continua certo depois de o app fechar, quando o `DeviceClock` já esqueceu a diferença dela.
+- **O formato do banco fica no Git**, em [`app/schemas`](app/schemas). O Room o gera a cada compilação, então uma mudança no formato aparece na revisão, e uma versão futura pode ser migrada a partir dele.
+- **Por enquanto o app guarda tudo**: a placa faz uma amostra a cada 10 s e hoje são três entidades no histórico, então uns 26 mil registros por dia, alguns megabytes. Limpar o que for muito antigo entra quando houver a tela do histórico e se souber quanto ele precisa mostrar.
+
+Os testes usam o **Robolectric**, que roda um Android de verdade no computador, para o Room trabalhar com o banco de verdade, sem celular e sem emulador. Dois detalhes: o Robolectric só roda o Android 16 (SDK 36) no Java 21, e o app compila com o 17, então estes testes rodam no SDK 35 (veja `robolectric.properties`); e na primeira vez ele baixa o Android para `~/.m2` (uns 200 MB), o que a próxima execução não repete.
 
 ### A regra de dependência é testada
 

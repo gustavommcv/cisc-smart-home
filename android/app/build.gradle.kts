@@ -2,6 +2,7 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.ksp)
 }
 
 android {
@@ -43,6 +44,10 @@ android {
     // allowBackup="false" already turns backup off on every Android version.
     disable += "DataExtractionRules"
   }
+  testOptions {
+    // Robolectric needs them to start the Android that the local tests of the database run on.
+    unitTests.isIncludeAndroidResources = true
+  }
   packaging {
     resources {
       excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -52,6 +57,12 @@ android {
 
 kotlin {
   jvmToolchain(17)
+}
+
+ksp {
+  // Room writes the shape of the database here at each build; it is kept in Git, so a change of the
+  // shape shows in review and a later version can be migrated from it.
+  arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -67,8 +78,12 @@ dependencies {
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.okhttp)
   implementation(libs.okhttp.sse)
+  implementation(libs.androidx.room.runtime)
+  ksp(libs.androidx.room.compiler)
   debugImplementation(libs.androidx.compose.ui.tooling)
 
   testImplementation(libs.junit)
   testImplementation(libs.okhttp.mockwebserver)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.androidx.test.core)
 }

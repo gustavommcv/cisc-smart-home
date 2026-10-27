@@ -1,0 +1,68 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "c3198a5629c0c4dfc25a00de1cbdab7e",
+    "entities": [
+      {
+        "tableName": "reading",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`bootId` TEXT NOT NULL, `uptimeMs` INTEGER NOT NULL, `entityId` TEXT NOT NULL, `atMs` INTEGER NOT NULL, `value` REAL, PRIMARY KEY(`bootId`, `uptimeMs`, `entityId`))",
+        "fields": [
+          {
+            "fieldPath": "bootId",
+            "columnName": "bootId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uptimeMs",
+            "columnName": "uptimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityId",
+            "columnName": "entityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atMs",
+            "columnName": "atMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "REAL"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "bootId",
+            "uptimeMs",
+            "entityId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_reading_entityId_atMs",
+            "unique": false,
+            "columnNames": [
+              "entityId",
+              "atMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reading_entityId_atMs` ON `${TABLE_NAME}` (`entityId`, `atMs`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c3198a5629c0c4dfc25a00de1cbdab7e')"
+    ]
+  }
+}
