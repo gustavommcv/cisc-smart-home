@@ -30,6 +30,8 @@ internal data class EntityDto(
 
 @Serializable internal data class SampleDto(val uptimeMs: Long, val values: Map<String, Double?>)
 
+@Serializable internal data class AlertDto(val type: String, val areaId: String, val entityId: String, val count: Long, val uptimeMs: Long)
+
 @Serializable internal data class ErrorEnvelopeDto(val error: ErrorDto)
 
 @Serializable internal data class ErrorDto(val code: String, val message: String = "")

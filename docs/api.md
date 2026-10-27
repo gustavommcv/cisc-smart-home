@@ -189,6 +189,7 @@ data: {"type":"gas-leak","areaId":"kitchen","entityId":"gas-state","count":1,"up
 - Se o app estava desconectado quando o vazamento começou, ele vê `gas-state` em `emergency` e `gas-alerts` maior que o último que conhecia, e avisa ao reconectar.
 - A cada 15 segundos sem novidade, o ESP32 manda um evento `ping`, sem dados. **Se o app ficar 20 segundos sem receber nada (nem `ping`), deve reconectar.**
 - O evento `home` só sai quando algo mudou (o `uptimeMs` sozinho não conta) e, no máximo, **uma vez por segundo**. O `alert` não espera esse intervalo: sai na hora, **antes** do `home` do mesmo instante.
+- O `alert` **não diz de qual partida do ESP32 é**. O app usa o `bootId` do `home` que chega logo ao conectar, na mesma conexão: uma conexão não atravessa um reinício.
 - Quem conecta depois de um vazamento não recebe o `alert` antigo, só o estado atual. Para saber se perdeu algum, compare o `count` de `gas-alerts` com o último que conhecia.
 - O ESP32 aceita poucas conexões de eventos ao mesmo tempo. Com o limite atingido, responde `503`.
 

@@ -66,6 +66,7 @@ dependencies {
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.okhttp)
+  implementation(libs.okhttp.sse)
   debugImplementation(libs.androidx.compose.ui.tooling)
 
   testImplementation(libs.junit)

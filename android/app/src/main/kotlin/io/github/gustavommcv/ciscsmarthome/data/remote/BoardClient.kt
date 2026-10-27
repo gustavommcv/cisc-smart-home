@@ -28,11 +28,7 @@ class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) 
   private val json: Json = BoardJson
 
   suspend fun getHome(): BoardResult<Home> =
-    call(request("api/v1/home")) { body ->
-      val home = json.decodeFromString<HomeDto>(body)
-      check(home.apiVersion == SUPPORTED_API_VERSION) { "the board speaks version ${home.apiVersion} of the API" }
-      home.toDomain()
-    }
+    call(request("api/v1/home"), ::parseHome)
 
   /** Asks an entity to become [value]. The result is the entity as the board says it ended up. */
   suspend fun sendCommand(entityId: EntityId, value: CommandValue): BoardResult<Entity> {
@@ -72,7 +68,7 @@ class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) 
         return BoardResult.Failure(BoardError.Unreachable(e))
       }
     val (status, body) = answer
-    if (status !in 200..299) return BoardResult.Failure(rejection(status, body))
+    if (status !in 200..299) return BoardResult.Failure(rejectionOf(status, body))
     return try {
       BoardResult.Success(parse(body))
     } catch (e: SerializationException) {
@@ -82,18 +78,9 @@ class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) 
     }
   }
 
-  private fun rejection(status: Int, body: String): BoardError =
-    try {
-      val error = json.decodeFromString<ErrorEnvelopeDto>(body).error
-      BoardError.Rejected(status, ErrorCode.fromWire(error.code), error.message)
-    } catch (e: SerializationException) {
-      BoardError.Unexpected("the board answered HTTP $status without an error of the contract")
-    }
-
   private fun unexpected(detail: String) = BoardResult.Failure(BoardError.Unexpected(detail))
 
   private companion object {
-    const val SUPPORTED_API_VERSION = 1
     val JSON_MEDIA_TYPE = "application/json".toMediaType()
   }
 }
