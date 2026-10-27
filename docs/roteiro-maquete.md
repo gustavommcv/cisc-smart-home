@@ -95,7 +95,7 @@ nmcli connection up SUA-REDE-DE-CASA
 
 O último volta para a sua rede de casa (troque `SUA-REDE-DE-CASA` pelo nome dela). Para o computador não entrar sozinho no Wi-Fi do ESP32 no futuro, apague o perfil: `nmcli connection delete cisc-smart-home`.
 
-Peça uma coisa de cada vez ao ESP32 enquanto o script roda: ele espera uns 18 s sem mexer na maquete para ver o `ping`. Se algo falhar, o script diz qual verificação e o que recebeu, e avisa se a placa reiniciou no meio.
+O script escuta o fluxo de eventos por uns 18 s para ver que ele não fica mudo. O `ping` só aparece quando a maquete fica 15 s sem mudar nada, e o clima do DHT11 costuma variar nesse tempo, então é normal só chegarem eventos `home`: eles também provam que a conexão está viva. Se algo falhar, o script diz qual verificação e o que recebeu, e avisa se a placa reiniciou no meio.
 
 ### O que observar no Serial durante o teste
 
