@@ -58,17 +58,19 @@ O que é "para efeito de maquete" (adicionar cômodo, adicionar dispositivo) é 
 
 ```text
 firmware/
-├── src/
+├── lib/
 │   ├── domain/        regras puras, sem Arduino: roda e é testada no computador
 │   ├── application/   liga sensores, regras e atuadores; mantém o histórico
 │   ├── adapters/      uma classe por peça: MQ-2, DHT11, relé, servo, buzzer, LED, botão
-│   ├── api/           REST + SSE, conversão para JSON
-│   └── main.cpp       monta tudo (único lugar que conhece as classes concretas)
+│   └── api/           REST + SSE, conversão para JSON
+├── src/main.cpp       monta tudo (único lugar que conhece as classes concretas)
 └── test/              testes do domínio e da aplicação, rodando no computador
 ```
 
-- **Domínio:** máquina de estados do gás, controle de umidade com dois limites, modo Automático/Manual e a estrutura do histórico. Não inclui `Arduino.h`.
-- **Portas:** interfaces pequenas, definidas pelo que o domínio precisa (ler gás, ler clima, ligar uma chave, ler o relógio).
+Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera código reutilizável e testável. Só `domain` existe por enquanto.
+
+- **Domínio:** máquina de estados do gás (`GasGuard`), controle de umidade com dois limites e modo Automático/Manual (`HumidityController`), tratamento do botão (`ButtonDebouncer`) e a estrutura do histórico (`RingBuffer`). Não inclui `Arduino.h`.
+- **Portas:** interfaces pequenas, definidas pelo que a aplicação precisa (ler gás, ler clima, ligar uma chave, ler o relógio). Entram na fase 3, junto com a aplicação, que é quem as usa. Criá-las antes seria código sem uso.
 - **Adaptadores:** implementam as portas com o hardware real. É a única parte que precisa da placa para testar.
 - **Aplicação:** a cada ciclo, lê as portas, chama o domínio e aplica o resultado. É onde ficam o histórico e a publicação dos eventos.
 - **API:** traduz entre HTTP e a aplicação. Não tem regra de negócio.
@@ -151,7 +153,7 @@ O desenvolvimento é guiado por testes: primeiro o teste que falha, depois o có
 | Telas do app | Testes de interface do Compose | No computador |
 | Sistema inteiro | Roteiro manual com o celular conectado ao ESP32 | Maquete |
 
-Cada pull request traz os testes da mudança.
+Cada pull request traz os testes da mudança, e o **CI** (GitHub Actions) os roda sozinho a cada PR. Hoje ele cobre os testes do firmware. A compilação para o ESP32 entra na fase 3, e o app, quando ele existir.
 
 ## Fluxo de trabalho
 
