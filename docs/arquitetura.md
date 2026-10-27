@@ -115,7 +115,7 @@ Segue as [recomendações oficiais de arquitetura do Android](https://developer.
 ```text
 android/app/src/main/kotlin/.../
 ├── ui/        telas em Compose; um ViewModel por tela, que expõe um estado imutável
-├── domain/    modelos (Area, Device, Entity) e regras de negócio
+├── domain/    modelos (Home, Area, Device, Entity) e as regras puras: tempo e alertas
 ├── data/      repositórios, cliente do ESP32 (REST + SSE) e banco local (Room)
 ├── service/   serviço de alertas e notificações
 └── di/        montagem manual das dependências (sem framework)
