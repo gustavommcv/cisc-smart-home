@@ -5,6 +5,7 @@ build/
 .kotlin/
 
 # Local configuration
+firmware/src/WifiSecrets.h
 local.properties
 *.iml
 .idea/

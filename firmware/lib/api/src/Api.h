@@ -29,6 +29,10 @@ class Api {
   // owns the connections, so it asks for this one when it has to refuse.
   static Response tooManyClients();
 
+  // The answer for a request to the event route that is not from an event stream
+  // client (it lacks "Accept: text/event-stream").
+  static Response notAcceptable();
+
  private:
   Response command(const std::string& entityId, const std::string& body);
   Response history(const std::string& query);

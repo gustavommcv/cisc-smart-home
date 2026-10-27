@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include "Mq2Scale.h"
@@ -40,5 +41,10 @@ constexpr std::uint8_t kValveClosedDegrees = 15;
 constexpr cisc::Mq2Wiring kGasSensorWiring{10000.0f, 20000.0f, 5000.0f};
 
 constexpr unsigned long kSerialBaud = 115200;
+
+// The API server.
+constexpr std::uint16_t kHttpPort = 80;
+// Each listening client takes memory and a socket; the maquete needs one or two.
+constexpr std::size_t kMaxEventClients = 3;
 
 }  // namespace board

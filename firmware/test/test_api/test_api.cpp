@@ -264,6 +264,10 @@ void test_too_many_clients_has_the_error_of_the_contract() {
   assertError(Api::tooManyClients(), 503, "too-many-clients");
 }
 
+void test_the_event_route_asks_for_an_event_stream_client() {
+  assertError(Api::notAcceptable(), 406, "not-acceptable");
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_home_returns_the_state_of_the_house);
@@ -291,5 +295,6 @@ int main() {
   RUN_TEST(test_unknown_query_parameters_are_ignored);
   RUN_TEST(test_a_bad_query_is_rejected);
   RUN_TEST(test_too_many_clients_has_the_error_of_the_contract);
+  RUN_TEST(test_the_event_route_asks_for_an_event_stream_client);
   return UNITY_END();
 }
