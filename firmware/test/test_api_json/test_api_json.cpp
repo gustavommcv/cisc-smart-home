@@ -1,0 +1,235 @@
+#include <set>
+#include <string>
+
+#include <ArduinoJson.h>
+#include <unity.h>
+
+#include "ApiJson.h"
+
+using cisc::ControlMode;
+using cisc::GasState;
+using cisc::HouseSnapshot;
+
+namespace {
+
+// A healthy house in NORMAL, with a valid climate reading.
+HouseSnapshot normalHouse() {
+  HouseSnapshot snapshot{};
+  snapshot.uptimeMs = 183450;
+  snapshot.gasReading = 142;
+  snapshot.gasState = GasState::Normal;
+  snapshot.valveOpen = true;
+  snapshot.gasAlertCount = 0;
+  snapshot.climateSampled = true;
+  snapshot.climateValid = true;
+  snapshot.temperatureC = 21.4f;
+  snapshot.humidityPercent = 74.1f;
+  snapshot.dehumidifierOn = false;
+  snapshot.dehumidifierMode = ControlMode::Automatic;
+  return snapshot;
+}
+
+JsonDocument parse(const std::string& text) {
+  JsonDocument document;
+  const DeserializationError error = deserializeJson(document, text);
+  TEST_ASSERT_FALSE_MESSAGE(error, "the output is not valid JSON");
+  return document;
+}
+
+// Looks an entity up by id anywhere in the home tree.
+JsonObject entity(JsonDocument& home, const char* id) {
+  JsonArray areas = home["areas"];
+  for (JsonObject area : areas) {
+    JsonArray devices = area["devices"];
+    for (JsonObject device : devices) {
+      JsonArray entities = device["entities"];
+      for (JsonObject candidate : entities) {
+        if (std::string(candidate["id"].as<const char*>()) == id) return candidate;
+      }
+    }
+  }
+  TEST_FAIL_MESSAGE("entity not found");
+  return JsonObject();
+}
+
+// Calls `visit` for every entity of the house.
+template <typename Visit>
+void forEachEntity(JsonDocument& home, Visit visit) {
+  JsonArray areas = home["areas"];
+  for (JsonObject area : areas) {
+    JsonArray devices = area["devices"];
+    for (JsonObject device : devices) {
+      JsonArray entities = device["entities"];
+      for (JsonObject item : entities) visit(item);
+    }
+  }
+}
+
+}  // namespace
+
+// ---- the home tree ----------------------------------------------------------
+
+void test_the_home_envelope_carries_version_boot_and_uptime() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "5f3a9c21"));
+  TEST_ASSERT_EQUAL_INT(1, home["apiVersion"].as<int>());
+  TEST_ASSERT_EQUAL_STRING("5f3a9c21", home["bootId"].as<const char*>());
+  TEST_ASSERT_EQUAL_UINT32(183450, home["uptimeMs"].as<uint32_t>());
+}
+
+void test_the_house_has_a_kitchen_and_a_bedroom() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  JsonArray areas = home["areas"];
+  TEST_ASSERT_EQUAL_UINT(2, areas.size());
+  TEST_ASSERT_EQUAL_STRING("kitchen", areas[0]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("Kitchen", areas[0]["name"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("bedroom", areas[1]["id"].as<const char*>());
+}
+
+void test_the_devices_are_grouped_by_area() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  JsonArray kitchen = home["areas"][0]["devices"];
+  JsonArray bedroom = home["areas"][1]["devices"];
+  TEST_ASSERT_EQUAL_UINT(2, kitchen.size());
+  TEST_ASSERT_EQUAL_STRING("gas-sensor", kitchen[0]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("gas-valve", kitchen[1]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_UINT(2, bedroom.size());
+  TEST_ASSERT_EQUAL_STRING("closet-sensor", bedroom[0]["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("dehumidifier", bedroom[1]["id"].as<const char*>());
+}
+
+void test_every_entity_id_is_unique_across_the_house() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  std::set<std::string> ids;
+  size_t total = 0;
+  forEachEntity(home, [&](JsonObject item) {
+    ids.insert(item["id"].as<const char*>());
+    ++total;
+  });
+  TEST_ASSERT_EQUAL_UINT(8, total);
+  TEST_ASSERT_EQUAL_UINT(total, ids.size());
+}
+
+// ---- the kitchen ------------------------------------------------------------
+
+void test_the_gas_level_is_a_sensor_in_adc_units() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  JsonObject level = entity(home, "gas-level");
+  TEST_ASSERT_EQUAL_STRING("sensor", level["kind"].as<const char*>());
+  TEST_ASSERT_EQUAL_INT(142, level["value"].as<int>());
+  TEST_ASSERT_EQUAL_STRING("adc", level["unit"].as<const char*>());
+}
+
+void test_the_gas_state_uses_the_names_of_the_contract() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.gasState = GasState::Emergency;
+  JsonDocument home = parse(cisc::api::homeJson(snapshot, "x"));
+  TEST_ASSERT_EQUAL_STRING("emergency", entity(home, "gas-state")["value"].as<const char*>());
+}
+
+void test_the_alert_counter_and_the_valve_are_reported() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.gasAlertCount = 3;
+  snapshot.valveOpen = false;
+  JsonDocument home = parse(cisc::api::homeJson(snapshot, "x"));
+  TEST_ASSERT_EQUAL_UINT32(3, entity(home, "gas-alerts")["value"].as<uint32_t>());
+  JsonObject valve = entity(home, "valve-open");
+  TEST_ASSERT_EQUAL_STRING("binary_sensor", valve["kind"].as<const char*>());
+  TEST_ASSERT_FALSE(valve["value"].as<bool>());
+}
+
+// ---- the bedroom ------------------------------------------------------------
+
+void test_temperature_and_humidity_come_with_their_units() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  TEST_ASSERT_EQUAL_FLOAT(21.4f, entity(home, "temperature")["value"].as<float>());
+  TEST_ASSERT_EQUAL_STRING("°C", entity(home, "temperature")["unit"].as<const char*>());
+  TEST_ASSERT_EQUAL_FLOAT(74.1f, entity(home, "humidity")["value"].as<float>());
+  TEST_ASSERT_EQUAL_STRING("%", entity(home, "humidity")["unit"].as<const char*>());
+}
+
+void test_without_a_valid_reading_the_climate_values_are_null() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.climateValid = false;
+  JsonDocument home = parse(cisc::api::homeJson(snapshot, "x"));
+  TEST_ASSERT_TRUE(entity(home, "temperature")["value"].isNull());
+  TEST_ASSERT_TRUE(entity(home, "humidity")["value"].isNull());
+}
+
+void test_decimals_are_rounded_to_one_place() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.temperatureC = 21.43f;
+  snapshot.humidityPercent = 74.06f;
+  const std::string json = cisc::api::homeJson(snapshot, "x");
+  TEST_ASSERT_NOT_EQUAL(std::string::npos, json.find("\"value\":21.4,"));
+  TEST_ASSERT_NOT_EQUAL(std::string::npos, json.find("\"value\":74.1,"));
+}
+
+void test_the_dehumidifier_can_be_commanded_and_shows_its_mode() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.dehumidifierOn = true;
+  snapshot.dehumidifierMode = ControlMode::Manual;
+  JsonDocument home = parse(cisc::api::homeJson(snapshot, "x"));
+  JsonObject power = entity(home, "dehumidifier-power");
+  TEST_ASSERT_EQUAL_STRING("switch", power["kind"].as<const char*>());
+  TEST_ASSERT_TRUE(power["value"].as<bool>());
+  TEST_ASSERT_TRUE(power["commandable"].as<bool>());
+  JsonObject mode = entity(home, "dehumidifier-mode");
+  TEST_ASSERT_EQUAL_STRING("select", mode["kind"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("manual", mode["value"].as<const char*>());
+  TEST_ASSERT_TRUE(mode["commandable"].as<bool>());
+  TEST_ASSERT_EQUAL_UINT(2, mode["options"].as<JsonArray>().size());
+  TEST_ASSERT_EQUAL_STRING("automatic", mode["options"][0].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("manual", mode["options"][1].as<const char*>());
+}
+
+void test_only_the_dehumidifier_entities_are_commandable() {
+  JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
+  forEachEntity(home, [](JsonObject item) {
+    const std::string id = item["id"].as<const char*>();
+    const bool expected = id == "dehumidifier-power" || id == "dehumidifier-mode";
+    TEST_ASSERT_EQUAL_MESSAGE(expected, item["commandable"].as<bool>(), id.c_str());
+  });
+}
+
+// ---- a single entity and the alert ------------------------------------------
+
+void test_a_single_entity_has_the_exact_shape_of_the_contract() {
+  std::string json;
+  TEST_ASSERT_TRUE(cisc::api::entityJson(normalHouse(), "dehumidifier-power", json));
+  TEST_ASSERT_EQUAL_STRING(
+      "{\"id\":\"dehumidifier-power\",\"kind\":\"switch\",\"name\":\"Power\",\"value\":false,\"commandable\":true}",
+      json.c_str());
+}
+
+void test_an_unknown_entity_is_reported_as_missing() {
+  std::string json;
+  TEST_ASSERT_FALSE(cisc::api::entityJson(normalHouse(), "no-such-thing", json));
+}
+
+void test_the_alert_event_has_the_exact_shape_of_the_contract() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.gasAlertCount = 1;
+  TEST_ASSERT_EQUAL_STRING(
+      "{\"type\":\"gas-leak\",\"areaId\":\"kitchen\",\"entityId\":\"gas-state\",\"count\":1,\"uptimeMs\":183450}",
+      cisc::api::alertJson(snapshot).c_str());
+}
+
+int main() {
+  UNITY_BEGIN();
+  RUN_TEST(test_the_home_envelope_carries_version_boot_and_uptime);
+  RUN_TEST(test_the_house_has_a_kitchen_and_a_bedroom);
+  RUN_TEST(test_the_devices_are_grouped_by_area);
+  RUN_TEST(test_every_entity_id_is_unique_across_the_house);
+  RUN_TEST(test_the_gas_level_is_a_sensor_in_adc_units);
+  RUN_TEST(test_the_gas_state_uses_the_names_of_the_contract);
+  RUN_TEST(test_the_alert_counter_and_the_valve_are_reported);
+  RUN_TEST(test_temperature_and_humidity_come_with_their_units);
+  RUN_TEST(test_without_a_valid_reading_the_climate_values_are_null);
+  RUN_TEST(test_decimals_are_rounded_to_one_place);
+  RUN_TEST(test_the_dehumidifier_can_be_commanded_and_shows_its_mode);
+  RUN_TEST(test_only_the_dehumidifier_entities_are_commandable);
+  RUN_TEST(test_a_single_entity_has_the_exact_shape_of_the_contract);
+  RUN_TEST(test_an_unknown_entity_is_reported_as_missing);
+  RUN_TEST(test_the_alert_event_has_the_exact_shape_of_the_contract);
+  return UNITY_END();
+}
