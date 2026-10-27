@@ -67,7 +67,7 @@ firmware/
 └── test/              testes do domínio e da aplicação, rodando no computador
 ```
 
-Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera código reutilizável e testável. Só `domain` existe por enquanto.
+Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera código reutilizável e testável. Por enquanto existem `domain` e `application`.
 
 - **Domínio:** máquina de estados do gás (`GasGuard`), controle de umidade com dois limites e modo Automático/Manual (`HumidityController`), tratamento do botão (`ButtonDebouncer`) e a estrutura do histórico (`RingBuffer`). Não inclui `Arduino.h`.
 - **Portas:** interfaces pequenas, definidas pelo que a aplicação precisa (ler gás, ler clima, ligar uma chave, ler o relógio). Ficam junto com a aplicação, que é quem as usa.
