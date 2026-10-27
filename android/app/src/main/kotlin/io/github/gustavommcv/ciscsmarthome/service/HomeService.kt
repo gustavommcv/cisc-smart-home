@@ -7,7 +7,7 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import io.github.gustavommcv.ciscsmarthome.AppDependencies
-import io.github.gustavommcv.ciscsmarthome.R
+import io.github.gustavommcv.ciscsmarthome.nameRes
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
@@ -109,9 +109,5 @@ class HomeService : Service() {
 
   // The names the board gives are in English; the two rooms of the maquete have theirs in Portuguese.
   private fun areaName(alert: GasAlert, home: Home?): String =
-    when (alert.areaId.value) {
-      "kitchen" -> getString(R.string.area_kitchen)
-      "bedroom" -> getString(R.string.area_bedroom)
-      else -> home?.areas?.firstOrNull { it.id == alert.areaId }?.name ?: alert.areaId.value
-    }
+    alert.areaId.nameRes()?.let { getString(it) } ?: home?.areas?.firstOrNull { it.id == alert.areaId }?.name ?: alert.areaId.value
 }
