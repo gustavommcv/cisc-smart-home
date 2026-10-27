@@ -69,6 +69,7 @@ cisc-smart-home/
 ## Documentação
 
 - [Arquitetura](docs/arquitetura.md): camadas do firmware e do app, modelo de dados, conexão, alertas e testes
+- [API](docs/api.md): o contrato entre o app e o ESP32
 - [Decisões de arquitetura](docs/decisoes): o porquê de cada escolha, com as alternativas descartadas
 
 ## Ferramentas de desenvolvimento
@@ -95,8 +96,8 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 | # | Fase | Estado |
 |---|---|---|
 | 1 | README e decisões de arquitetura | concluída |
-| 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | em andamento |
-| 3 | Firmware: hardware, rede própria e API REST + SSE | |
+| 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
+| 3 | Firmware: aplicação, hardware, rede própria e API REST + SSE. Em três partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** rede e servidor | 3a em andamento |
 | 4 | App: núcleo (modelo de dados, comunicação, histórico) | |
 | 5 | App: telas | |
 | 6 | App: conexão ao ESP32 e alertas | |

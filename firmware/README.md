@@ -1,10 +1,10 @@
 # Firmware
 
-Firmware do ESP32 do CISC Smart Home. Esta fase tem só o **domínio**: as regras da casa, sem nenhuma dependência de hardware, escritas com testes antes do código.
+Firmware do ESP32 do CISC Smart Home. Por enquanto tem o **domínio** (as regras da casa) e a **aplicação** (quem coloca as regras para funcionar). Nenhum dos dois depende de hardware, e ambos foram escritos com testes antes do código.
 
-## O que existe
+## Domínio
 
-Tudo está em [`lib/domain/src`](lib/domain/src):
+Em [`lib/domain/src`](lib/domain/src):
 
 | Arquivo | O que faz |
 |---|---|
@@ -16,6 +16,21 @@ Tudo está em [`lib/domain/src`](lib/domain/src):
 | `Time.h` | Comparação de tempo que continua certa quando o `millis()` dá a volta |
 
 O código é C++ puro, sem `Arduino.h`, sem exceções e sem alocação dinâmica. Compila também com o compilador do ESP32.
+
+## Aplicação
+
+Em [`lib/application/src`](lib/application/src):
+
+| Arquivo | O que faz |
+|---|---|
+| `Ports.h` | As **portas**: o que a aplicação precisa do mundo (relógio, sensor de gás, sensor de clima, botão e saídas liga/desliga). O hardware real as implementa nos adaptadores, e os testes usam versões falsas |
+| `HouseController` | Roda a casa: lê os sensores no ritmo de cada um, entrega as leituras às regras do domínio, aciona as saídas só quando o valor muda, guarda o histórico, conta os vazamentos e recebe os comandos do app |
+| `HouseSnapshot` | Tudo o que o mundo de fora pode querer saber da casa, em um instante |
+| `HouseSettings.h` | O ritmo de cada leitura e o tamanho do histórico |
+
+O `HouseController` ocupa uns 7 KB, quase todos do histórico. Por isso deve ser uma variável global, e não ficar na pilha.
+
+O contrato de como o app enxerga esses dados está em [`docs/api.md`](../docs/api.md).
 
 ## Rodar os testes
 
@@ -34,4 +49,4 @@ pio test -e native -f test_gas_guard
 
 ## O que vem depois
 
-Na fase 3 entram as portas (interfaces para sensores, relé e relógio), os adaptadores com o hardware real, a rede própria do ESP32 e a API. É quando o ambiente do ESP32 é acrescentado ao `platformio.ini`.
+Na parte 3b entram os adaptadores com o hardware real e o ambiente do ESP32 no `platformio.ini`. Na 3c, a rede própria do ESP32 e o servidor da API.
