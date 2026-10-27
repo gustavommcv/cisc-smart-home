@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The interface is in Portuguese, the language of its users. Code and comments are in English. -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="pt">
     <string name="app_name">CISC Casa</string>
     <string name="home_title">CISC Casa</string>
     <string name="home_subtitle">Casa Inteligente Segura e Confortável</string>
@@ -26,6 +26,11 @@
     <string name="device_gas_valve">Válvula de gás</string>
     <string name="device_closet_sensor">Sensor do armário</string>
     <string name="device_dehumidifier">Desumidificador</string>
+
+    <string name="command_refused">A placa não aceitou o comando.</string>
+    <string name="command_unreachable">Não foi possível falar com a placa. Confira a conexão e tente de novo.</string>
+    <string name="command_incompatible">A placa respondeu algo que o app não entende.</string>
+    <string name="hint_dehumidifier_mode">Ligar ou desligar à mão passa para o modo manual. Para a placa voltar a decidir pela umidade, escolha Automático.</string>
 
     <string name="label_gas_level">Nível de gás</string>
     <string name="label_gas_state">Gás</string>

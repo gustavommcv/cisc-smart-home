@@ -37,7 +37,16 @@ class FakeHomeRepository : HomeRepository {
 
   override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> = emptyFlow()
 
-  override suspend fun send(entityId: EntityId, value: CommandValue): CommandResult = CommandResult.Refused
+  /** What the board answers to a command; a test replaces it, and may make it wait. */
+  var sendHandler: suspend (EntityId, CommandValue) -> CommandResult = { _, _ -> CommandResult.Refused }
+
+  /** The commands that were sent, in order. */
+  val sent = mutableListOf<Pair<EntityId, CommandValue>>()
+
+  override suspend fun send(entityId: EntityId, value: CommandValue): CommandResult {
+    sent += entityId to value
+    return sendHandler(entityId, value)
+  }
 
   override suspend fun keepSynced(): Nothing {
     syncsStarted++
