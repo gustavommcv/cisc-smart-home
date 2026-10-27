@@ -43,7 +43,7 @@ class BoardEventStream(
   silenceLimit: Duration = SILENCE_LIMIT,
   private val backoff: Backoff = Backoff(),
   private val pause: suspend (Duration) -> Unit = { delay(it) },
-) {
+) : BoardEvents {
   private val request: Request =
     Request.Builder().url(baseUrl.newBuilder().addPathSegments("api/v1/events").build()).get().build()
 
@@ -53,7 +53,7 @@ class BoardEventStream(
    * Connects when collected and goes on until the collection is cancelled, which cancels the call to
    * the board. Each collection is a stream of its own.
    */
-  fun updates(): Flow<BoardStreamUpdate> = flow {
+  override fun updates(): Flow<BoardStreamUpdate> = flow {
     var failures = 0
     while (true) {
       connection().collect { update ->
