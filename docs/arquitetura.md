@@ -70,9 +70,9 @@ firmware/
 Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera código reutilizável e testável. Só `domain` existe por enquanto.
 
 - **Domínio:** máquina de estados do gás (`GasGuard`), controle de umidade com dois limites e modo Automático/Manual (`HumidityController`), tratamento do botão (`ButtonDebouncer`) e a estrutura do histórico (`RingBuffer`). Não inclui `Arduino.h`.
-- **Portas:** interfaces pequenas, definidas pelo que a aplicação precisa (ler gás, ler clima, ligar uma chave, ler o relógio). Entram na fase 3, junto com a aplicação, que é quem as usa. Criá-las antes seria código sem uso.
+- **Portas:** interfaces pequenas, definidas pelo que a aplicação precisa (ler gás, ler clima, ligar uma chave, ler o relógio). Ficam junto com a aplicação, que é quem as usa.
 - **Adaptadores:** implementam as portas com o hardware real. É a única parte que precisa da placa para testar.
-- **Aplicação:** a cada ciclo, lê as portas, chama o domínio e aplica o resultado. É onde ficam o histórico e a publicação dos eventos.
+- **Aplicação:** a cada ciclo, lê as portas, chama o domínio e aplica o resultado, e só escreve numa saída quando o valor muda. Guarda o histórico e conta os vazamentos. Recebe os comandos do app. Não sabe nada de HTTP nem de pinos.
 - **API:** traduz entre HTTP e a aplicação. Não tem regra de negócio.
 
 O `Controle.h` da primeira versão da maquete já separava a regra do hardware. Esta estrutura leva a ideia adiante.
@@ -94,7 +94,7 @@ Limites e tempos ficam em constantes nomeadas e em um só lugar, porque dependem
 
 O ESP32 guarda as últimas leituras em um buffer circular na memória, com tamanho fixo. O app copia essas leituras para o seu banco local e desenha o gráfico a partir dele. Assim, o histórico já guardado no celular sobrevive a reinícios do ESP32.
 
-O ESP32 não tem hora certa sem internet. Cada amostra registra o tempo desde a partida, e o app envia a hora do celular ao conectar. Um identificador de partida permite ao app perceber que o ESP32 reiniciou e acertar a conversão para a hora real.
+O ESP32 não tem hora certa sem internet, e nem precisa ter. Cada amostra registra o tempo desde a partida (`uptimeMs`), e **o app** calcula a diferença para o relógio do celular a cada resposta. Um identificador de partida (`bootId`) permite ao app perceber que o ESP32 reiniciou. Os detalhes estão em [Tempo](api.md#tempo).
 
 ## API entre o app e o firmware
 
@@ -102,7 +102,7 @@ O ESP32 não tem hora certa sem internet. Cada amostra registra o tempo desde a 
 - **SSE** (Server-Sent Events) em um único fluxo, por onde o ESP32 empurra leituras e alarmes assim que acontecem.
 - Ao conectar (ou reconectar), o app pede o estado completo antes de ouvir os eventos, para nunca ficar desatualizado.
 
-O contrato detalhado (rotas, formatos, erros) será escrito junto com o firmware, em `docs/api.md`, **antes** do código que o implementa.
+O contrato completo (rotas, formatos, erros) está em [`api.md`](api.md). Ele foi escrito **antes** do código que o implementa.
 
 ## App Android
 
