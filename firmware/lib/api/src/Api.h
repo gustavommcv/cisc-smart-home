@@ -1,0 +1,37 @@
+#pragma once
+
+#include <string>
+
+#include "HouseController.h"
+
+namespace cisc {
+namespace api {
+
+enum class Method { Get, Put, Other };
+
+// What to send back. The body is always JSON.
+struct Response {
+  int status;
+  std::string body;
+};
+
+// The REST side of docs/api.md: it receives a request already split into method,
+// path, query and body, acts on the house and says what to answer. It knows
+// nothing about the web server that carries the bytes, so it is tested on the host.
+// (The SSE stream, GET /api/v1/events, is handled by EventStream.)
+class Api {
+ public:
+  Api(HouseController& house, std::string bootId) : house_(house), bootId_(std::move(bootId)) {}
+
+  Response handle(Method method, const std::string& path, const std::string& query, const std::string& body);
+
+ private:
+  Response command(const std::string& entityId, const std::string& body);
+  Response history(const std::string& query);
+
+  HouseController& house_;
+  std::string bootId_;
+};
+
+}  // namespace api
+}  // namespace cisc

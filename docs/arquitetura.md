@@ -74,7 +74,7 @@ Cada camada é uma biblioteca do PlatformIO em `lib/`, o lugar onde ele espera c
 - **Portas:** interfaces pequenas, definidas pelo que a aplicação precisa (ler gás, ler clima, ligar uma chave, ler o relógio). Ficam junto com a aplicação, que é quem as usa.
 - **Adaptadores:** implementam as portas com o hardware real. É a única parte que precisa da placa para testar.
 - **Aplicação:** a cada ciclo, lê as portas, chama o domínio e aplica o resultado, e só escreve numa saída quando o valor muda. Guarda o histórico e conta os vazamentos. Recebe os comandos do app. Não sabe nada de HTTP nem de pinos.
-- **API:** traduz entre HTTP e a aplicação. Não tem regra de negócio.
+- **API:** traduz entre HTTP e a aplicação: o JSON do contrato, os comandos, o histórico e os eventos. Não tem regra de negócio. O servidor web em si (rede, conexões) é só o transporte e fica por fora, por isso toda a lógica da API é testada no computador.
 - **Display local:** o LCD da maquete mostra o estado da casa, para acompanhar sem o celular. A regra do que escrever (`DisplayText`) e o ritmo (`DisplayPresenter`) ficam na aplicação e são testados no computador. Só a escrita no LCD (`I2cLcdDisplay`) toca a placa.
 
 O `Controle.h` da primeira versão da maquete já separava a regra do hardware. Esta estrutura leva a ideia adiante.
@@ -150,8 +150,9 @@ O desenvolvimento é guiado por testes: primeiro o teste que falha, depois o có
 |---|---|---|
 | Regras do domínio do firmware | Testes unitários (Unity) pelo PlatformIO, ambiente `native` | No computador |
 | Aplicação do firmware | O mesmo, com portas falsas no lugar do hardware | No computador |
+| API do firmware (JSON, comandos, histórico, eventos) | O mesmo, sem rede, com a aplicação rodando em cima de portas falsas | No computador |
 | Contas dos adaptadores | Testes unitários no computador | No computador |
-| Adaptadores e API do firmware | [Roteiro manual](roteiro-maquete.md) com a placa, e o contrato escrito | Na placa |
+| Adaptadores e servidor web do firmware | [Roteiro manual](roteiro-maquete.md) com a placa, e o contrato escrito | Na placa |
 | Domínio e dados do app | Testes JVM (JUnit) com um servidor HTTP falso no lugar do ESP32 | No computador |
 | Telas do app | Testes de interface do Compose | No computador |
 | Sistema inteiro | Roteiro manual com o celular conectado ao ESP32 | Maquete |

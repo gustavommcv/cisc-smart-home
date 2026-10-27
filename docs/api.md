@@ -148,7 +148,9 @@ Depois de um comando, o novo estado também chega pelo fluxo de eventos.
 | Parâmetro | Significado |
 |---|---|
 | `after` | Opcional. Só as amostras com `uptimeMs` **maior** que este valor. Serve para pedir apenas o que é novo |
-| `limit` | Opcional. No máximo esta quantidade, das mais antigas para as mais novas dentro do filtro |
+| `limit` | Opcional. No máximo esta quantidade, das mais antigas para as mais novas dentro do filtro. Um número maior do que o ESP32 guarda (360) devolve tudo o que há |
+
+Sem `limit`, a resposta traz **no máximo 100 amostras**, para caber na memória do ESP32. Para buscar o resto, o app repete o pedido com `after` igual ao `uptimeMs` da última amostra recebida. Um `after` ou um `limit` que não seja um número inteiro (e um `limit` menor que 1) dá o erro `invalid-query`. Outros parâmetros são ignorados.
 
 ```json
 {
@@ -185,6 +187,8 @@ data: {"type":"gas-leak","areaId":"kitchen","entityId":"gas-state","count":1,"up
 - `count` é o valor de `gas-alerts` naquele momento. O app o usa, junto com o `bootId`, para **não avisar duas vezes** do mesmo vazamento, mesmo que reconecte.
 - Se o app estava desconectado quando o vazamento começou, ele vê `gas-state` em `emergency` e `gas-alerts` maior que o último que conhecia, e avisa ao reconectar.
 - A cada 15 segundos sem novidade, o ESP32 manda uma linha de comentário (`: keepalive`). **Se o app ficar 20 segundos sem receber nada, deve reconectar.**
+- O evento `home` só sai quando algo mudou (o `uptimeMs` sozinho não conta) e, no máximo, **uma vez por segundo**. O `alert` não espera esse intervalo: sai na hora, **antes** do `home` do mesmo instante.
+- Quem conecta depois de um vazamento não recebe o `alert` antigo, só o estado atual. Para saber se perdeu algum, compare o `count` de `gas-alerts` com o último que conhecia.
 - O ESP32 aceita poucas conexões de eventos ao mesmo tempo. Com o limite atingido, responde `503`.
 
 ### Como o app se conecta
@@ -205,9 +209,11 @@ hora de amostra  = (uptimeMs da amostra) + diferença
 
 Como o `bootId` identifica a partida, o app guarda uma diferença por partida. O erro é de alguns décimos de segundo (o tempo da resposta), o que sobra para um gráfico com leituras a cada 10 segundos.
 
+Limite conhecido: `uptimeMs` é um número de 32 bits em milissegundos e volta a zero depois de uns 49 dias ligado. Se o app vir o `uptimeMs` diminuir com o mesmo `bootId`, deve tratar como um reinício. Para uma demonstração isso não importa.
+
 ## Erros
 
-Qualquer resposta de erro tem este formato:
+Qualquer resposta de erro tem este formato. A entidade é verificada **antes** do corpo: pedir um comando a uma entidade que não existe ou que é somente leitura dá o mesmo erro, qualquer que seja o corpo.
 
 ```json
 { "error": { "code": "not-commandable", "message": "Entity 'valve-open' does not accept commands" } }
@@ -217,8 +223,10 @@ Qualquer resposta de erro tem este formato:
 |---|---|---|
 | 400 | `invalid-body` | O corpo não é um JSON válido ou não tem `value` |
 | 400 | `invalid-value` | O `value` não serve para essa entidade (por exemplo, um texto em um `switch`) |
+| 400 | `invalid-query` | O `after` ou o `limit` do histórico não é um número válido |
 | 403 | `not-commandable` | A entidade não aceita comandos |
 | 404 | `not-found` | A entidade ou a rota não existe |
+| 405 | `method-not-allowed` | A rota existe, mas não aceita esse método |
 | 503 | `too-many-clients` | Conexões de eventos demais |
 
 ## Testar com `curl`
