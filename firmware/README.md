@@ -36,6 +36,18 @@ O contrato de como o app enxerga esses dados está em [`docs/api.md`](../docs/ap
 
 O arquivo `Names.h` dá os nomes dos estados que o contrato usa (`starting`, `normal`, `emergency`, `automatic`, `manual`).
 
+## API
+
+Em [`lib/api/src`](lib/api/src): tudo o que o contrato de [`docs/api.md`](../docs/api.md) pede, **menos a rede**. Cada peça recebe e devolve texto e não sabe nada de sockets, por isso é testada no computador.
+
+| Arquivo | O que faz |
+|---|---|
+| `ApiJson` | O JSON do contrato: o estado da casa (cômodos, dispositivos e entidades), uma entidade, o evento de alerta e o histórico |
+| `Api` | O roteador REST: recebe método, caminho, parâmetros e corpo, age na casa e devolve o status e o JSON, com os códigos de erro do contrato |
+| `EventStream` | O que o fluxo SSE envia a cada instante: o estado quando muda (no máximo uma vez por segundo), o alerta de vazamento na hora e um sinal de vida a cada 15 s |
+
+O servidor web, que carrega esses textos pela rede, entra na parte 3d.
+
 ## Conversões
 
 Em [`lib/conversions/src`](lib/conversions/src): as contas dos adaptadores que não dependem de hardware, separadas para serem testadas no computador.
