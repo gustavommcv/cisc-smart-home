@@ -40,7 +40,7 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
 ├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/local` com o histórico e `data/repository` com o repositório
-├── ui/        as telas em Compose e um ViewModel por tela
+├── ui/        as telas em Compose e um ViewModel por tela; `ui/theme` guarda o visual (cores, formas, espaços) e `ui/components` as peças que as telas repartem
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 ├── di/        a montagem das dependências, sem framework
 ├── CiscApplication.kt    cria a montagem quando algo a pede pela primeira vez e inicia o serviço
@@ -149,7 +149,7 @@ Há três telas, escolhidas por `HomeContent` a partir do estado do `HomeViewMod
 
 | Tela | Quando aparece | O que mostra |
 |---|---|---|
-| **Cômodos** (`RoomsScreen`) | Há uma casa para mostrar | Um cartão por cômodo, com o nome em português e **até três coisas que importam nele** (na cozinha, o estado e o nível do gás; no quarto, a temperatura, a umidade e o desumidificador). O cartão do cômodo com vazamento fica **vermelho, com um aviso**. No fim, o cartão **bloqueado** "Adicionar cômodo / Em breve" |
+| **Cômodos** (`RoomsScreen`) | Há uma casa para mostrar | Um cartão por cômodo, com o ícone e o nome em português e **até três coisas que importam nele** (na cozinha, o estado e o nível do gás; no quarto, a temperatura, a umidade e o desumidificador). O cartão do cômodo com vazamento fica **vermelho, com um aviso**. No fim, o cartão **bloqueado** "Adicionar cômodo / Em breve" |
 | **Cômodo** (`RoomScreen`) | Toque num cartão | Os dispositivos do cômodo e o que cada um lê, com **os controles do que a placa aceita comandar** (no quarto, um interruptor para ligar e desligar o desumidificador e a escolha entre Automático e Manual) e o cartão bloqueado "Adicionar dispositivo". O botão de voltar do sistema volta para a lista |
 | **Sem casa** (`NoHomeScreen`) | O app ainda não ouviu a placa | Uma espera, ou, se a placa não pode ser alcançada, o que conferir (o texto muda com o motivo: outra rede, conexões demais, versão diferente) |
 
@@ -168,6 +168,31 @@ Quando a conexão cai **com uma casa já lida**, o app não esconde o que sabe: 
 O que cada cartão diz, os nomes e as palavras da tela ficam em funções puras, testadas sem celular: `Area.highlights()` escolhe o que o cartão mostra, `Home.isInEmergency()` diz qual cômodo está em emergência, e `Labels.kt` traduz o que a placa nomeia em inglês: as entidades (`gas-state` vira "Gás"), os dispositivos (`closet-monitor` vira "Monitor do armário") e as palavras (`emergency` vira "VAZAMENTO"; `automatic` vira "Automático"). **Os números sempre saem no formato português** (`18,4 °C`), mesmo com o celular em inglês: o app é em português, e uma tela que diz "Temperatura" ao lado de "18.4" parece um erro. Foi o que o primeiro teste no celular mostrou. **O que o app não conhece aparece como a placa o nomeou**, então uma entidade ou um cômodo novo da placa aparece mesmo sem tradução. Os nomes dos cômodos (`AreaId.nameRes()`) são os mesmos da tela e da notificação do vazamento.
 
 **A navegação não usa biblioteca**: são duas telas e um botão de voltar, então o `HomeViewModel` guarda qual está aberta (`Screen`). Um cômodo que deixa de existir na casa fecha sozinho. Uma biblioteca de navegação entra quando houver mais telas do que isso justifique.
+
+### O visual
+
+O visual tem um lugar só, e as telas pedem a ele em vez de soletrar cores e números. Segue o que desenhamos no mockup: um verde-azulado calmo sobre um cinza frio, e o vermelho guardado para o que está errado.
+
+| Peça | Onde | O que faz |
+|---|---|---|
+| **Cores** | `ui/theme/Color.kt` | Duas paletas completas do Material 3, **clara e escura**. Os papéis que o app não usa (secundário, terciário) repetem a família do verde-azulado, para que nenhum roxo padrão do Material apareça |
+| **Espaços** | `ui/theme/Spacing.kt` | Cinco degraus (`Xs`, `S`, `M`, `L`, `Xl` = 4, 8, 12, 16 e 24 dp). A tela pede um degrau, não um número, então mudar o ritmo é mexer num lugar |
+| **Formas** | `ui/theme/Shape.kt` | Cantos suaves; o cartão (`large`) tem 18 dp. O que é redondo (selo de ícone, etiqueta) é círculo |
+| **Tom** | `ui/components/Tone.kt` | Quão alto algo fala: `Primary` (o que está bem), `Alert` (o que pede um olhar) e `Neutral` (o resto). Cada tom diz qual cor é o fundo, qual é o texto sobre ele, a cor forte e o que se desenha sobre a cor forte |
+| **Cartão** | `ui/components/CiscCard.kt` | Superfície branca com um fio fino em volta; com um tom, é o fundo desse tom (um cômodo em emergência é um cartão de alerta). Com `onClick`, o cartão inteiro recebe o toque |
+| **Selo de ícone** | `ui/components/IconBadge.kt` | Um ícone num círculo de 40 dp, no tom escolhido, ou sólido para chamar atenção. Sem `contentDescription` é enfeite e o leitor de tela o ignora |
+| **Etiqueta de estado** | `ui/components/StatusPill.kt` | Uma palavra curta sobre o estado, com um ponto do mesmo tom. A faixa de conexão a usa: "Conectado à placa", "Conectando à placa…" ou "Sem conexão com a placa", e, quando a conexão cai, o motivo vem logo abaixo |
+| **Borda tracejada** | `ui/components/DashedBorder.kt` | O contorno do que é desenhado como um lugar e ainda não existe (os cartões "Em breve") |
+
+**O tema segue o do sistema, claro ou escuro**, como já seguia. A escolha do tema e o claro como padrão chegam com a aba de ajustes: sem ela não haveria como mudá-lo, e uma opção guardada que ninguém altera seria código parado.
+
+**O contraste é garantido por teste.** O `ColorsTest` confere, nos dois temas, que todo texto tem pelo menos **4,5:1** sobre o fundo em que é desenhado (o mínimo AA da WCAG 2.1) e que o contorno de um controle tem pelo menos 3:1. O texto secundário (legendas, rótulos de baixo) tem entre 7,6:1 e 9,9:1 sobre o fundo e sobre o cartão. O `ToneTest` faz o mesmo para cada tom, e o `DimensionsTest` confere que os espaços formam uma escala na grade de 4 dp e que os cantos crescem em ordem.
+
+**Os ícones** são o [Material Symbols](https://fonts.google.com/icons) (traço fino, 24 dp), um arquivo XML por ícone em `res/drawable/ic_*.xml`: seta de voltar, cadeado, aviso, casa, cozinha e cama. Vêm do repositório [google/material-design-icons](https://github.com/google/material-design-icons), sob a licença **Apache 2.0**, e há uma única alteração neles: o `?attr/colorControlNormal` do original virou `?android:attr/colorControlNormal`, porque o primeiro só existe com o AppCompat, que o app não usa. A cor de verdade vem do `Icon` do Compose, que pinta o ícone.
+
+Para pôr um ícone novo: baixe `symbols/android/<nome>/materialsymbolsoutlined/<nome>_24px.xml`, salve como `res/drawable/ic_<nome>.xml`, faça a mesma troca do atributo e use `painterResource(R.drawable.ic_<nome>)`. O `SymbolIconsTest` confere que todo ícone tem 24 dp, está na grade de 960 do conjunto e desenha alguma coisa, então um tamanho ou variante errados falham no teste. A biblioteca `material-icons-core` saiu do app, o que o deixa menor.
+
+**A aparência dos componentes não tem teste automático**: o app não usa a biblioteca de teste do Compose, então o que é lógica (qual cor, qual ícone, qual palavra) está em funções puras testadas, e o resto foi conferido no celular.
 
 ### O serviço e o aviso de vazamento
 
