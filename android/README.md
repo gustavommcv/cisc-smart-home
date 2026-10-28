@@ -180,6 +180,16 @@ Com a tela apagada, o Android corta a rede dos apps que estão em segundo plano,
 - **Avisa quando a casa deixa de ser vigiada.** Se a placa fica fora de alcance por **1 minuto** (o celular saiu do Wi-Fi dela, ou ela desligou), uma notificação própria diz "A casa não está sendo vigiada", com o motivo. Ela tem um canal de importância alta com o som de notificação, **não** o de alarme, porque uma casa sem vigia é grave, mas não é gás. Some quando a placa volta, e o minuto recomeça a cada mudança de estado, então uma placa que volta a tempo nunca avisa.
 - Se o Android o encerrar por falta de memória, ele é iniciado de novo (`START_STICKY`).
 
+**O serviço só liga as peças.** As regras de quando avisar ficam fora dele, em classes sem Android, e por isso são testadas sem celular, com o tempo simulado:
+
+| Peça | O que faz |
+|---|---|
+| `HomeService` | Inicia o serviço em primeiro plano, põe o repositório para rodar e liga as peças abaixo ao que o repositório entrega |
+| `ConnectionWatch` | Diz qual é o estado da conexão e, se a placa fica fora de alcance por 1 minuto, avisa que a casa não está sendo vigiada. O minuto recomeça a cada mudança de estado |
+| `LeakWarnings` | Avisa de cada vazamento e retira o aviso quando a placa diz que *aquele* vazamento acabou |
+| `Notifier` | A interface do que o serviço diz ao usuário: o estado da conexão, a casa sem vigia, o vazamento e a retirada de cada um |
+| `AndroidNotifier` | O `Notifier` do celular: cada aviso é uma notificação, montada pelo `Notices`; é ele que dá ao cômodo o nome em português |
+
 O que já foi avisado fica guardado (`PreferencesAlertMemory`, um arquivo de preferências com um número por partida da placa) e é regravado só quando muda, logo depois de entregue a quem mostra. Assim, abrir o app de novo com o mesmo vazamento ainda ativo não avisa outra vez.
 
 Como a `ui/` não pode importar o `service/` (nem o contrário), os dois se encontram em `AppDependencies`, que a `CiscApplication` implementa: a tela pede `startMonitoring()` e o serviço pega o `homeRepository`. É por isso também que os testes do serviço rodam com uma aplicação de mentira.

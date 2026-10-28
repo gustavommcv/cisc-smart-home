@@ -166,6 +166,15 @@ class HomeServiceTest {
   }
 
   @Test
+  fun `a room the board names in English is announced in Portuguese all the same`() {
+    repository.home.value = house("emergency", alerts = 1)
+    start()
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(text(R.string.alert_gas_text, text(R.string.area_kitchen)), leakNotifications().single().body())
+  }
+
+  @Test
   fun `an area nobody knows is announced by its id`() {
     start()
     repository.announce(leak(count = 1, area = "attic"))
@@ -330,6 +339,16 @@ class HomeServiceTest {
     val notice = lostNotifications().single()
     assertEquals(text(R.string.alert_lost_title), notice.title())
     assertEquals(text(R.string.connection_unreachable), notice.body())
+  }
+
+  @Test
+  fun `the warning does not take the place of the notice that stays`() {
+    val service = start()
+    val id = shadowOf(service).lastForegroundNotificationId
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(61)
+    assertEquals(1, lostNotifications().size)
+    assertEquals("monitoring", shadowNotifications.getNotification(id).channelId)
   }
 
   @Test
