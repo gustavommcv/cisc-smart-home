@@ -56,9 +56,10 @@ class StatusTest {
         Entity.BinarySensor(EntityId("valve-open"), "Valve", null),
         Entity.Switch(EntityId("dehumidifier-power"), "Power", on = null, commandable = true),
         Entity.Select(EntityId("dehumidifier-mode"), "Mode", selected = null, options = listOf("automatic"), commandable = true),
+        Entity.Number(EntityId("dehumidifier-on-at"), "Turn on at", null, "%", min = 40.0, max = 95.0, step = 1.0, default = 85.0, commandable = true),
         reading("humidity"),
       )
-    assertEquals(Status.Unavailable(4), room.status())
+    assertEquals(Status.Unavailable(5), room.status())
   }
 
   @Test

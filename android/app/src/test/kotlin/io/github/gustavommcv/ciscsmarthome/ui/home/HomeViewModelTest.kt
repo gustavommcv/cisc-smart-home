@@ -353,4 +353,94 @@ class HomeViewModelTest {
     HomeViewModel(repository, names).chooseRoomIcon(AreaId("kitchen"), null)
     assertEquals(listOf<Pair<AreaId, RoomIcon?>>(AreaId("kitchen") to null), names.iconChoices)
   }
+
+  // ---- commands that go one after the other -----------------------------------------------
+
+  private val onAt = EntityId("dehumidifier-on-at")
+  private val offAt = EntityId("dehumidifier-off-at")
+  private val applied = CommandResult.Applied(powerOn)
+
+  @Test
+  fun `commands in order go one after the other, each only when the one before was answered`() = runTest {
+    val first = CompletableDeferred<CommandResult>()
+    repository.sendHandler = { id, _ -> if (id == offAt) first.await() else applied }
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+
+    viewModel.sendInOrder(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)))
+    assertEquals(listOf(offAt to CommandValue.Number(83.0)), repository.sent)
+
+    first.complete(applied)
+    assertEquals(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)), repository.sent)
+  }
+
+  @Test
+  fun `all the entities wait while the commands go, and are free when the last was answered`() = runTest {
+    val first = CompletableDeferred<CommandResult>()
+    repository.sendHandler = { id, _ -> if (id == offAt) first.await() else applied }
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+
+    viewModel.sendInOrder(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)))
+    assertEquals(setOf(offAt, onAt), viewModel.state.value.pending)
+
+    first.complete(applied)
+    assertEquals(emptySet<EntityId>(), viewModel.state.value.pending)
+  }
+
+  @Test
+  fun `a command the board refuses stops the ones after it, and says so`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Refused }
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+
+    viewModel.sendInOrder(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)))
+
+    assertEquals(listOf(offAt to CommandValue.Number(83.0)), repository.sent)
+    assertEquals(CommandNotice.Refused, viewModel.state.value.notice)
+    assertEquals(emptySet<EntityId>(), viewModel.state.value.pending)
+  }
+
+  @Test
+  fun `a command that could not be sent stops the ones after it, and says why`() = runTest {
+    repository.sendHandler = { _, _ -> CommandResult.Failed(ConnectionProblem.Unreachable) }
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+
+    viewModel.sendInOrder(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)))
+
+    assertEquals(1, repository.sent.size)
+    assertEquals(CommandNotice.Failed(ConnectionProblem.Unreachable), viewModel.state.value.notice)
+  }
+
+  @Test
+  fun `commands that were all done say nothing`() = runTest {
+    repository.sendHandler = { _, _ -> applied }
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+    viewModel.sendInOrder(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)))
+    assertNull(viewModel.state.value.notice)
+  }
+
+  @Test
+  fun `nothing is sent when one of the entities is still waiting for an answer`() = runTest {
+    val answer = CompletableDeferred<CommandResult>()
+    repository.sendHandler = { _, _ -> answer.await() }
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+    viewModel.send(onAt, CommandValue.Number(90.0))
+
+    viewModel.sendInOrder(listOf(offAt to CommandValue.Number(83.0), onAt to CommandValue.Number(85.0)))
+
+    assertEquals(listOf(onAt to CommandValue.Number(90.0)), repository.sent)
+  }
+
+  @Test
+  fun `no commands is nothing sent`() = runTest {
+    val viewModel = HomeViewModel(repository, names)
+    following(viewModel)
+    viewModel.sendInOrder(emptyList())
+    assertEquals(emptyList<Pair<EntityId, CommandValue>>(), repository.sent)
+    assertEquals(emptySet<EntityId>(), viewModel.state.value.pending)
+  }
 }

@@ -13,6 +13,8 @@ object EntityIds {
   val Humidity = EntityId("humidity")
   val DehumidifierPower = EntityId("dehumidifier-power")
   val DehumidifierMode = EntityId("dehumidifier-mode")
+  val DehumidifierOnAt = EntityId("dehumidifier-on-at")
+  val DehumidifierOffAt = EntityId("dehumidifier-off-at")
 }
 
 object AreaIds {

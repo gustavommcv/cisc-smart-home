@@ -30,6 +30,8 @@ class ContractTest {
         EntityIds.Humidity,
         EntityIds.DehumidifierPower,
         EntityIds.DehumidifierMode,
+        EntityIds.DehumidifierOnAt,
+        EntityIds.DehumidifierOffAt,
       ).map { it.value },
     )
   }

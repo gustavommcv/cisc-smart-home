@@ -40,6 +40,8 @@ class BoardClient(private val baseUrl: HttpUrl, private val http: OkHttpClient) 
         when (value) {
           is CommandValue.Flag -> JsonPrimitive(value.on)
           is CommandValue.Choice -> JsonPrimitive(value.option)
+          // A whole number goes as one ("90", not "90.0"): it is what the board's step is made of.
+          is CommandValue.Number -> if (value.value % 1.0 == 0.0) JsonPrimitive(value.value.toLong()) else JsonPrimitive(value.value)
         },
       )
     }

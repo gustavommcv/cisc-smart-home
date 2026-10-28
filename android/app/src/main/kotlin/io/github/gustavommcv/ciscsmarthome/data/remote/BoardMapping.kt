@@ -33,8 +33,17 @@ internal fun EntityDto.toDomain(): Entity? {
     "binary_sensor" -> Entity.BinarySensor(entityId, name, flag(value))
     "switch" -> Entity.Switch(entityId, name, flag(value), commandable)
     "select" -> Entity.Select(entityId, name, text(value), options.orEmpty(), commandable)
+    // A number the board gave no range or step for cannot be drawn, so it is left out like a kind the app does not know.
+    "number" -> numberEntity(entityId)
     else -> null
   }
+}
+
+private fun EntityDto.numberEntity(entityId: EntityId): Entity? {
+  val min = min ?: return null
+  val max = max ?: return null
+  val step = step?.takeIf { it > 0.0 } ?: return null
+  return Entity.Number(entityId, name, number(value), unit, min, max, step, default, commandable)
 }
 
 internal fun HistoryDto.toDomain(): HistoryPage =
@@ -49,5 +58,7 @@ private fun sensorValue(value: JsonElement?): SensorValue {
 }
 
 private fun flag(value: JsonElement?): Boolean? = primitive(value)?.takeIf { !it.isString }?.booleanOrNull
+
+private fun number(value: JsonElement?): Double? = primitive(value)?.takeIf { !it.isString }?.doubleOrNull
 
 private fun text(value: JsonElement?): String? = primitive(value)?.takeIf { it.isString }?.content

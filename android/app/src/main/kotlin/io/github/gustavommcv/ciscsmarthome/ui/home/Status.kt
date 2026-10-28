@@ -69,4 +69,5 @@ private fun Entity.hasReading(): Boolean =
     is Entity.BinarySensor -> value != null
     is Entity.Switch -> on != null
     is Entity.Select -> selected != null
+    is Entity.Number -> value != null
   }
