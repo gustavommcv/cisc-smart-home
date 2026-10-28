@@ -16,6 +16,31 @@ class ControlsTest {
   private val power = Entity.Switch(EntityId("dehumidifier-power"), "Power", on = false, commandable = true)
   private val mode = Entity.Select(EntityId("dehumidifier-mode"), "Mode", "automatic", listOf("automatic", "manual"), commandable = true)
 
+  private val buzzer = Entity.Switch(EntityId("buzzer-enabled"), "Buzzer", on = true, commandable = true)
+
+  // ---- the buzzer asks before it is silenced -------------------------------------------
+
+  @Test
+  fun `the buzzer asks first when it is about to be silenced, for nobody near the board would hear a leak`() {
+    assertTrue(buzzer.asksBeforeToggling())
+  }
+
+  @Test
+  fun `the buzzer does not ask when it is about to be enabled again`() {
+    assertFalse(buzzer.copy(on = false).asksBeforeToggling())
+  }
+
+  @Test
+  fun `a buzzer that says nothing is asked to be enabled, which does not ask`() {
+    assertFalse(buzzer.copy(on = null).asksBeforeToggling())
+  }
+
+  @Test
+  fun `no other switch asks first`() {
+    assertFalse(power.asksBeforeToggling())
+    assertFalse(power.copy(on = true).asksBeforeToggling())
+  }
+
   // ---- when a control works -------------------------------------------------------------
 
   @Test

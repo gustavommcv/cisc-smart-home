@@ -19,6 +19,7 @@ internal fun EntityId.labelRes(): Int? =
     EntityIds.GasState -> R.string.label_gas_state
     EntityIds.GasAlerts -> R.string.label_gas_alerts
     EntityIds.ValveOpen -> R.string.label_valve_open
+    EntityIds.BuzzerEnabled -> R.string.label_buzzer
     EntityIds.Temperature -> R.string.label_temperature
     EntityIds.Humidity -> R.string.label_humidity
     EntityIds.DehumidifierPower -> R.string.label_dehumidifier_power

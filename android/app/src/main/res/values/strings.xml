@@ -125,6 +125,11 @@
     <string name="label_gas_state">Gás</string>
     <string name="label_gas_alerts">Vazamentos desde que ligou</string>
     <string name="label_valve_open">Válvula aberta</string>
+    <string name="label_buzzer">Buzzer da placa</string>
+    <string name="hint_buzzer">Silencia só o apito da placa. O LED, a válvula e o aviso no celular continuam. Se a placa reiniciar, o buzzer volta a ligar sozinho.</string>
+    <string name="buzzer_off_title">Silenciar o buzzer da placa?</string>
+    <string name="buzzer_off_text">A placa não vai apitar num vazamento: só vai acender o LED e fechar a válvula, e o celular vai avisar. Quem estiver perto dela, sem o celular, não vai ouvir nada. O buzzer volta a ligar sozinho se a placa reiniciar.</string>
+    <string name="buzzer_off_confirm">Silenciar</string>
     <string name="label_temperature">Temperatura</string>
     <string name="label_humidity">Umidade</string>
     <string name="label_dehumidifier_power">Desumidificador</string>
