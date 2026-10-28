@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,9 +24,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
@@ -36,6 +34,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
+import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 
 /** One room: its devices, what each reads, and the controls of what can be commanded. The history chart comes to it next. */
 @Composable
@@ -60,15 +59,15 @@ internal fun RoomScreen(
   }
   Scaffold(modifier = modifier.fillMaxSize(), snackbarHost = { SnackbarHost(snackbar) }) { insets ->
     Column(modifier = Modifier.padding(insets)) {
-      Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back)) }
+      Row(modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.S), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back)) }
         Text(roomName(area), style = MaterialTheme.typography.headlineSmall)
       }
-      LazyColumn(contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = 8.dp)) }
+      LazyColumn(contentPadding = PaddingValues(start = Spacing.Xl, end = Spacing.Xl, bottom = Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+        item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = Spacing.S)) }
         if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
         area.devices.forEach { device ->
-          item { Text(deviceName(device), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp)) }
+          item { Text(deviceName(device), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = Spacing.L)) }
           items(device.entities, key = { it.id.value }) { entity ->
             val enabled = entity.controlEnabled(connection, pending)
             when {
@@ -78,7 +77,7 @@ internal fun RoomScreen(
             }
           }
         }
-        item { LockedCard(R.string.device_add, modifier = Modifier.padding(top = 16.dp)) }
+        item { LockedCard(R.string.device_add, modifier = Modifier.padding(top = Spacing.L)) }
       }
     }
   }
@@ -97,7 +96,7 @@ private fun ReadRow(entity: Entity) {
 private fun SwitchRow(entity: Entity.Switch, enabled: Boolean, onToggle: () -> Unit) {
   Row(
     modifier =
-      Modifier.fillMaxWidth().toggleable(value = entity.on == true, enabled = enabled, role = Role.Switch, onValueChange = { onToggle() }).padding(vertical = 4.dp),
+      Modifier.fillMaxWidth().toggleable(value = entity.on == true, enabled = enabled, role = Role.Switch, onValueChange = { onToggle() }).padding(vertical = Spacing.Xs),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -108,9 +107,9 @@ private fun SwitchRow(entity: Entity.Switch, enabled: Boolean, onToggle: () -> U
 
 @Composable
 private fun SelectRow(entity: Entity.Select, enabled: Boolean, onChoose: (String) -> Unit) {
-  Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+  Column(verticalArrangement = Arrangement.spacedBy(Spacing.S), modifier = Modifier.padding(vertical = Spacing.Xs)) {
     Text(entityLabel(entity), style = MaterialTheme.typography.bodyLarge)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
       entity.options.forEach { option ->
         FilterChip(
           selected = option == entity.selected,

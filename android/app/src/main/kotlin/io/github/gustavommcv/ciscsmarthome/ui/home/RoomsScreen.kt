@@ -10,11 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,7 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
+import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
+import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
+import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
@@ -35,13 +33,13 @@ internal fun RoomsScreen(home: Home, connection: ConnectionState, onOpenRoom: (A
   val lastReading = connection is ConnectionState.Disconnected
   LazyColumn(
     modifier = modifier.fillMaxSize().safeDrawingPadding(),
-    contentPadding = PaddingValues(24.dp),
-    verticalArrangement = Arrangement.spacedBy(12.dp),
+    contentPadding = PaddingValues(Spacing.Xl),
+    verticalArrangement = Arrangement.spacedBy(Spacing.M),
   ) {
     item {
       Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineLarge)
       Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.titleMedium)
-      ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+      ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(top = Spacing.L, bottom = Spacing.Xs))
     }
     items(home.areas, key = { it.id.value }) { area ->
       RoomCard(area, inEmergency = home.isInEmergency(area), dimmed = lastReading, onClick = { onOpenRoom(area.id) })
@@ -52,26 +50,24 @@ internal fun RoomsScreen(home: Home, connection: ConnectionState, onOpenRoom: (A
 
 @Composable
 private fun RoomCard(area: Area, inEmergency: Boolean, dimmed: Boolean, onClick: () -> Unit) {
-  val colors =
-    if (inEmergency) {
-      CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
-    } else {
-      CardDefaults.cardColors()
-    }
-  Card(onClick = onClick, colors = colors, modifier = Modifier.fillMaxWidth().alpha(if (dimmed) 0.6f else 1f)) {
-    Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (inEmergency) Icon(Icons.Filled.Warning, contentDescription = null)
-        Text(roomName(area), style = MaterialTheme.typography.titleLarge)
-      }
-      val highlights = area.highlights()
-      if (highlights.isEmpty()) Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium)
-      highlights.forEach { entity ->
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-          Text(entityLabel(entity), style = MaterialTheme.typography.bodyLarge)
-          Text(entityValue(entity), style = MaterialTheme.typography.bodyLarge)
+  CiscCard(onClick = onClick, tone = if (inEmergency) Tone.Alert else null, modifier = Modifier.alpha(if (dimmed) DIMMED else 1f)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
+      // A room in emergency says so with a solid red warning in the place of its own icon.
+      IconBadge(if (inEmergency) R.drawable.ic_warning else area.id.iconRes(), if (inEmergency) Tone.Alert else Tone.Primary, solid = inEmergency)
+      Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
+        Text(roomName(area), style = MaterialTheme.typography.titleMedium)
+        val highlights = area.highlights()
+        if (highlights.isEmpty()) Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium)
+        highlights.forEach { entity ->
+          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(entityLabel(entity), style = MaterialTheme.typography.bodyMedium)
+            Text(entityValue(entity), style = MaterialTheme.typography.bodyMedium)
+          }
         }
       }
     }
   }
 }
+
+// The cards say they show the last reading, not the present one, by being fainter.
+private const val DIMMED = 0.6f
