@@ -5,6 +5,16 @@
     <string name="home_title">CISC Casa</string>
     <string name="home_subtitle">Casa Inteligente Segura e Confortável</string>
 
+    <string name="tab_home">Início</string>
+    <string name="tab_history">Histórico</string>
+    <string name="tab_settings">Ajustes</string>
+    <string name="history_charts">Gráficos das leituras</string>
+    <string name="settings_theme">Tema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="theme_system">Automático</string>
+    <string name="theme_system_hint">Segue o tema do celular</string>
+
     <string name="connection_connecting">Conectando à placa…</string>
     <string name="connection_connected">Conectado à placa</string>
     <string name="connection_unreachable">Sem conexão com a placa. Confira se o celular está no Wi-Fi cisc-smart-home e com os dados móveis desligados.</string>

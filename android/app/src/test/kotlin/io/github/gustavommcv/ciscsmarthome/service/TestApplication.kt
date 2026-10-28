@@ -3,13 +3,17 @@ package io.github.gustavommcv.ciscsmarthome.service
 import android.app.Application
 import io.github.gustavommcv.ciscsmarthome.AppDependencies
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
+import io.github.gustavommcv.ciscsmarthome.testing.FakeThemeSettings
 
 /** The application of the service tests: what the service asks of it is a fake repository the test moves by hand. */
 class TestApplication : Application(), AppDependencies {
   val repository = FakeHomeRepository()
 
   override val homeRepository: HomeRepository get() = repository
+
+  override val themeSettings: ThemeSettings = FakeThemeSettings()
 
   override fun startMonitoring() = Unit
 }

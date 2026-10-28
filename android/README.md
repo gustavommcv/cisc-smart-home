@@ -40,7 +40,7 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
 ├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/local` com o histórico e `data/repository` com o repositório
-├── ui/        as telas em Compose e um ViewModel por tela; `ui/theme` guarda o visual (cores, formas, espaços) e `ui/components` as peças que as telas repartem
+├── ui/        as telas em Compose e um ViewModel por tela; `ui/theme` guarda o visual (cores, formas, espaços), `ui/components` as peças que as telas repartem e `ui/navigation` a barra de baixo
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 ├── di/        a montagem das dependências, sem framework
 ├── CiscApplication.kt    cria a montagem quando algo a pede pela primeira vez e inicia o serviço
@@ -145,7 +145,7 @@ A placa fala HTTP sem certificado, então o HTTP puro é **liberado só para `19
 
 ### As telas
 
-Há três telas, escolhidas por `HomeContent` a partir do estado do `HomeViewModel` (`HomeState`: a casa, a conexão e qual tela está aberta):
+Dentro da aba Início há três telas, escolhidas por `HomeContent` a partir do estado do `HomeViewModel` (`HomeState`: a casa, a conexão e qual tela está aberta):
 
 | Tela | Quando aparece | O que mostra |
 |---|---|---|
@@ -184,15 +184,30 @@ O visual tem um lugar só, e as telas pedem a ele em vez de soletrar cores e nú
 | **Etiqueta de estado** | `ui/components/StatusPill.kt` | Uma palavra curta sobre o estado, com um ponto do mesmo tom. A faixa de conexão a usa: "Conectado à placa", "Conectando à placa…" ou "Sem conexão com a placa", e, quando a conexão cai, o motivo vem logo abaixo |
 | **Borda tracejada** | `ui/components/DashedBorder.kt` | O contorno do que é desenhado como um lugar e ainda não existe (os cartões "Em breve") |
 
-**O tema segue o do sistema, claro ou escuro**, como já seguia. A escolha do tema e o claro como padrão chegam com a aba de ajustes: sem ela não haveria como mudá-lo, e uma opção guardada que ninguém altera seria código parado.
+**O tema é uma escolha do usuário**: claro, escuro ou automático (o do celular), na aba de Ajustes. Ver [A barra de baixo e os ajustes](#a-barra-de-baixo-e-os-ajustes).
 
 **O contraste é garantido por teste.** O `ColorsTest` confere, nos dois temas, que todo texto tem pelo menos **4,5:1** sobre o fundo em que é desenhado (o mínimo AA da WCAG 2.1) e que o contorno de um controle tem pelo menos 3:1. O texto secundário (legendas, rótulos de baixo) tem entre 7,6:1 e 9,9:1 sobre o fundo e sobre o cartão. O `ToneTest` faz o mesmo para cada tom, e o `DimensionsTest` confere que os espaços formam uma escala na grade de 4 dp e que os cantos crescem em ordem.
 
-**Os ícones** são o [Material Symbols](https://fonts.google.com/icons) (traço fino, 24 dp), um arquivo XML por ícone em `res/drawable/ic_*.xml`: seta de voltar, cadeado, aviso, casa, cozinha e cama. Vêm do repositório [google/material-design-icons](https://github.com/google/material-design-icons), sob a licença **Apache 2.0**, e há uma única alteração neles: o `?attr/colorControlNormal` do original virou `?android:attr/colorControlNormal`, porque o primeiro só existe com o AppCompat, que o app não usa. A cor de verdade vem do `Icon` do Compose, que pinta o ícone.
+**Os ícones** são o [Material Symbols](https://fonts.google.com/icons) (traço fino, 24 dp), um arquivo XML por ícone em `res/drawable/ic_*.xml`: seta de voltar, cadeado, aviso, casa, cozinha e cama, e, para a barra de baixo e a escolha do tema, relógio (histórico), engrenagem (ajustes), sol, lua e o brilho automático. Vêm do repositório [google/material-design-icons](https://github.com/google/material-design-icons), sob a licença **Apache 2.0**, e há uma única alteração neles: o `?attr/colorControlNormal` do original virou `?android:attr/colorControlNormal`, porque o primeiro só existe com o AppCompat, que o app não usa. A cor de verdade vem do `Icon` do Compose, que pinta o ícone.
 
 Para pôr um ícone novo: baixe `symbols/android/<nome>/materialsymbolsoutlined/<nome>_24px.xml`, salve como `res/drawable/ic_<nome>.xml`, faça a mesma troca do atributo e use `painterResource(R.drawable.ic_<nome>)`. O `SymbolIconsTest` confere que todo ícone tem 24 dp, está na grade de 960 do conjunto e desenha alguma coisa, então um tamanho ou variante errados falham no teste. A biblioteca `material-icons-core` saiu do app, o que o deixa menor.
 
 **A aparência dos componentes não tem teste automático**: o app não usa a biblioteca de teste do Compose, então o que é lógica (qual cor, qual ícone, qual palavra) está em funções puras testadas, e o resto foi conferido no celular.
+
+### A barra de baixo e os ajustes
+
+O app tem **três abas**, numa barra de baixo (`BottomBar`): **Início** (a lista de cômodos e cada cômodo), **Histórico** e **Ajustes**. O `CiscApp` guarda qual está aberta e a troca; cada aba tem o seu `ViewModel` e o seu estado, então sair de uma e voltar a encontra como estava (um cômodo aberto continua aberto). O voltar do sistema leva do Histórico e dos Ajustes ao Início, e do Início fecha o cômodo e, depois, o app. A navegação é à mão, sem biblioteca; a [decisão 0007](../docs/decisoes/0007-abas-e-escolha-do-tema.md) diz por quê.
+
+| Peça | Onde | O que faz |
+|---|---|---|
+| `Tab` | `ui/navigation/Tab.kt` | As três abas, a ordem, a palavra e o ícone de cada uma, e para onde o voltar vai (`back()`) |
+| `BottomBar` | `ui/navigation/BottomBar.kt` | A barra: a aba aberta fica numa pílula tingida e com a palavra forte; as outras, na cor discreta |
+| `HistoryScreen` | `ui/history/` | O lugar dos gráficos das leituras: por enquanto, um cartão "Em breve". O app já guarda o histórico; o gráfico vem na próxima etapa |
+| `SettingsScreen` e `SettingsViewModel` | `ui/settings/` | A escolha do tema, em três linhas inteiras que recebem o toque (Claro, Escuro, Automático, este com "Segue o tema do celular") |
+
+**O tema** é um `ThemeMode` (`Claro`, `Escuro`, `Automático`) do domínio, com a regra de quando o app fica escuro (`isDark`): o claro nunca, o escuro sempre, o automático como o celular estiver. **O padrão é o automático.** A escolha é guardada pelo `PreferencesThemeSettings`, num arquivo de preferências com uma palavra (o nome do valor), lida ao abrir e válida na mesma hora em que muda; uma palavra desconhecida vale como nenhuma escolha. A tela chega a ela por `AppDependencies.themeSettings`, o mesmo caminho do repositório. O arquivo se chama `theme-settings` e a chave `theme`: são o que o usuário já tem no celular, e um teste os guarda.
+
+**As barras do sistema acompanham o tema do app, não o do celular.** Sem isso, com o app claro num celular escuro, os ícones da barra de status ficariam claros sobre uma barra clara. A janela que aparece antes de o Compose desenhar segue o sistema (`Theme.DeviceDefault.DayNight`), então, com uma escolha diferente da do celular, ela pode aparecer por um instante na cor do sistema.
 
 ### O serviço e o aviso de vazamento
 

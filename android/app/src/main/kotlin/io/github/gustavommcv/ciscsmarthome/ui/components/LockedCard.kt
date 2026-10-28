@@ -1,4 +1,4 @@
-package io.github.gustavommcv.ciscsmarthome.ui.home
+package io.github.gustavommcv.ciscsmarthome.ui.components
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.gustavommcv.ciscsmarthome.R
-import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
-import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
-import io.github.gustavommcv.ciscsmarthome.ui.components.dashedBorder
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 
 /** Something the app will do and does not yet: shown, so it is clear where it goes, and drawn as an empty place, so it is clear it does not work. */

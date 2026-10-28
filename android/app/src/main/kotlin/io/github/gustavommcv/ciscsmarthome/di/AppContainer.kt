@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import io.github.gustavommcv.ciscsmarthome.data.local.HistoryDatabase
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesAlertMemory
+import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesThemeSettings
 import io.github.gustavommcv.ciscsmarthome.data.local.RoomHistoryStore
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardClient
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardEventStream
 import io.github.gustavommcv.ciscsmarthome.data.repository.HomeRepositoryImpl
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -29,6 +31,8 @@ class AppContainer(context: Context) {
 
   private val alertMemory = PreferencesAlertMemory(context.applicationContext.getSharedPreferences(ALERT_MEMORY_FILE, Context.MODE_PRIVATE))
 
+  val themeSettings: ThemeSettings = PreferencesThemeSettings(context.applicationContext.getSharedPreferences(THEME_FILE, Context.MODE_PRIVATE))
+
   val homeRepository: HomeRepository =
     HomeRepositoryImpl(
       BoardClient(boardUrl, http),
@@ -45,5 +49,6 @@ class AppContainer(context: Context) {
     private const val NETWORK_TIMEOUT_SECONDS = 5L
     private const val DATABASE_NAME = "history.db"
     private const val ALERT_MEMORY_FILE = "alert-memory"
+    private const val THEME_FILE = "theme-settings"
   }
 }

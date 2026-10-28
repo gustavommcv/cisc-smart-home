@@ -10,6 +10,7 @@ Cada decisão importante do projeto está registrada em um arquivo curto, com o 
 | [0004](0004-modelo-comodo-dispositivo-entidade.md) | Modelo de dados: cômodo, dispositivo e entidade | aceita |
 | [0005](0005-firmware-em-camadas-testavel.md) | Firmware em camadas, com o domínio testável no computador | aceita |
 | [0006](0006-alertas-por-notificacao-local.md) | Alertas por notificação local, de um serviço em primeiro plano | aceita |
+| [0007](0007-abas-e-escolha-do-tema.md) | Navegação por abas e tema escolhido pelo usuário | aceita |
 
 Uma decisão aceita não se apaga: se mudar, ganha um novo arquivo que a substitui, e a antiga fica marcada como substituída.
 
