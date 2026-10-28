@@ -11,6 +11,7 @@ Cada decisão importante do projeto está registrada em um arquivo curto, com o 
 | [0005](0005-firmware-em-camadas-testavel.md) | Firmware em camadas, com o domínio testável no computador | aceita |
 | [0006](0006-alertas-por-notificacao-local.md) | Alertas por notificação local, de um serviço em primeiro plano | aceita |
 | [0007](0007-abas-e-escolha-do-tema.md) | Navegação por abas e tema escolhido pelo usuário | aceita |
+| [0008](0008-grafico-desenhado-a-mao.md) | O gráfico do histórico é desenhado à mão, sem biblioteca | aceita |
 
 Uma decisão aceita não se apaga: se mudar, ganha um novo arquivo que a substitui, e a antiga fica marcada como substituída.
 

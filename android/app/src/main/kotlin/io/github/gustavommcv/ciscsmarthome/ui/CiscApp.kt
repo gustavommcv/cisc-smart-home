@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import io.github.gustavommcv.ciscsmarthome.ui.history.HistoryScreen
+import io.github.gustavommcv.ciscsmarthome.ui.history.HistoryViewModel
 import io.github.gustavommcv.ciscsmarthome.ui.home.HomeScreen
 import io.github.gustavommcv.ciscsmarthome.ui.home.HomeViewModel
 import io.github.gustavommcv.ciscsmarthome.ui.navigation.BottomBar
@@ -23,7 +24,7 @@ import io.github.gustavommcv.ciscsmarthome.ui.settings.SettingsViewModel
  * leaving one and coming back finds it as it was (a room that was open is still open).
  */
 @Composable
-internal fun CiscApp(homeViewModel: HomeViewModel, settingsViewModel: SettingsViewModel) {
+internal fun CiscApp(homeViewModel: HomeViewModel, historyViewModel: HistoryViewModel, settingsViewModel: SettingsViewModel) {
   var tab by rememberSaveable { mutableStateOf(Tab.Start) }
   // From history or settings, back goes home. From home it is the screen's, or the system's: a room closes, then the app does.
   BackHandler(enabled = tab.back() != null) { tab.back()?.let { tab = it } }
@@ -31,7 +32,7 @@ internal fun CiscApp(homeViewModel: HomeViewModel, settingsViewModel: SettingsVi
     val content = Modifier.padding(padding)
     when (tab) {
       Tab.Home -> HomeScreen(homeViewModel, content)
-      Tab.History -> HistoryScreen(content)
+      Tab.History -> HistoryScreen(historyViewModel, content)
       Tab.Settings -> SettingsScreen(settingsViewModel, content)
     }
   }

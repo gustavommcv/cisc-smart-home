@@ -2,7 +2,21 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o app fala com a placa e vigia a casa. Ele conecta, mostra a casa como a placa a descreve, numa lista simples, e, com a tela apagada, continua ouvindo a placa num serviço em primeiro plano e **avisa de um vazamento de gás com uma notificação**. A tela inicial já é a dos cômodos, em português. O controle do desumidificador, o gráfico do histórico e a entrada automática na rede da placa chegam nas próximas partes (veja as [fases](../README.md#fases)).
+> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras num gráfico**, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). Faltam a entrada automática na rede da placa e os nomes editáveis pelo usuário (veja as [fases](../README.md#fases)).
+
+## Como é o app
+
+As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
+
+| Início | Cômodo | Histórico |
+|:---:|:---:|:---:|
+| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador e a escolha entre automático e manual"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
+
+| Vazamento de gás | Ajustes | Tema escuro |
+|:---:|:---:|:---:|
+| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes, com a escolha do tema: claro, escuro ou automático"> | <img src="../docs/imagens/historico-escuro.png" width="250" alt="O histórico no tema escuro"> |
+
+As imagens mostram só o app: a barra de status do celular foi cortada. Para refazê-las, com o celular em modo de depuração e ligado à maquete, use `adb exec-out screencap -p > tela.png` e corte os primeiros 110 pixels de cima.
 
 ## Ferramentas
 
@@ -40,7 +54,7 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
 ├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/local` com o histórico e `data/repository` com o repositório
-├── ui/        as telas em Compose e um ViewModel por tela; `ui/theme` guarda o visual (cores, formas, espaços), `ui/components` as peças que as telas repartem e `ui/navigation` a barra de baixo
+├── ui/        as telas em Compose e um ViewModel por tela; `ui/theme` guarda o visual (cores, formas, espaços), `ui/components` as peças que as telas repartem, `ui/navigation` a barra de baixo e `ui/history` o gráfico
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 ├── di/        a montagem das dependências, sem framework
 ├── CiscApplication.kt    cria a montagem quando algo a pede pela primeira vez e inicia o serviço
@@ -208,7 +222,7 @@ O app tem **três abas**, numa barra de baixo (`BottomBar`): **Início** (a list
 |---|---|---|
 | `Tab` | `ui/navigation/Tab.kt` | As três abas, a ordem, a palavra e o ícone de cada uma, e para onde o voltar vai (`back()`) |
 | `BottomBar` | `ui/navigation/BottomBar.kt` | A barra: a aba aberta fica numa pílula tingida e com a palavra forte; as outras, na cor discreta |
-| `HistoryScreen` | `ui/history/` | O lugar dos gráficos das leituras: por enquanto, um cartão "Em breve". O app já guarda o histórico; o gráfico vem na próxima etapa |
+| `HistoryScreen` e `HistoryViewModel` | `ui/history/` | O gráfico das leituras de um sensor, no período escolhido. Veja [O histórico e o gráfico](#o-histórico-e-o-gráfico) |
 | `SettingsScreen` e `SettingsViewModel` | `ui/settings/` | A escolha do tema, em três linhas inteiras que recebem o toque (Claro, Escuro, Automático, este com "Segue o tema do celular") |
 
 **O tema** é um `ThemeMode` (`Claro`, `Escuro`, `Automático`) do domínio, com a regra de quando o app fica escuro (`isDark`): o claro nunca, o escuro sempre, o automático como o celular estiver. **O padrão é o automático.** A escolha é guardada pelo `PreferencesThemeSettings`, num arquivo de preferências com uma palavra (o nome do valor), lida ao abrir e válida na mesma hora em que muda; uma palavra desconhecida vale como nenhuma escolha. A tela chega a ela por `AppDependencies.themeSettings`, o mesmo caminho do repositório. O arquivo se chama `theme-settings` e a chave `theme`: são o que o usuário já tem no celular, e um teste os guarda.
@@ -228,6 +242,28 @@ O logo é uma **casa branca com um escudo com visto (casa segura) e um brilho do
 O ícone anterior era o **modelo do Android Studio** (o robozinho verde sobre uma grade). Os arquivos de imagem do ícone (`mipmap-*dpi/*.webp`) saíram junto: com o ícone adaptativo (o app exige Android 10 ou mais), o sistema nunca os usa.
 
 O `LauncherIconTest` guarda o que importa: que o ícone e o redondo são o mesmo ícone adaptativo e têm a camada de uma cor, que cada camada é um vetor de 108 dp, que **o desenho fica dentro da zona segura** (um círculo de 66 dp no centro, que qualquer máscara de launcher deixa visível), que o ícone da barra de status é só branco, que o logo da tela e o ícone da barra de status têm o **mesmo desenho** do ícone (para um não se afastar do outro) e que nenhum ícone de imagem volta. Para mudar o desenho, mude os caminhos nos quatro arquivos; o teste diz se algum ficou para trás.
+
+### O histórico e o gráfico
+
+A aba **Histórico** mostra uma linha com o que a placa leu de **um sensor**, num **período** (1 h, 6 h ou 24 h). O app guarda as leituras no celular (veja "O histórico local"), então o gráfico se lê também **sem a placa por perto**: sem a casa carregada, a aba oferece os três sensores da maquete (gás, temperatura e umidade).
+
+| Peça | Onde | O que faz |
+|---|---|---|
+| `chartOf` | `ui/history/Chart.kt` | A regra do gráfico: põe cada leitura na janela, quebra a linha onde o app não ouviu a placa, reduz o que não cabe na tela sem perder os picos e diz o menor e o maior valor |
+| `chartSensors` | `ui/history/ChartSensors.kt` | Quais sensores o gráfico oferece: os que leem com uma unidade (uma contagem, como a dos vazamentos, não tem), os da maquete primeiro |
+| `ChartPeriod` | `ui/history/ChartPeriod.kt` | Os três períodos, e o de 6 horas como o que abre |
+| `HistoryViewModel` | `ui/history/HistoryViewModel.kt` | Junta a escolha do usuário com a série que o repositório devolve, e move a janela com o tempo |
+| `LineChart` | `ui/history/LineChart.kt` | Desenha: uma linha na cor do app sobre três linhas de grade; um trecho de uma leitura só é um ponto |
+| `HistoryScreen` | `ui/history/HistoryScreen.kt` | A tela: os sensores e os períodos em fichas, o gráfico num cartão, o menor e o maior valor embaixo, e uma frase que explica os vazios |
+
+**Quatro regras decidem o que se vê**, todas em funções puras e testadas sem celular. A [decisão 0008](../docs/decisoes/0008-grafico-desenhado-a-mao.md) conta por que o gráfico é desenhado à mão, sem biblioteca:
+
+- **Os vazios ficam vazios.** Um silêncio de mais de **2 minutos** entre duas leituras quebra a linha, e o tempo sem leitura continua em branco: ligar os dois lados com uma reta diria que nada aconteceu ali. Uma leitura sem valor (`null`) também conta como tempo sem leitura.
+- **A redução guarda os picos.** A placa lê a cada 10 s: um dia são 8 640 pontos. Um trecho com mais leituras do que a tela mostra é cortado em 150 partes e, de cada parte, ficam **a menor e a maior** leitura, na ordem do tempo. A média nunca é usada, porque achataria o pico de um vazamento, que dura segundos.
+- **A janela anda com o tempo.** O `HistoryViewModel` a pede de novo a cada 30 segundos e a faz terminar na hora em que o gráfico é montado, então a leitura que acabou de chegar entra.
+- **Um sensor que sai da casa deixa de estar escolhido.** O primeiro toma o lugar dele.
+
+O gráfico não tem toque nem zoom num ponto: mostra o menor e o maior valor, a janela (de "há 6 h" a "agora") e uma descrição para o leitor de tela. Os testes (`ChartTest`, `ChartSensorsTest`, `HistoryViewModelTest` e outros) quebram se um pico sumir, se um vazio for ligado ou se a janela não andar; a aparência do desenho foi conferida no celular.
 
 ### O serviço e o aviso de vazamento
 

@@ -21,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import java.time.Clock
 import io.github.gustavommcv.ciscsmarthome.AppDependencies
+import io.github.gustavommcv.ciscsmarthome.ui.history.HistoryViewModel
 import io.github.gustavommcv.ciscsmarthome.ui.home.HomeViewModel
 import io.github.gustavommcv.ciscsmarthome.ui.settings.SettingsViewModel
 import io.github.gustavommcv.ciscsmarthome.ui.theme.CiscTheme
@@ -30,6 +32,10 @@ import io.github.gustavommcv.ciscsmarthome.ui.theme.CiscTheme
 class MainActivity : ComponentActivity() {
   private val homeViewModel: HomeViewModel by viewModels {
     viewModelFactory { initializer { HomeViewModel((application as AppDependencies).homeRepository) } }
+  }
+
+  private val historyViewModel: HistoryViewModel by viewModels {
+    viewModelFactory { initializer { HistoryViewModel((application as AppDependencies).homeRepository, Clock.systemUTC()) } }
   }
 
   private val settingsViewModel: SettingsViewModel by viewModels {
@@ -58,7 +64,7 @@ class MainActivity : ComponentActivity() {
         onDispose {}
       }
       CiscTheme(darkTheme = dark) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { CiscApp(homeViewModel, settingsViewModel) }
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { CiscApp(homeViewModel, historyViewModel, settingsViewModel) }
       }
     }
   }

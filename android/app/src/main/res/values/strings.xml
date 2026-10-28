@@ -8,7 +8,16 @@
     <string name="tab_home">Início</string>
     <string name="tab_history">Histórico</string>
     <string name="tab_settings">Ajustes</string>
-    <string name="history_charts">Gráficos das leituras</string>
+    <string name="period_1h">1 h</string>
+    <string name="period_6h">6 h</string>
+    <string name="period_24h">24 h</string>
+    <string name="history_min">mín. %1$s</string>
+    <string name="history_max">máx. %1$s</string>
+    <string name="history_since">há %1$s</string>
+    <string name="history_now">agora</string>
+    <string name="history_chart_description">Gráfico de %1$s nas últimas %2$s, de %3$s a %4$s</string>
+    <string name="history_empty">Ainda não há leituras guardadas neste período.</string>
+    <string name="history_caption">Cada ponto é uma leitura da placa, guardada no celular. Os vazios são o tempo em que o app não ouviu a placa.</string>
     <string name="settings_theme">Tema</string>
 
     <string name="section_rooms">Cômodos</string>
