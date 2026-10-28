@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import androidx.room.Room
 import io.github.gustavommcv.ciscsmarthome.data.local.HistoryDatabase
+import io.github.gustavommcv.ciscsmarthome.data.local.MIGRATION_1_2
 import io.github.gustavommcv.ciscsmarthome.data.link.AndroidNetworkJoiner
 import io.github.gustavommcv.ciscsmarthome.data.link.BoardLink
 import io.github.gustavommcv.ciscsmarthome.data.link.ChosenLink
@@ -42,7 +43,7 @@ class AppContainer(context: Context) {
   // The board is on the phone's own network, so it answers in milliseconds or not at all.
   private val http = OkHttpClient.Builder().connectTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS).readTimeout(NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS).build()
 
-  private val database = Room.databaseBuilder(context.applicationContext, HistoryDatabase::class.java, DATABASE_NAME).build()
+  private val database = Room.databaseBuilder(context.applicationContext, HistoryDatabase::class.java, DATABASE_NAME).addMigrations(MIGRATION_1_2).build()
 
   private val alertMemory = PreferencesAlertMemory(context.applicationContext.getSharedPreferences(ALERT_MEMORY_FILE, Context.MODE_PRIVATE))
 

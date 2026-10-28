@@ -18,9 +18,11 @@ import io.github.gustavommcv.ciscsmarthome.domain.HistoryStore
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeEvent
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.LeakAnnouncer
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,12 +51,15 @@ class HomeRepositoryImpl(
   private val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Connecting)
   private val leaks = LeakAnnouncer(alertMemory)
   private val history = HistorySync(api, store, deviceClock)
+  private var readingsLetGoOfAt: Instant? = null
 
   override val home: StateFlow<Home?> = homeState.asStateFlow()
   override val connection: StateFlow<ConnectionState> = connectionState.asStateFlow()
   override val alerts: Flow<GasAlert> = leaks.alerts
 
   override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> = store.series(entityId, since)
+
+  override fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>> = store.hourly(entityId, since, until)
 
   override suspend fun send(entityId: EntityId, value: CommandValue): CommandResult =
     when (val result = api.sendCommand(entityId, value)) {
@@ -100,9 +105,22 @@ class HomeRepositoryImpl(
       is BoardResult.Success -> {
         accept(result.value)
         connectionState.value = ConnectionState.Connected
+        letGoOfOldReadings()
         history.catchUp(result.value.bootId)
       }
     }
+  }
+
+  /**
+   * The readings are kept for [READINGS_KEPT], and what was read in each hour stays as its least and its greatest. This is done when the board
+   * connects, and at most once in [LET_GO_EVERY], for a board that keeps dropping would otherwise make the database look through everything each time.
+   */
+  private suspend fun letGoOfOldReadings() {
+    val now = clock.instant()
+    val last = readingsLetGoOfAt
+    if (last != null && Duration.between(last, now) < LET_GO_EVERY) return
+    store.forgetReadingsBefore(now.minus(READINGS_KEPT))
+    readingsLetGoOfAt = now
   }
 
   private fun accept(incoming: Home) {
@@ -121,4 +139,12 @@ class HomeRepositoryImpl(
       is BoardError.Unexpected -> ConnectionProblem.Incompatible
       is BoardError.NoRoute -> problem
     }
+
+  internal companion object {
+    /** How long the readings are kept. A day of them is what the charts of hours show; a week leaves room to go back a few days. After that, only the hours stay. */
+    val READINGS_KEPT: Duration = Duration.ofDays(7)
+
+    /** How often at most the old readings are let go of. */
+    val LET_GO_EVERY: Duration = Duration.ofHours(1)
+  }
 }

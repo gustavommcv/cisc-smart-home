@@ -11,6 +11,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.HistoryPage
 import io.github.gustavommcv.ciscsmarthome.domain.HistoryStore
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
@@ -69,10 +70,32 @@ internal class FakeHistoryStore : HistoryStore {
 
   val saved: List<StoredSample> get() = kept.values.toList()
 
+  /** What the repository asked for, in order: "save" and "forget". */
+  val calls = mutableListOf<String>()
+
+  /** The moments the readings before were let go of, in order. */
+  val forgotten = mutableListOf<Instant>()
+
   override suspend fun save(samples: List<StoredSample>) {
+    calls += "save"
     samples.forEach { kept.putIfAbsent(it.bootId to it.uptimeMs, it) }
     changes.value += 1
   }
+
+  override suspend fun forgetReadingsBefore(before: Instant) {
+    calls += "forget"
+    forgotten += before
+  }
+
+  override fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>> =
+    changes.map {
+      kept.values
+        .mapNotNull { sample -> sample.values[entityId]?.let { sample.at to it } }
+        .groupBy { (at, _) -> Instant.ofEpochSecond(at.epochSecond / 3_600 * 3_600) }
+        .filterKeys { hour -> hour >= since && hour < until }
+        .toSortedMap()
+        .map { (hour, readings) -> HourlyReading(hour, readings.minOf { it.second }, readings.maxOf { it.second }) }
+    }
 
   override suspend fun latestUptime(bootId: BootId): Long? = kept.keys.filter { it.first == bootId }.maxOfOrNull { it.second }
 
