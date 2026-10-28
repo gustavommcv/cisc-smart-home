@@ -215,6 +215,20 @@ O app tem **três abas**, numa barra de baixo (`BottomBar`): **Início** (a list
 
 **As barras do sistema acompanham o tema do app, não o do celular.** Sem isso, com o app claro num celular escuro, os ícones da barra de status ficariam claros sobre uma barra clara. A janela que aparece antes de o Compose desenhar segue o sistema (`Theme.DeviceDefault.DayNight`), então, com uma escolha diferente da do celular, ela pode aparecer por um instante na cor do sistema.
 
+### O logo
+
+O logo é uma **casa branca com um escudo com visto (casa segura) e um brilho dourado (casa inteligente)**, sobre um degradê verde-azulado, o da paleta. Foi desenhado uma vez só e é usado de três jeitos, sempre com o mesmo desenho:
+
+| Onde | Arquivo | Como |
+|---|---|---|
+| **O ícone do app no celular** | `drawable/ic_launcher_background.xml`, `ic_launcher_foreground.xml` e `ic_launcher_monochrome.xml`, reunidos em `mipmap-anydpi/ic_launcher.xml` e `ic_launcher_round.xml` | Ícone adaptativo: o fundo é o degradê, a frente é a casa, e a camada de uma cor (a casa com o escudo vazado e o visto) é a dos **ícones temáticos** do Android 13 em diante |
+| **A barra de status** | `drawable/ic_notification.xml` | A casa com o escudo vazado, branca sobre transparente, como a barra de status quer seus ícones |
+| **O cabeçalho do Início** | `drawable/ic_logo.xml`, pelo componente `LogoMark` | O ícone num quadrado de cantos arredondados, ao lado do nome. É enfeite: o nome está escrito ao lado, então o leitor de tela o ignora |
+
+O ícone anterior era o **modelo do Android Studio** (o robozinho verde sobre uma grade). Os arquivos de imagem do ícone (`mipmap-*dpi/*.webp`) saíram junto: com o ícone adaptativo (o app exige Android 10 ou mais), o sistema nunca os usa.
+
+O `LauncherIconTest` guarda o que importa: que o ícone e o redondo são o mesmo ícone adaptativo e têm a camada de uma cor, que cada camada é um vetor de 108 dp, que **o desenho fica dentro da zona segura** (um círculo de 66 dp no centro, que qualquer máscara de launcher deixa visível), que o ícone da barra de status é só branco, que o logo da tela e o ícone da barra de status têm o **mesmo desenho** do ícone (para um não se afastar do outro) e que nenhum ícone de imagem volta. Para mudar o desenho, mude os caminhos nos quatro arquivos; o teste diz se algum ficou para trás.
+
 ### O serviço e o aviso de vazamento
 
 Com a tela apagada, o Android corta a rede dos apps que estão em segundo plano, e um vazamento é justamente o que não pode passar em branco com o celular no bolso. Por isso o app tem o `HomeService`, um **serviço em primeiro plano** do tipo "dispositivo conectado" (o tipo que o Android reserva para quem fala com um aparelho e que não tem limite de tempo). A tela o inicia ao abrir (de uma tela à frente o Android permite; do segundo plano, não), e ele:

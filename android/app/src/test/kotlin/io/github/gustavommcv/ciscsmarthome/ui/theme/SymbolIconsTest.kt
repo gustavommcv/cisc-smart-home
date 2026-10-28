@@ -9,7 +9,7 @@ import org.junit.Test
 class SymbolIconsTest {
   // Unit tests run from the module folder, as ContractTest relies on.
   private val symbols =
-    File("src/main/res/drawable").listFiles { file -> file.name.startsWith("ic_") && !file.name.startsWith("ic_launcher") && file.name != "ic_notification.xml" }.orEmpty().sortedBy { it.name }
+    File("src/main/res/drawable").listFiles { file -> file.name.startsWith("ic_") && !file.name.startsWith("ic_launcher") && file.name != "ic_notification.xml" && file.name != "ic_logo.xml" }.orEmpty().sortedBy { it.name }
 
   private fun attribute(source: String, name: String): String? = Regex("""android:$name="([^"]*)"""").find(source)?.groupValues?.get(1)
 
