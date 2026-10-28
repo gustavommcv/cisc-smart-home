@@ -39,3 +39,6 @@ internal fun entityValue(entity: Entity): String {
     is Entity.Select -> entity.selected?.let { option -> optionRes(option)?.let { stringResource(it) } ?: option } ?: unavailable
   }
 }
+
+/** What to keep of a name typed in the dialog: nothing when it is the default one, or none, so what was only given an icon goes on following the default name. */
+internal fun nameToKeep(typed: String, default: String): String? = Names.clean(typed)?.takeIf { it != default }

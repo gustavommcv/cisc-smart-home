@@ -36,7 +36,24 @@
     <string name="link_password_show">Mostrar</string>
     <string name="link_password_hide">Ocultar</string>
 
-    <string name="rename_room_title">Renomear o cômodo</string>
+    <string name="edit_room_title">Editar o cômodo</string>
+    <string name="edit_room_default">Voltar ao padrão</string>
+    <string name="edit_description">Editar %1$s</string>
+    <string name="room_delete">Excluir cômodo</string>
+    <string name="room_icon_title">Ícone do cômodo</string>
+    <string name="room_icon_home">Casa</string>
+    <string name="room_icon_kitchen">Cozinha</string>
+    <string name="room_icon_bedroom">Quarto</string>
+    <string name="room_icon_living">Sala</string>
+    <string name="room_icon_dining">Sala de jantar</string>
+    <string name="room_icon_bathroom">Banheiro</string>
+    <string name="room_icon_laundry">Lavanderia</string>
+    <string name="room_icon_office">Escritório</string>
+    <string name="room_icon_nursery">Quarto de criança</string>
+    <string name="room_icon_entrance">Entrada</string>
+    <string name="room_icon_balcony">Varanda</string>
+    <string name="room_icon_yard">Quintal</string>
+    <string name="room_icon_garage">Garagem</string>
     <string name="rename_device_title">Renomear o dispositivo</string>
     <string name="rename_label">Nome</string>
     <string name="rename_save">Salvar</string>

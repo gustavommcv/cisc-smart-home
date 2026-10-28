@@ -1,5 +1,6 @@
 package io.github.gustavommcv.ciscsmarthome.ui.home
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
+import io.github.gustavommcv.ciscsmarthome.domain.AreaIcons
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.Device
@@ -46,6 +48,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
 import io.github.gustavommcv.ciscsmarthome.domain.Names
+import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.LockedCard
@@ -60,12 +63,14 @@ internal fun RoomScreen(
   area: Area,
   connection: ConnectionState,
   names: Names,
+  icons: AreaIcons,
   pending: Set<EntityId>,
   notice: CommandNotice?,
   onBack: () -> Unit,
   onCommand: (EntityId, CommandValue) -> Unit,
   onNoticeShown: () -> Unit,
   onRenameRoom: (String?) -> Unit,
+  onChooseIcon: (RoomIcon?) -> Unit,
   onRenameDevice: (DeviceId, String?) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -87,7 +92,7 @@ internal fun RoomScreen(
       Row(modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.S), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back)) }
         Text(roomName(area, names), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-        RenameButton(roomName(area, names), onClick = { renamingRoom = true })
+        EditButton(R.string.edit_description, roomName(area, names), onClick = { renamingRoom = true })
       }
       LazyColumn(contentPadding = PaddingValues(start = Spacing.Xl, end = Spacing.Xl, bottom = Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
         item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = Spacing.S)) }
@@ -95,36 +100,70 @@ internal fun RoomScreen(
         if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
         items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, names, connection, pending, onCommand, onRename = { renamingDevice = device.id.value }) }
         item { LockedCard(R.string.device_add) }
+        // Shown, so it is clear it is to come; a room cannot be taken out of the board's house from the phone.
+        item { LockedCard(R.string.room_delete) }
       }
     }
   }
 
   if (renamingRoom) {
-    RenameDialog(
-      title = R.string.rename_room_title,
-      current = roomName(area, names),
-      hasCustomName = area.id in names.areas,
-      onSave = { onRenameRoom(it); renamingRoom = false },
-      onUseDefault = { onRenameRoom(null); renamingRoom = false },
+    val defaultName = roomName(area, Names())
+    EditRoomDialog(
+      area = area,
+      names = names,
+      icons = icons,
+      onSave = { name, icon ->
+        onRenameRoom(nameToKeep(name, defaultName))
+        onChooseIcon(icon.asChoiceFor(area.id))
+        renamingRoom = false
+      },
+      onUseDefault = {
+        onRenameRoom(null)
+        onChooseIcon(null)
+        renamingRoom = false
+      },
       onDismiss = { renamingRoom = false },
     )
   }
   area.devices.firstOrNull { it.id.value == renamingDevice }?.let { device ->
+    val defaultName = deviceName(device, Names())
     RenameDialog(
       title = R.string.rename_device_title,
       current = deviceName(device, names),
       hasCustomName = device.id in names.devices,
-      onSave = { onRenameDevice(device.id, it); renamingDevice = null },
+      onSave = { onRenameDevice(device.id, nameToKeep(it, defaultName)); renamingDevice = null },
       onUseDefault = { onRenameDevice(device.id, null); renamingDevice = null },
       onDismiss = { renamingDevice = null },
     )
   }
 }
 
-/** The pencil that renames what it sits beside; a screen reader says which name it renames. */
+/**
+ * What the user can change of a room: its name and its icon. The icon is held here, from the one the room has now, until the user saves, so a choice that is
+ * not saved changes nothing. Going back to the default takes both away.
+ */
 @Composable
-private fun RenameButton(name: String, onClick: () -> Unit) {
-  IconButton(onClick = onClick) { Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.rename_description, name)) }
+private fun EditRoomDialog(area: Area, names: Names, icons: AreaIcons, onSave: (String, RoomIcon) -> Unit, onUseDefault: () -> Unit, onDismiss: () -> Unit) {
+  // Kept as its key, which survives a rotation: the icon half chosen is not lost with the screen.
+  var chosenKey by rememberSaveable { mutableStateOf(icons.of(area.id).key) }
+  val chosen = RoomIcon.fromKey(chosenKey) ?: icons.of(area.id)
+  RenameDialog(
+    title = R.string.edit_room_title,
+    current = roomName(area, names),
+    hasCustomName = area.id in names.areas || area.id in icons.areas,
+    onSave = { onSave(it, chosen) },
+    onUseDefault = onUseDefault,
+    onDismiss = onDismiss,
+    useDefaultLabel = R.string.edit_room_default,
+  ) {
+    RoomIconChoice(chosen, onChoose = { chosenKey = it.key })
+  }
+}
+
+/** The pencil that edits what it sits beside; a screen reader says which one it edits. */
+@Composable
+private fun EditButton(@StringRes description: Int, name: String, onClick: () -> Unit) {
+  IconButton(onClick = onClick) { Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(description, name)) }
 }
 
 /** A device in a card: its icon, its name and how it is, and inside the card what it reads and what it lets the user command. */
@@ -139,7 +178,7 @@ private fun DeviceCard(device: Device, names: Names, connection: ConnectionState
         Text(deviceName(device, names), style = MaterialTheme.typography.titleMedium)
         headlineText(device)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = subtle) }
       }
-      RenameButton(deviceName(device, names), onClick = onRename)
+      EditButton(R.string.rename_description, deviceName(device, names), onClick = onRename)
     }
     device.rows().forEachIndexed { index, entity ->
       // The first line sets the rows apart from the header; the rows carry the room above and below themselves, so each sits halfway between two lines.

@@ -3,6 +3,7 @@ package io.github.gustavommcv.ciscsmarthome.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.gustavommcv.ciscsmarthome.domain.Area
+import io.github.gustavommcv.ciscsmarthome.domain.AreaIcons
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
@@ -13,6 +14,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.Names
+import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,7 @@ data class HomeState(
   val pending: Set<EntityId> = emptySet(),
   val notice: CommandNotice? = null,
   val names: Names = Names(),
+  val icons: AreaIcons = AreaIcons(),
 ) {
   /** The room that is open, or null on the list. */
   val openRoom: Area?
@@ -53,12 +56,13 @@ class HomeViewModel(private val repository: HomeRepository, private val nameBook
   val state: StateFlow<HomeState> =
     combine(
         combine(repository.home, repository.connection, screen) { home, connection, screen -> Triple(home, connection, screen) },
-        combine(pending, notice, nameBook.names) { pending, notice, names -> Triple(pending, notice, names) },
-      ) { (home, connection, screen), (pending, notice, names) ->
-        HomeState(home, connection, visible(screen, home), pending, notice, names)
+        combine(pending, notice, nameBook.names, nameBook.icons) { pending, notice, names, icons -> Pair(Triple(pending, notice, names), icons) },
+      ) { (home, connection, screen), (own, icons) ->
+        val (pending, notice, names) = own
+        HomeState(home, connection, visible(screen, home), pending, notice, names, icons)
       }
       // Stops following the repository a few seconds after the screen is gone, so a rotation does not restart anything.
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value, names = nameBook.names.value))
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value, names = nameBook.names.value, icons = nameBook.icons.value))
 
   fun openRoom(areaId: AreaId) {
     screen.value = Screen.Room(areaId)
@@ -92,6 +96,10 @@ class HomeViewModel(private val repository: HomeRepository, private val nameBook
   /** Names a room, or, with null, goes back to the default name. */
   fun renameRoom(areaId: AreaId, name: String?) {
     nameBook.renameArea(areaId, name)
+  }
+
+  fun chooseRoomIcon(areaId: AreaId, icon: RoomIcon?) {
+    nameBook.chooseAreaIcon(areaId, icon)
   }
 
   fun renameDevice(deviceId: DeviceId, name: String?) {
