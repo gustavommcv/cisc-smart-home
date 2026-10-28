@@ -185,6 +185,41 @@ void test_a_limit_does_not_take_the_dehumidifier_out_of_automatic() {
   TEST_ASSERT_EQUAL(cisc::ControlMode::Automatic, f.rig.controller.snapshot().dehumidifierMode);
 }
 
+// ---- the buzzer ---------------------------------------------------------------
+
+void test_silencing_the_buzzer_is_a_command_and_the_entity_comes_back() {
+  Fixture f;
+  const Response response = put(f.api, "buzzer-enabled", "{\"value\":false}");
+  TEST_ASSERT_EQUAL_INT(200, response.status);
+  JsonDocument entity = parse(response.body);
+  TEST_ASSERT_EQUAL_STRING("buzzer-enabled", entity["id"].as<const char*>());
+  TEST_ASSERT_FALSE(entity["value"].as<bool>());
+  TEST_ASSERT_FALSE(f.rig.controller.snapshot().buzzerEnabled);
+}
+
+void test_enabling_the_buzzer_again_is_a_command_too() {
+  Fixture f;
+  put(f.api, "buzzer-enabled", "{\"value\":false}");
+  const Response response = put(f.api, "buzzer-enabled", "{\"value\":true}");
+  TEST_ASSERT_EQUAL_INT(200, response.status);
+  TEST_ASSERT_TRUE(parse(response.body)["value"].as<bool>());
+  TEST_ASSERT_TRUE(f.rig.controller.snapshot().buzzerEnabled);
+}
+
+void test_a_value_that_is_not_true_or_false_does_not_touch_the_buzzer() {
+  Fixture f;
+  assertError(put(f.api, "buzzer-enabled", "{\"value\":\"off\"}"), 400, "invalid-value");
+  assertError(put(f.api, "buzzer-enabled", "{\"value\":0}"), 400, "invalid-value");
+  TEST_ASSERT_TRUE(f.rig.controller.snapshot().buzzerEnabled);
+}
+
+void test_silencing_the_buzzer_does_not_touch_the_dehumidifier() {
+  Fixture f;
+  put(f.api, "buzzer-enabled", "{\"value\":false}");
+  TEST_ASSERT_EQUAL(cisc::ControlMode::Automatic, f.rig.controller.snapshot().dehumidifierMode);
+  TEST_ASSERT_FALSE(f.rig.dehumidifier.value);
+}
+
 void test_a_rejected_command_changes_nothing() {
   Fixture f;
   put(f.api, "dehumidifier-power", "{\"value\":\"yes\"}");
@@ -368,6 +403,10 @@ int main() {
   RUN_TEST(test_a_limit_that_is_not_a_number_is_rejected);
   RUN_TEST(test_a_rejected_limit_changes_nothing_and_saves_nothing);
   RUN_TEST(test_a_limit_does_not_take_the_dehumidifier_out_of_automatic);
+  RUN_TEST(test_silencing_the_buzzer_is_a_command_and_the_entity_comes_back);
+  RUN_TEST(test_enabling_the_buzzer_again_is_a_command_too);
+  RUN_TEST(test_a_value_that_is_not_true_or_false_does_not_touch_the_buzzer);
+  RUN_TEST(test_silencing_the_buzzer_does_not_touch_the_dehumidifier);
   RUN_TEST(test_a_rejected_command_changes_nothing);
   RUN_TEST(test_a_body_that_is_not_a_json_object_with_a_value_is_rejected);
   RUN_TEST(test_a_read_only_entity_does_not_accept_commands);

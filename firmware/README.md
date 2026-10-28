@@ -24,7 +24,7 @@ Em [`lib/application/src`](lib/application/src):
 | Arquivo | O que faz |
 |---|---|
 | `Ports.h` | As **portas**: o que a aplicação precisa do mundo (relógio, sensor de gás, sensor de clima, botão, saídas liga/desliga, display e o **`SettingsStore`**, onde ficam guardados os limites de umidade que o usuário mudou). O hardware real as implementa nos adaptadores, e os testes usam versões falsas |
-| `HouseController` | Roda a casa: lê os sensores no ritmo de cada um, entrega as leituras às regras do domínio, aciona as saídas só quando o valor muda, guarda o histórico, conta os vazamentos e recebe os comandos do app, entre eles **mudar os limites de umidade**: o que mudou é guardado e, ao ligar, o que estava guardado vale no lugar dos valores de fábrica (se ainda for permitido) |
+| `HouseController` | Roda a casa: lê os sensores no ritmo de cada um, entrega as leituras às regras do domínio, aciona as saídas só quando o valor muda, guarda o histórico, conta os vazamentos e recebe os comandos do app, entre eles **silenciar o buzzer** (só o buzzer, na hora, sem guardar: ao reiniciar ele volta ligado) e **mudar os limites de umidade**: o que mudou é guardado e, ao ligar, o que estava guardado vale no lugar dos valores de fábrica (se ainda for permitido) |
 | `HouseSnapshot` | Tudo o que o mundo de fora pode querer saber da casa, em um instante |
 | `DisplayText` | A regra do que escrever em cada linha do display, em português e sem acentos, que o LCD não tem |
 | `DisplayPresenter` | Mantém um display em dia: olha a casa no seu ritmo e só escreve quando o texto mudou, para um barramento lento nunca atrasar o controle |

@@ -14,7 +14,8 @@ bool sameState(const HouseSnapshot& a, const HouseSnapshot& b) {
          a.climateSampled == b.climateSampled && a.climateValid == b.climateValid &&
          a.temperatureC == b.temperatureC && a.humidityPercent == b.humidityPercent &&
          a.dehumidifierOn == b.dehumidifierOn && a.dehumidifierMode == b.dehumidifierMode &&
-         a.dehumidifierOnAt == b.dehumidifierOnAt && a.dehumidifierOffAt == b.dehumidifierOffAt;
+         a.dehumidifierOnAt == b.dehumidifierOnAt && a.dehumidifierOffAt == b.dehumidifierOffAt &&
+         a.buzzerEnabled == b.buzzerEnabled;
 }
 
 }  // namespace

@@ -362,6 +362,101 @@ void test_changing_a_limit_does_not_touch_the_relay_by_itself() {
   TEST_ASSERT_EQUAL(writes, rig.dehumidifier.writes);
 }
 
+// ---- the buzzer can be silenced ------------------------------------------------
+
+void test_the_buzzer_is_enabled_until_someone_says_otherwise() {
+  Rig rig;
+  rig.controller.begin();
+  TEST_ASSERT_TRUE(rig.controller.snapshot().buzzerEnabled);
+}
+
+void test_a_leak_sounds_the_buzzer_while_it_is_enabled() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.gas.value = 150;
+  rig.run(200);
+  TEST_ASSERT_TRUE(rig.buzzer.value);
+}
+
+void test_a_silenced_buzzer_stays_quiet_in_a_leak_and_the_rest_of_the_alarm_goes_on() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.controller.setBuzzerEnabled(false);
+  rig.gas.value = 150;
+  rig.run(200);
+  TEST_ASSERT_FALSE(rig.buzzer.value);
+  TEST_ASSERT_TRUE(rig.alarmLed.value);
+  TEST_ASSERT_FALSE(rig.valve.value);
+  TEST_ASSERT_EQUAL(GasState::Emergency, rig.controller.snapshot().gasState);
+  TEST_ASSERT_EQUAL_UINT32(1, rig.controller.snapshot().gasAlertCount);
+}
+
+void test_silencing_the_buzzer_in_the_middle_of_a_leak_stops_it_at_once() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.gas.value = 150;
+  rig.run(200);
+  TEST_ASSERT_TRUE(rig.buzzer.value);
+  rig.controller.setBuzzerEnabled(false);
+  TEST_ASSERT_FALSE(rig.buzzer.value);
+  TEST_ASSERT_FALSE(rig.controller.snapshot().buzzerEnabled);
+}
+
+void test_enabling_the_buzzer_in_the_middle_of_a_leak_sounds_it_at_once() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.controller.setBuzzerEnabled(false);
+  rig.gas.value = 150;
+  rig.run(200);
+  TEST_ASSERT_FALSE(rig.buzzer.value);
+  rig.controller.setBuzzerEnabled(true);
+  TEST_ASSERT_TRUE(rig.buzzer.value);
+}
+
+void test_the_buzzer_does_not_sound_without_a_leak_whatever_it_is_set_to() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.controller.setBuzzerEnabled(true);
+  rig.controller.setBuzzerEnabled(false);
+  rig.controller.setBuzzerEnabled(true);
+  TEST_ASSERT_FALSE(rig.buzzer.value);
+}
+
+void test_a_silenced_buzzer_stays_silenced_through_the_next_leak() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.controller.setBuzzerEnabled(false);
+  rig.gas.value = 150;
+  rig.run(200);
+  rig.gas.value = 50;
+  rig.run(400);
+  rig.button.pressed = true;
+  rig.run(100);
+  rig.button.pressed = false;
+  rig.run(100);
+  rig.gas.value = 150;
+  rig.run(200);
+  TEST_ASSERT_FALSE(rig.buzzer.value);
+  TEST_ASSERT_EQUAL_UINT32(2, rig.controller.snapshot().gasAlertCount);
+}
+
+void test_the_silence_is_not_saved_so_a_restart_brings_the_buzzer_back() {
+  Rig rig;
+  rig.controller.begin();
+  rig.controller.setBuzzerEnabled(false);
+  TEST_ASSERT_EQUAL(0, rig.store.saves);
+}
+
+void test_the_buzzer_output_is_touched_only_when_it_changes() {
+  Rig rig;
+  rig.bootToNormal();
+  const int writes = rig.buzzer.writes;
+  rig.controller.setBuzzerEnabled(false);
+  rig.controller.setBuzzerEnabled(true);
+  rig.controller.setBuzzerEnabled(true);
+  TEST_ASSERT_EQUAL(writes, rig.buzzer.writes);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_begin_puts_every_output_in_a_safe_state);
@@ -399,5 +494,14 @@ int main() {
   RUN_TEST(test_a_limit_that_is_not_valid_changes_nothing_and_saves_nothing);
   RUN_TEST(test_the_new_limit_is_the_one_the_next_reading_is_judged_by);
   RUN_TEST(test_changing_a_limit_does_not_touch_the_relay_by_itself);
+  RUN_TEST(test_the_buzzer_is_enabled_until_someone_says_otherwise);
+  RUN_TEST(test_a_leak_sounds_the_buzzer_while_it_is_enabled);
+  RUN_TEST(test_a_silenced_buzzer_stays_quiet_in_a_leak_and_the_rest_of_the_alarm_goes_on);
+  RUN_TEST(test_silencing_the_buzzer_in_the_middle_of_a_leak_stops_it_at_once);
+  RUN_TEST(test_enabling_the_buzzer_in_the_middle_of_a_leak_sounds_it_at_once);
+  RUN_TEST(test_the_buzzer_does_not_sound_without_a_leak_whatever_it_is_set_to);
+  RUN_TEST(test_a_silenced_buzzer_stays_silenced_through_the_next_leak);
+  RUN_TEST(test_the_silence_is_not_saved_so_a_restart_brings_the_buzzer_back);
+  RUN_TEST(test_the_buzzer_output_is_touched_only_when_it_changes);
   return UNITY_END();
 }

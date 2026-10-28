@@ -68,6 +68,11 @@ void HouseController::setDehumidifierMode(ControlMode mode) {
   }
 }
 
+void HouseController::setBuzzerEnabled(bool enabled) {
+  buzzerEnabled_ = enabled;
+  applyOutputs();
+}
+
 bool HouseController::setDehumidifierOnAt(float percent) {
   return changeLimits(percent, humidity_.limits().offAtPercent);
 }
@@ -99,6 +104,7 @@ HouseSnapshot HouseController::snapshot() const {
       humidity_.mode(),
       humidity_.limits().onAtPercent,
       humidity_.limits().offAtPercent,
+      buzzerEnabled_,
   };
 }
 
@@ -118,7 +124,7 @@ void HouseController::trackAlert(GasState before) {
 void HouseController::applyOutputs() {
   drive(hardware_.valve, valveOut_, gasGuard_.valveOpen());
   drive(hardware_.alarmLed, alarmLedOut_, gasGuard_.alarmLedOn());
-  drive(hardware_.buzzer, buzzerOut_, gasGuard_.buzzerOn());
+  drive(hardware_.buzzer, buzzerOut_, gasGuard_.buzzerOn() && buzzerEnabled_);
   drive(hardware_.dehumidifier, dehumidifierOut_, humidity_.dehumidifierOn());
 }
 

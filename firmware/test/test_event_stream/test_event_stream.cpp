@@ -94,6 +94,15 @@ void test_the_lower_limit_changing_is_a_change_too() {
   TEST_ASSERT_EQUAL_UINT(1, f.stream.poll().size());
 }
 
+void test_silencing_the_buzzer_is_a_change_and_is_sent() {
+  Fixture f;
+  f.rig.controller.setBuzzerEnabled(false);
+  f.rig.run(100);
+  const std::vector<Event> events = f.stream.poll();
+  TEST_ASSERT_EQUAL_UINT(1, events.size());
+  TEST_ASSERT_TRUE(contains(events[0].data, "\"id\":\"buzzer-enabled\",\"kind\":\"switch\",\"name\":\"Buzzer\",\"value\":false"));
+}
+
 void test_changes_are_held_back_until_the_minimum_interval_has_passed() {
   Fixture f;
   f.rig.run(10);
@@ -216,6 +225,7 @@ int main() {
   RUN_TEST(test_a_change_is_sent_as_a_home_event);
   RUN_TEST(test_a_new_limit_of_the_dehumidifier_is_a_change_and_is_sent);
   RUN_TEST(test_the_lower_limit_changing_is_a_change_too);
+  RUN_TEST(test_silencing_the_buzzer_is_a_change_and_is_sent);
   RUN_TEST(test_changes_are_held_back_until_the_minimum_interval_has_passed);
   RUN_TEST(test_the_same_state_is_not_sent_twice);
   RUN_TEST(test_only_the_uptime_changing_is_not_a_change);

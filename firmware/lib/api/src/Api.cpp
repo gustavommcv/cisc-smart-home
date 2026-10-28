@@ -139,6 +139,9 @@ Response Api::command(const std::string& entityId, const std::string& body) {
     }
     const std::string mode = value.as<const char*>();
     house_.setDehumidifierMode(mode == "automatic" ? ControlMode::Automatic : ControlMode::Manual);
+  } else if (entityId == "buzzer-enabled") {
+    if (!value.is<bool>()) return error(400, "invalid-value", "The value of a switch must be true or false");
+    house_.setBuzzerEnabled(value.as<bool>());
   } else if (entityId == "dehumidifier-on-at" || entityId == "dehumidifier-off-at") {
     if (!value.is<float>()) return error(400, "invalid-value", kLimitMessage);
     const float percent = value.as<float>();

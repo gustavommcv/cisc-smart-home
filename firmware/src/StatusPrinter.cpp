@@ -16,5 +16,6 @@ void StatusPrinter::tick(cisc::Millis now) {
   } else {
     Serial.print("climate=n/a | ");
   }
-  Serial.printf("dehumidifier=%s mode=%s\n", s.dehumidifierOn ? "on" : "off", cisc::toString(s.dehumidifierMode));
+  Serial.printf("dehumidifier=%s mode=%s | buzzer=%s\n", s.dehumidifierOn ? "on" : "off", cisc::toString(s.dehumidifierMode),
+                s.buzzerEnabled ? "on" : "muted");
 }

@@ -15,6 +15,7 @@ Cada decisão importante do projeto está registrada em um arquivo curto, com o 
 | [0009](0009-nomes-dados-pelo-usuario.md) | Os nomes de cômodos e dispositivos são do usuário, ficam no celular e o alarme os diz | aceita |
 | [0010](0010-conexao-do-app-com-a-placa.md) | O app entra sozinho na rede da placa, por um link que se pode trocar | aceita |
 | [0011](0011-limites-de-umidade-mudam-pelo-app.md) | Os limites de umidade do desumidificador mudam pelo app e ficam guardados na placa | aceita |
+| [0012](0012-buzzer-pode-ser-silenciado-pelo-app.md) | O buzzer da placa pode ser silenciado pelo app, e o silêncio não fica guardado | aceita |
 
 Uma decisão aceita não se apaga: se mudar, ganha um novo arquivo que a substitui, e a antiga fica marcada como substituída.
 

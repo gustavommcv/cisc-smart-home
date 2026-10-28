@@ -41,7 +41,8 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
             { "id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc" },
             { "id": "gas-state", "kind": "sensor", "name": "Gas state", "value": "normal" },
             { "id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0 },
-            { "id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true }
+            { "id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true },
+            { "id": "buzzer-enabled", "kind": "switch", "name": "Buzzer", "value": true, "commandable": true }
           ]
         }
       ]
@@ -105,6 +106,7 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 | | | `gas-state` | `sensor` | `starting`, `normal` ou `emergency` |
 | | | `gas-alerts` | `sensor` | quantos vazamentos desde que o ESP32 ligou |
 | | | `valve-open` | `binary_sensor` | `true` quando aberta. **Somente leitura**: só o botão físico a reabre |
+| | | `buzzer-enabled` | `switch` | `true` quando o buzzer da placa pode soar num vazamento; `false` quando foi silenciado |
 | `bedroom` | `closet-monitor` | `temperature` | `sensor` | graus Celsius, ou `null` |
 | | | `humidity` | `sensor` | porcentagem, ou `null` |
 | | | `dehumidifier-power` | `switch` | ligado ou desligado |
@@ -138,6 +140,7 @@ A resposta `200` traz a entidade **como ficou**, no mesmo formato de `/home`:
 | `dehumidifier-power` = `true` ou `false` | Liga ou desliga **e passa para o modo manual** |
 | `dehumidifier-mode` = `"automatic"` | Devolve o controle à regra de umidade. O estado atual vale até a próxima leitura |
 | `dehumidifier-mode` = `"manual"` | Passa para manual **mantendo** o estado atual |
+| `buzzer-enabled` = `false` ou `true` | **Silencia** o buzzer da placa, ou o deixa soar de novo. **Só o buzzer**: o LED de alarme, a válvula e o evento `alert` são os mesmos de qualquer jeito. Vale na hora, no meio de um vazamento também. **Não fica guardado**: se a placa reiniciar, o buzzer volta ligado, para uma queda de energia nunca deixar a placa muda sem ninguém saber |
 | `dehumidifier-on-at` = número | Muda a umidade em que o modo automático **liga**. Não muda o modo nem o estado: o novo limite vale a partir da próxima leitura |
 | `dehumidifier-off-at` = número | Muda a umidade em que o modo automático **desliga**, do mesmo jeito |
 

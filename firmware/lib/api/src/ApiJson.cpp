@@ -70,6 +70,9 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
   addEntity(gasMonitor, "gas-state", "sensor", "Gas state")["value"] = toString(s.gasState);
   addEntity(gasMonitor, "gas-alerts", "sensor", "Gas alerts since boot")["value"] = s.gasAlertCount;
   addEntity(gasMonitor, "valve-open", "binary_sensor", "Valve open")["value"] = s.valveOpen;
+  JsonObject buzzer = addEntity(gasMonitor, "buzzer-enabled", "switch", "Buzzer");
+  buzzer["value"] = s.buzzerEnabled;
+  buzzer["commandable"] = true;
 
   JsonArray bedroom = addArea(areas, "bedroom", "Bedroom");
 
