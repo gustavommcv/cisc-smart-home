@@ -7,16 +7,17 @@ import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.Device
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
+import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
 import io.github.gustavommcv.ciscsmarthome.nameRes
 
-/** The name of a room: ours in Portuguese for the rooms we know, the board's otherwise. */
+/** The name of a room: the one the user gave it, else ours in Portuguese for the rooms we know, else the board's. */
 @Composable
-internal fun roomName(area: Area): String = area.id.nameRes()?.let { stringResource(it) } ?: area.name
+internal fun roomName(area: Area, names: Names): String = names.nameOfArea(area.id, area.id.nameRes()?.let { stringResource(it) }, area.name)
 
-/** The name of a device: ours in Portuguese for the ones we know, the board's otherwise. */
+/** The name of a device: the one the user gave it, else ours in Portuguese for the ones we know, else the board's. */
 @Composable
-internal fun deviceName(device: Device): String = device.id.nameRes()?.let { stringResource(it) } ?: device.name
+internal fun deviceName(device: Device, names: Names): String = names.nameOfDevice(device.id, device.id.nameRes()?.let { stringResource(it) }, device.name)
 
 /** The label of an entity: ours in Portuguese for the ones we know, the board's otherwise. */
 @Composable

@@ -24,6 +24,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.LockedCard
@@ -37,7 +38,7 @@ import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
  * is (not what each reads: that is for the room), and the card of what is to come.
  */
 @Composable
-internal fun RoomsScreen(home: Home, connection: ConnectionState, onOpenRoom: (AreaId) -> Unit, modifier: Modifier = Modifier) {
+internal fun RoomsScreen(home: Home, connection: ConnectionState, names: Names, onOpenRoom: (AreaId) -> Unit, modifier: Modifier = Modifier) {
   // What is shown is the last reading when the board is lost, and the cards say so by being fainter.
   val dim = Modifier.alpha(if (connection is ConnectionState.Disconnected) DIMMED else 1f)
   LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
@@ -51,16 +52,16 @@ internal fun RoomsScreen(home: Home, connection: ConnectionState, onOpenRoom: (A
       }
       ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(top = Spacing.L, bottom = Spacing.Xs))
     }
-    item { SummaryCard(home, dim) }
+    item { SummaryCard(home, names, dim) }
     item { SectionTitle(R.string.section_rooms, Modifier.padding(top = Spacing.S)) }
-    items(home.areas, key = { it.id.value }) { area -> RoomCard(area, dim, onClick = { onOpenRoom(area.id) }) }
+    items(home.areas, key = { it.id.value }) { area -> RoomCard(area, names, dim, onClick = { onOpenRoom(area.id) }) }
     item { LockedCard(R.string.rooms_add) }
   }
 }
 
 /** How the whole house is, so the first thing the screen says is whether anything needs a look. */
 @Composable
-private fun SummaryCard(home: Home, modifier: Modifier) {
+private fun SummaryCard(home: Home, names: Names, modifier: Modifier) {
   val status = home.status()
   val emergency = status == Status.Emergency
   val resources = LocalResources.current
@@ -69,14 +70,14 @@ private fun SummaryCard(home: Home, modifier: Modifier) {
       IconBadge(status.iconRes(), status.tone(), solid = emergency)
       Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
         Text(resources.summaryTitle(status), style = MaterialTheme.typography.titleMedium)
-        Text(resources.summaryText(status, home.emergencyArea()?.let { roomName(it) }), style = MaterialTheme.typography.bodyMedium, color = subtleColor(emergency))
+        Text(resources.summaryText(status, home.emergencyArea()?.let { roomName(it, names) }), style = MaterialTheme.typography.bodyMedium, color = subtleColor(emergency))
       }
     }
   }
 }
 
 @Composable
-private fun RoomCard(area: Area, modifier: Modifier, onClick: () -> Unit) {
+private fun RoomCard(area: Area, names: Names, modifier: Modifier, onClick: () -> Unit) {
   val status = area.status()
   val emergency = status == Status.Emergency
   val resources = LocalResources.current
@@ -85,7 +86,7 @@ private fun RoomCard(area: Area, modifier: Modifier, onClick: () -> Unit) {
       // A room in emergency says so with a solid red warning in the place of its own icon.
       IconBadge(if (emergency) R.drawable.ic_warning else area.id.iconRes(), if (emergency) Tone.Alert else Tone.Primary, solid = emergency)
       Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
-        Text(roomName(area), style = MaterialTheme.typography.titleMedium)
+        Text(roomName(area, names), style = MaterialTheme.typography.titleMedium)
         Text(resources.roomSubtitle(area, status), style = MaterialTheme.typography.bodyMedium, color = subtleColor(emergency))
       }
       Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = subtleColor(emergency))

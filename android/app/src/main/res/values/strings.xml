@@ -20,6 +20,14 @@
     <string name="history_caption">Cada ponto é uma leitura da placa, guardada no celular. Os vazios são o tempo em que o app não ouviu a placa.</string>
     <string name="settings_theme">Tema</string>
 
+    <string name="rename_room_title">Renomear o cômodo</string>
+    <string name="rename_device_title">Renomear o dispositivo</string>
+    <string name="rename_label">Nome</string>
+    <string name="rename_save">Salvar</string>
+    <string name="rename_cancel">Cancelar</string>
+    <string name="rename_default">Voltar ao nome padrão</string>
+    <string name="rename_description">Renomear %1$s</string>
+
     <string name="section_rooms">Cômodos</string>
     <string name="section_devices">Dispositivos</string>
     <plurals name="devices_count">

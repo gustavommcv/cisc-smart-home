@@ -7,9 +7,12 @@ import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.NameBook
+import io.github.gustavommcv.ciscsmarthome.domain.Names
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,23 +38,27 @@ data class HomeState(
   val screen: Screen = Screen.Rooms,
   val pending: Set<EntityId> = emptySet(),
   val notice: CommandNotice? = null,
+  val names: Names = Names(),
 ) {
   /** The room that is open, or null on the list. */
   val openRoom: Area?
     get() = (screen as? Screen.Room)?.let { room -> home?.areas?.firstOrNull { it.id == room.areaId } }
 }
 
-class HomeViewModel(private val repository: HomeRepository) : ViewModel() {
+class HomeViewModel(private val repository: HomeRepository, private val nameBook: NameBook) : ViewModel() {
   private val screen = MutableStateFlow<Screen>(Screen.Rooms)
   private val pending = MutableStateFlow<Set<EntityId>>(emptySet())
   private val notice = MutableStateFlow<CommandNotice?>(null)
 
   val state: StateFlow<HomeState> =
-    combine(repository.home, repository.connection, screen, pending, notice) { home, connection, screen, pending, notice ->
-        HomeState(home, connection, visible(screen, home), pending, notice)
+    combine(
+        combine(repository.home, repository.connection, screen) { home, connection, screen -> Triple(home, connection, screen) },
+        combine(pending, notice, nameBook.names) { pending, notice, names -> Triple(pending, notice, names) },
+      ) { (home, connection, screen), (pending, notice, names) ->
+        HomeState(home, connection, visible(screen, home), pending, notice, names)
       }
       // Stops following the repository a few seconds after the screen is gone, so a rotation does not restart anything.
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value))
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value, names = nameBook.names.value))
 
   fun openRoom(areaId: AreaId) {
     screen.value = Screen.Room(areaId)
@@ -80,6 +87,15 @@ class HomeViewModel(private val repository: HomeRepository) : ViewModel() {
         pending.update { it - entityId }
       }
     }
+  }
+
+  /** Names a room, or, with null, goes back to the default name. */
+  fun renameRoom(areaId: AreaId, name: String?) {
+    nameBook.renameArea(areaId, name)
+  }
+
+  fun renameDevice(deviceId: DeviceId, name: String?) {
+    nameBook.renameDevice(deviceId, name)
   }
 
   /** The user has seen what the notice said. */

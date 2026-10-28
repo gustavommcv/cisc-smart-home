@@ -2,7 +2,7 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras num gráfico**, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). Faltam a entrada automática na rede da placa e os nomes editáveis pelo usuário (veja as [fases](../README.md#fases)).
+> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras num gráfico**, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). O usuário também pode **dar nome aos cômodos e aos dispositivos**, e o alarme diz o nome que ele deu. Falta a entrada automática na rede da placa (veja as [fases](../README.md#fases)).
 
 ## Como é o app
 
@@ -10,11 +10,11 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 
 | Início | Cômodo | Histórico |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador e a escolha entre automático e manual"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
+| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador e a escolha entre automático e manual, e um lápis para renomear o cômodo e o dispositivo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
 
-| Vazamento de gás | Ajustes | Tema escuro |
+| Vazamento de gás (tema escuro) | Ajustes | Renomear |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes, com a escolha do tema: claro, escuro ou automático"> | <img src="../docs/imagens/historico-escuro.png" width="250" alt="O histórico no tema escuro"> |
+| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes, com a escolha do tema: claro, escuro ou automático"> | <img src="../docs/imagens/renomear.png" width="250" alt="A janela para renomear o cômodo, com o nome atual selecionado, o contador de letras e os botões Salvar, Voltar ao nome padrão e Cancelar"> |
 
 As imagens mostram só o app: a barra de status do celular foi cortada. Para refazê-las, com o celular em modo de depuração e ligado à maquete, use `adb exec-out screencap -p > tela.png` e corte os primeiros 110 pixels de cima.
 
@@ -213,6 +213,21 @@ O visual tem um lugar só, e as telas pedem a ele em vez de soletrar cores e nú
 Para pôr um ícone novo: baixe `symbols/android/<nome>/materialsymbolsoutlined/<nome>_24px.xml`, salve como `res/drawable/ic_<nome>.xml`, faça a mesma troca do atributo e use `painterResource(R.drawable.ic_<nome>)`. O `SymbolIconsTest` confere que todo ícone tem 24 dp, está na grade de 960 do conjunto e desenha alguma coisa, então um tamanho ou variante errados falham no teste. A biblioteca `material-icons-core` saiu do app, o que o deixa menor.
 
 **A aparência dos componentes não tem teste automático**: o app não usa a biblioteca de teste do Compose, então o que é lógica (qual cor, qual ícone, qual palavra) está em funções puras testadas, e o resto foi conferido no celular.
+
+### Os nomes que o usuário dá
+
+Um **lápis** no cabeçalho do cômodo e no cartão de cada dispositivo abre uma janela para **renomear**: o campo vem com o nome de agora, todo selecionado, e há **Salvar**, **Cancelar** e, quando o usuário já deu um nome, **Voltar ao nome padrão**. As leituras ("Temperatura", "Nível de gás") não se renomeiam. A [decisão 0009](../docs/decisoes/0009-nomes-dados-pelo-usuario.md) conta o porquê.
+
+| Peça | Onde | O que faz |
+|---|---|---|
+| `Names` | `domain/Names.kt` | Os nomes dados, por id, e a regra de qual vale: **o que o usuário digitou, depois o nome em português do app, depois o da placa**. Diz também o que é um nome: sem o espaço das pontas, no máximo **30 caracteres**, e em branco não é nome |
+| `NameBook` | `domain/NameBook.kt` | A interface do que está dado e de como dar ou tirar um nome |
+| `PreferencesNameBook` | `data/local/` | Guarda os nomes num arquivo de preferências, um por entrada (`area:<id>`, `device:<id>`), então um cômodo e um dispositivo que dividam um id têm cada um o seu. O que o arquivo tem e não é nome é ignorado |
+| `RenameDialog` | `ui/components/` | A janela: o campo para no limite, mostra quantas letras já foram e salva também pelo "Concluído" do teclado |
+
+- **O nome aparece em todo lugar**: no cartão do cômodo, no resumo do Início ("Local: …"), no cabeçalho e nos cartões da tela do cômodo.
+- **O alarme diz o nome do usuário.** O `AndroidNotifier` o lê na hora de montar o aviso ("Local: Cozinha da vó"), então um nome dado um instante antes já vale. Numa emergência, a mensagem fala a palavra que a pessoa usa para o lugar.
+- **Os nomes ficam no celular**, no arquivo `user-names`, e a placa não sabe deles. Um segundo celular não os vê. O nome do arquivo e as chaves são o que o usuário já terá: um teste os guarda.
 
 ### A barra de baixo e os ajustes
 
