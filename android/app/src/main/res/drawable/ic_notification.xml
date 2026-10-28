@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A house, white on transparent, as the status bar wants its icons. -->
+<!-- The house of the logo with the shield cut out, white on transparent, as the status bar wants its icons. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12,3L2,12h3v8h6v-6h2v6h6v-8h3L12,3z" />
+    android:viewportWidth="60"
+    android:viewportHeight="60">
+    <group
+        android:translateX="-24"
+        android:translateY="-24">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M54,28.5 C55.2,28.5 56.3,28.9 57.2,29.7 L81.2,50.6 C82.6,51.8 81.8,54 80,54 L76,54 L76,76 C76,77.7 74.7,79 73,79 L35,79 C33.3,79 32,77.7 32,76 L32,54 L28,54 C26.2,54 25.4,51.8 26.8,50.6 L50.8,29.7 C51.7,28.9 52.8,28.5 54,28.5 Z M54,57 L62.5,60 L62.5,66 C62.5,71 58.9,74.4 54,76 C49.1,74.4 45.5,71 45.5,66 L45.5,60 Z" />
+        <path
+            android:pathData="M50.2,66.2 L53,69 L58.2,63.4"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.4"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
 </vector>

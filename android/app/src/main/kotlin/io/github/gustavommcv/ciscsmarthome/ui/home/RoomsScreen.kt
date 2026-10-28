@@ -27,6 +27,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.LockedCard
+import io.github.gustavommcv.ciscsmarthome.ui.components.LogoMark
 import io.github.gustavommcv.ciscsmarthome.ui.components.SectionTitle
 import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
@@ -41,8 +42,13 @@ internal fun RoomsScreen(home: Home, connection: ConnectionState, onOpenRoom: (A
   val dim = Modifier.alpha(if (connection is ConnectionState.Disconnected) DIMMED else 1f)
   LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
     item {
-      Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineLarge)
-      Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.titleMedium)
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
+        LogoMark()
+        Column {
+          Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium)
+          Text(stringResource(R.string.home_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+      }
       ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(top = Spacing.L, bottom = Spacing.Xs))
     }
     item { SummaryCard(home, dim) }
