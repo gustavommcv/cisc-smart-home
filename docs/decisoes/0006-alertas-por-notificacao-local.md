@@ -23,5 +23,6 @@ Um **serviço em primeiro plano** (tipo `connectedDevice`) mantém aberto o flux
 
 - Os alertas funcionam sem internet, que é o cenário da apresentação.
 - Um serviço em primeiro plano exibe uma **notificação permanente**, e o Android 13 ou superior pede a permissão de notificações ao usuário. As duas coisas fazem parte da interface.
+- A notificação permanente tem o botão **"Parar de monitorar"**, que fecha o app de vez: para o serviço, devolve o Wi-Fi do celular e tira o app da lista de recentes. É uma escolha do usuário, e por isso o Android não reinicia o serviço; **um aviso de vazamento que está tocando fica como está**. Parar de monitorar deixa a casa sem vigia no celular até o app ser aberto de novo, e um toque sem querer no botão faz isso: o botão tem o nome claro e fica ao lado do estado, e uma confirmação ficou de fora, porque o botão de uma notificação não abre uma pergunta sem abrir o app.
 - Se o usuário encerrar o app à força, não há alerta no celular. O alarme sonoro e a válvula continuam no ESP32, porque a segurança não depende do app.
 - A conexão precisa se recuperar sozinha de quedas, com espera crescente entre tentativas.

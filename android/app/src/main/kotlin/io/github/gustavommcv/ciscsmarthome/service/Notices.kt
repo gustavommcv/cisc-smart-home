@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
@@ -47,6 +48,7 @@ internal object Notices {
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setContentIntent(openApp(context))
+      .addAction(0, context.getString(R.string.notice_stop_monitoring), stopMonitoring(context))
       .build()
 
   /** The warning of a leak in [areaName]. */
@@ -77,6 +79,10 @@ internal object Notices {
       .setAutoCancel(true)
       .setContentIntent(openApp(context))
       .build()
+
+  // The button asks the service itself, which the app owns, so no other app can send it.
+  private fun stopMonitoring(context: Context): PendingIntent =
+    PendingIntent.getService(context, 1, Intent(context, HomeService::class.java).setAction(HomeService.ACTION_STOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
   // The service may not import the screen, so the app is opened by what Android says opens it.
   private fun openApp(context: Context): PendingIntent {

@@ -26,4 +26,12 @@ class TestApplication : Application(), AppDependencies {
   override val nameBook: NameBook get() = names
 
   override fun startMonitoring() = Unit
+
+  /** How many times the service closed the screens of the app. */
+  var appsClosed = 0
+    private set
+
+  override fun closeApp() {
+    appsClosed++
+  }
 }

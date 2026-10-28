@@ -1,5 +1,6 @@
 package io.github.gustavommcv.ciscsmarthome
 
+import android.app.ActivityManager
 import android.app.Application
 import android.content.Intent
 import androidx.core.content.ContextCompat
@@ -20,5 +21,9 @@ class CiscApplication : Application(), AppDependencies {
 
   override fun startMonitoring() {
     ContextCompat.startForegroundService(this, Intent(this, HomeService::class.java))
+  }
+
+  override fun closeApp() {
+    getSystemService(ActivityManager::class.java).appTasks.forEach { it.finishAndRemoveTask() }
   }
 }
