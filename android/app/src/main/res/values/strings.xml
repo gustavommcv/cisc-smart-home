@@ -19,6 +19,22 @@
     <string name="history_empty">Ainda não há leituras guardadas neste período.</string>
     <string name="history_caption">Cada ponto é uma leitura da placa, guardada no celular. Os vazios são o tempo em que o app não ouviu a placa.</string>
     <string name="settings_theme">Tema</string>
+    <string name="settings_connection">Conexão</string>
+    <string name="link_board_wifi">Wi-Fi da placa</string>
+    <string name="link_board_wifi_hint">O app entra sozinho no Wi-Fi cisc-smart-home, sem você mudar o Wi-Fi do celular.</string>
+    <string name="link_current_network">Rede do celular</string>
+    <string name="link_current_network_hint">Usa a rede em que o celular já está: a da placa, uma VPN ou outra que chegue até ela.</string>
+    <string name="link_cloud">Nuvem</string>
+    <string name="link_vpn">VPN ou endereço próprio</string>
+    <string name="link_password_forget">Esquecer a senha</string>
+    <string name="link_password_label">Senha do Wi-Fi da placa</string>
+    <string name="link_password_hint">Digite uma vez. Fica guardada só neste celular.</string>
+    <string name="link_password_check">Não entrou na rede. Se a senha estiver errada, digite a certa.</string>
+    <string name="link_password_saved">Senha guardada. Digite outra para trocar.</string>
+    <string name="link_password_invalid">A senha do Wi-Fi tem de 8 a 63 caracteres, sem acentos.</string>
+    <string name="link_password_save">Guardar senha</string>
+    <string name="link_password_show">Mostrar</string>
+    <string name="link_password_hide">Ocultar</string>
 
     <string name="rename_room_title">Renomear o cômodo</string>
     <string name="rename_device_title">Renomear o dispositivo</string>
@@ -66,6 +82,8 @@
     <string name="connection_unreachable">Sem conexão com a placa. Confira se o celular está no Wi-Fi cisc-smart-home e com os dados móveis desligados.</string>
     <string name="connection_too_many_clients">A placa já tem conexões demais. Feche o app em outros celulares.</string>
     <string name="connection_incompatible">A placa respondeu algo que este app não entende. Confira se o app e a placa estão na mesma versão.</string>
+    <string name="connection_network_not_set">Falta a senha do Wi-Fi da placa. Digite em Ajustes, na conexão Wi-Fi da placa.</string>
+    <string name="connection_network_not_joined">Não consegui entrar no Wi-Fi cisc-smart-home. Confira se a placa está ligada e perto, se a senha está certa e se você aceitou o aviso do Android.</string>
 
     <string name="area_kitchen">Cozinha</string>
     <string name="area_bedroom">Quarto</string>

@@ -43,6 +43,12 @@ enum class ConnectionProblem {
 
   /** The board answered with something the app cannot use, such as another version of the API. */
   Incompatible,
+
+  /** The app is to join the Wi-Fi of the board and does not have its password yet. */
+  NetworkNotSet,
+
+  /** The phone could not join the Wi-Fi of the board, or lost it: the board is off or far, the password is wrong, or the user refused. */
+  NetworkNotJoined,
 }
 
 sealed interface CommandResult {

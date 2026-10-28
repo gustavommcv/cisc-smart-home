@@ -15,5 +15,7 @@ fun ConnectionState.messageRes(): Int =
         ConnectionProblem.Unreachable -> R.string.connection_unreachable
         ConnectionProblem.TooManyClients -> R.string.connection_too_many_clients
         ConnectionProblem.Incompatible -> R.string.connection_incompatible
+        ConnectionProblem.NetworkNotSet -> R.string.connection_network_not_set
+        ConnectionProblem.NetworkNotJoined -> R.string.connection_network_not_joined
       }
   }

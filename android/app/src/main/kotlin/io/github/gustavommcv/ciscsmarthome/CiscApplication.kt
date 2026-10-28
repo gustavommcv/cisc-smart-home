@@ -14,6 +14,8 @@ class CiscApplication : Application(), AppDependencies {
 
   override val themeSettings get() = container.themeSettings
 
+  override val linkSettings get() = container.linkSettings
+
   override val nameBook get() = container.nameBook
 
   override fun startMonitoring() {

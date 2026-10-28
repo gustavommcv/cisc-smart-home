@@ -3,9 +3,11 @@ package io.github.gustavommcv.ciscsmarthome.service
 import android.app.Application
 import io.github.gustavommcv.ciscsmarthome.AppDependencies
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LinkSettings
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
+import io.github.gustavommcv.ciscsmarthome.testing.FakeLinkSettings
 import io.github.gustavommcv.ciscsmarthome.testing.FakeNameBook
 import io.github.gustavommcv.ciscsmarthome.testing.FakeThemeSettings
 
@@ -16,6 +18,8 @@ class TestApplication : Application(), AppDependencies {
   override val homeRepository: HomeRepository get() = repository
 
   override val themeSettings: ThemeSettings = FakeThemeSettings()
+
+  override val linkSettings: LinkSettings = FakeLinkSettings()
 
   val names = FakeNameBook()
 

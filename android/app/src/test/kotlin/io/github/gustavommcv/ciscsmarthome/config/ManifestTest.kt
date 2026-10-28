@@ -97,6 +97,13 @@ class ManifestTest {
     assertEquals("192.168.4.1", board.host)
   }
 
+  @Test
+  fun `the network the app joins is the one the firmware makes`() {
+    val firmware = File("../../firmware/src/WifiConfig.h").readText()
+    val name = Regex("""kAccessPointName\[\]\s*=\s*"([^"]+)"""").find(firmware)?.groupValues?.get(1)
+    assertEquals(name, AppContainer.BOARD_SSID)
+  }
+
   private companion object {
     const val ANDROID = "http://schemas.android.com/apk/res/android"
   }

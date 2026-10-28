@@ -137,7 +137,7 @@ android/app/src/main/kotlin/.../
 
 ## Conexão e alertas
 
-- **Rede:** o ESP32 cria a rede Wi-Fi. O Android costuma abandonar redes sem internet, então o app pede a rede explicitamente (`WifiNetworkSpecifier`) e prende o tráfego nela (`bindProcessToNetwork`).
+- **Rede:** o ESP32 cria a rede Wi-Fi. O Android costuma abandonar redes sem internet, então o app pede a rede explicitamente (`WifiNetworkSpecifier`) e prende os soquetes do cliente a ela. Isso fica atrás do `BoardLink`, que é a peça que se troca para chegar à placa de outro jeito (a nuvem, uma VPN). Veja a [decisão 0010](decisoes/0010-conexao-do-app-com-a-placa.md).
 - **HTTP simples:** o Android moderno bloqueia HTTP sem criptografia. O app libera apenas o endereço do ESP32, por meio do arquivo de configuração de segurança de rede.
 - **Alertas:** um **serviço em primeiro plano** mantém o fluxo SSE aberto e dispara a **notificação local** quando o ESP32 avisa de vazamento. Não usa Firebase nem internet. A notificação do serviço fica visível enquanto ele roda, o que é uma exigência do Android.
 - **Reconexão:** em caso de queda, o app tenta de novo com espera crescente e mostra a tela "Sem conexão".

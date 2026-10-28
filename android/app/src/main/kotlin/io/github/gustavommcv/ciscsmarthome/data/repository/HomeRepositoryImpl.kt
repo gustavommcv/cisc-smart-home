@@ -114,5 +114,6 @@ class HomeRepositoryImpl(
       is BoardError.Unreachable -> ConnectionProblem.Unreachable
       is BoardError.Rejected -> if (code == ErrorCode.TooManyClients) ConnectionProblem.TooManyClients else ConnectionProblem.Incompatible
       is BoardError.Unexpected -> ConnectionProblem.Incompatible
+      is BoardError.NoRoute -> problem
     }
 }

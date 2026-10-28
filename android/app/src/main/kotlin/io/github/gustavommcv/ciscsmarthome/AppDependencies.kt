@@ -1,6 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome
 
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LinkSettings
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
 
@@ -13,6 +14,9 @@ interface AppDependencies {
 
   /** The theme the user chose, which the screen reads to draw itself and the settings tab changes. */
   val themeSettings: ThemeSettings
+
+  /** How the user chose to reach the board, which the settings tab shows and changes, and the link follows. */
+  val linkSettings: LinkSettings
 
   /** The names the user gave to rooms and devices, which the screen shows and the warning of a leak says. */
   val nameBook: NameBook
