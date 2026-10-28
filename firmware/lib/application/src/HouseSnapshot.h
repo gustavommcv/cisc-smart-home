@@ -28,6 +28,8 @@ struct HouseSnapshot {
   ControlMode dehumidifierMode;
   float dehumidifierOnAt;   // the limits of the automatic mode, in percent
   float dehumidifierOffAt;
+
+  bool buzzerEnabled;  // false while the user has silenced the buzzer; the LED, the valve and the alert do not depend on it
 };
 
 }  // namespace cisc

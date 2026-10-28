@@ -61,7 +61,8 @@ Os limites atuais estão em [`Settings.h`](../firmware/lib/domain/src/Settings.h
 | 5 | Esperar 2 s com o gás abaixo do limite e **apertar** o botão | `state=normal`, `valve=open`, LED apagado, servo na posição aberta e o LCD de volta à temperatura | Se nada acontece, aperte de novo depois de uns 2 s abaixo do limite. O botão só vale com o ar limpo |
 | 6 | Soprar no DHT11 até a umidade passar de 85 % | `dehumidifier=on`. O relé estala, o LED verde da maquete acende e o LCD mostra `LIG` | |
 | 7 | Esperar a umidade cair a 83 % ou menos | `dehumidifier=off`, o relé solta e o LED verde apaga, com `OFF` no LCD | Se o Serial diz `off` mas o LED continua aceso, o módulo não está soltando. O firmware já solta o pino do relé (dreno aberto) por causa disso, então confira o fio do IN |
-| 8 | (Opcional) Soltar o fio DATA do DHT11 | `climate=n/a` e `dehumidifier=off`. Volte o fio e a leitura retorna | |
+| 8 | (Opcional) Silenciar o buzzer pelo app (monitor de gás, "Buzzer da placa") e repetir o passo 3 | O LED acende, a válvula fecha e o app avisa, **mas o buzzer não toca**; `buzzer=muted` no Serial. Ao reiniciar a placa, o buzzer volta ligado | |
+| 9 | (Opcional) Soltar o fio DATA do DHT11 | `climate=n/a` e `dehumidifier=off`. Volte o fio e a leitura retorna | |
 
 O botão deste módulo dá nível alto quando apertado, então **o rearme acontece ao apertar**, e não ao soltar.
 

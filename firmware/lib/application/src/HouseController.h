@@ -51,6 +51,10 @@ class HouseController {
   // changes. A change is kept for the next time the board starts.
   bool setDehumidifierOnAt(float percent);
   bool setDehumidifierOffAt(float percent);
+  // Silences the buzzer, or lets it sound again. Only the buzzer: the alarm LED, the valve and the alert of the
+  // app are the same either way. It takes effect at once, in the middle of a leak too. It is not saved: after a
+  // restart the buzzer is enabled, so a power cut never leaves the board mute without anyone knowing.
+  void setBuzzerEnabled(bool enabled);
 
   HouseSnapshot snapshot() const;
   const History& history() const { return history_; }
@@ -86,6 +90,7 @@ class HouseController {
   ClimateReading climate_{false, 0.0f, 0.0f};
   bool climateSampled_ = false;
   std::uint32_t gasAlertCount_ = 0;
+  bool buzzerEnabled_ = true;
 
   OutputCache valveOut_;
   OutputCache alarmLedOut_;
