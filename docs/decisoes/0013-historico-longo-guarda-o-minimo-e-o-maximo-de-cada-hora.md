@@ -28,7 +28,7 @@ Mas há uma regra que vem da [decisão 0008](0008-grafico-desenhado-a-mao.md): *
 
 ## Consequências
 
-- O gráfico de **1 hora, 6 horas e 24 horas** continua lendo as leituras; o de **mês** e **ano** lê as horas e mostra, para cada uma, o menor e o maior valor, o que mantém os picos. Ele não mostra a média.
+- O gráfico de **1 hora, 6 horas e 24 horas** continua lendo as leituras; o de **mês** e **ano** (que são os do calendário, com setas para o anterior e o seguinte) lê as horas e mostra, para cada uma, o menor e o maior valor, o que mantém os picos. Ele não mostra a média. A seta para trás só vale enquanto o histórico tem horas antes do que se vê: por isso o banco responde também desde quando ele tem horas (`firstHour`).
 - Quem abrir o app depois de mais de uma semana parado perde o detalhe de 10 segundos do que passou, mas não o desenho do mês: o menor e o maior de cada hora estão lá.
 - A semana é uma constante, fácil de mudar, mas **apagar não tem volta**: uma leitura que passou do prazo só existe como parte de uma hora.
 - Uma hora em que o app não ouviu a placa não existe na tabela, e o gráfico a deixa vazia, como já faz com os buracos (decisão 0008).

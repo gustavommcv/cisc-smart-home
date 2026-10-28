@@ -70,6 +70,15 @@ class FakeHomeRepository : HomeRepository {
     return hoursOf(entityId).map { all -> all.filter { it.hour >= since && it.hour < until } }
   }
 
+  private val firstHourState = MutableStateFlow<Instant?>(null)
+
+  /** Where the hours of the history start; setting it again is what an earlier hour arriving does. */
+  fun setFirstHour(hour: Instant?) {
+    firstHourState.value = hour
+  }
+
+  override fun firstHour(): Flow<Instant?> = firstHourState
+
   /** What the board answers to a command; a test replaces it, and may make it wait. */
   var sendHandler: suspend (EntityId, CommandValue) -> CommandResult = { _, _ -> CommandResult.Refused }
 

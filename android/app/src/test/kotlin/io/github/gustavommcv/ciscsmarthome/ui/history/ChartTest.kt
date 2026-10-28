@@ -163,4 +163,25 @@ class ChartTest {
   fun `the chart of a window with readings is a chart`() {
     assertNotNull(chart(reading(0, 1.0)))
   }
+
+  // ---- the silence that breaks a line ---------------------------------------------------------
+
+  @Test
+  fun `a silence longer than the one given breaks the line, and a shorter one does not`() {
+    val readings = listOf(reading(0, 1.0), reading(30 * 60, 2.0), reading(30 * 60 + 90 * 60, 3.0))
+    val chart = chartOf(readings, since, since.plus(Duration.ofHours(3)), maxGap = Duration.ofHours(1))!!
+    assertEquals(listOf(2, 1), chart.lines.map { it.size })
+  }
+
+  @Test
+  fun `a silence of exactly the one given does not break the line`() {
+    val chart = chartOf(listOf(reading(0, 1.0), reading(3_600, 2.0)), since, until, maxGap = Duration.ofHours(1))!!
+    assertEquals(1, chart.lines.size)
+  }
+
+  @Test
+  fun `without a gap given, it is the two minutes of a board that is heard every ten seconds`() {
+    val chart = chartOf(listOf(reading(0, 1.0), reading(30 * 60, 2.0)), since, until)!!
+    assertEquals(2, chart.lines.size)
+  }
 }

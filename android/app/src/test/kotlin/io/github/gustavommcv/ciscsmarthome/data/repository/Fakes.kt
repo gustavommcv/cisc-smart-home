@@ -82,6 +82,9 @@ internal class FakeHistoryStore : HistoryStore {
     changes.value += 1
   }
 
+  override fun firstHour(): Flow<Instant?> =
+    changes.map { kept.values.filter { sample -> sample.values.values.any { it != null } }.minOfOrNull { Instant.ofEpochSecond(it.at.epochSecond / 3_600 * 3_600) } }
+
   override suspend fun forgetReadingsBefore(before: Instant) {
     calls += "forget"
     forgotten += before

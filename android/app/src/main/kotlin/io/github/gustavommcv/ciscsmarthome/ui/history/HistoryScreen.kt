@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
@@ -43,6 +44,7 @@ import io.github.gustavommcv.ciscsmarthome.ui.home.iconRes
 import io.github.gustavommcv.ciscsmarthome.ui.home.labelRes
 import io.github.gustavommcv.ciscsmarthome.ui.home.roomName
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
+import java.time.ZoneId
 
 /**
  * The history tab: first the devices that have a history, then, in the one that was touched, a chart for each of its sensors, and for the sensors
@@ -53,13 +55,29 @@ internal fun HistoryScreen(viewModel: HistoryViewModel, modifier: Modifier = Mod
   val state by viewModel.state.collectAsStateWithLifecycle()
   // Back closes the device and shows the list again; from the list it is the app's, which goes home.
   BackHandler(enabled = state.open != null) { viewModel.back() }
-  HistoryContent(state, onOpenDevice = viewModel::openDevice, onBack = { viewModel.back() }, onChoosePeriod = viewModel::choosePeriod, modifier = modifier)
+  HistoryContent(
+    state,
+    onOpenDevice = viewModel::openDevice,
+    onBack = { viewModel.back() },
+    onChoosePeriod = viewModel::choosePeriod,
+    onEarlier = viewModel::earlier,
+    onLater = viewModel::later,
+    modifier = modifier,
+  )
 }
 
 @Composable
-internal fun HistoryContent(state: HistoryState, onOpenDevice: (DeviceId) -> Unit, onBack: () -> Unit, onChoosePeriod: (ChartPeriod) -> Unit, modifier: Modifier = Modifier) {
+internal fun HistoryContent(
+  state: HistoryState,
+  onOpenDevice: (DeviceId) -> Unit,
+  onBack: () -> Unit,
+  onChoosePeriod: (ChartPeriod) -> Unit,
+  onEarlier: () -> Unit,
+  onLater: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
   val open = state.open
-  if (open == null) DeviceList(state, onOpenDevice, modifier) else DeviceCharts(state, open, onBack, onChoosePeriod, modifier)
+  if (open == null) DeviceList(state, onOpenDevice, modifier) else DeviceCharts(state, open, onBack, onChoosePeriod, onEarlier, onLater, modifier)
 }
 
 @Composable
@@ -90,7 +108,7 @@ private fun DeviceList(state: HistoryState, onOpenDevice: (DeviceId) -> Unit, mo
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DeviceCharts(state: HistoryState, device: HistoryDevice, onBack: () -> Unit, onChoosePeriod: (ChartPeriod) -> Unit, modifier: Modifier) {
+private fun DeviceCharts(state: HistoryState, device: HistoryDevice, onBack: () -> Unit, onChoosePeriod: (ChartPeriod) -> Unit, onEarlier: () -> Unit, onLater: () -> Unit, modifier: Modifier) {
   Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
     Row(modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.S), verticalAlignment = Alignment.CenterVertically) {
       IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back)) }
@@ -103,38 +121,60 @@ private fun DeviceCharts(state: HistoryState, device: HistoryDevice, onBack: () 
       FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
         ChartPeriod.entries.forEach { period -> FilterChip(selected = period == state.period, onClick = { onChoosePeriod(period) }, label = { Text(stringResource(period.labelRes)) }) }
       }
+      // A month and a year have pages: the one before and the one after, with the name of the one that is shown between the arrows.
+      if (state.period.isCalendar) PageBar(state, onEarlier, onLater)
       when (val charts = state.charts) {
         // A card of the height of a chart while the history is read, so nothing jumps when it comes.
         ChartsState.Loading -> device.charts.forEach { spec -> CiscCard { Box(Modifier.fillMaxWidth().height(if (spec is ChartSpec.Compare) BandHeight * 2 else ChartHeight)) } }
-        is ChartsState.Ready -> charts.panels.forEach { panel -> PanelCard(panel, state.period) }
+        is ChartsState.Ready -> charts.panels.forEach { panel -> PanelCard(panel, state.window, state.zone) }
       }
-      Text(stringResource(R.string.history_caption), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(
+        stringResource(if (state.period.isCalendar) R.string.history_caption_hours else R.string.history_caption),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
     }
   }
 }
 
-/** One chart: its title, a band for each sensor it draws, and under them how far back it goes. */
+/** The arrows to the page before and the page after, and the name of the month or the year that is shown. An arrow that has nowhere to go is faint and does nothing. */
 @Composable
-private fun PanelCard(panel: ChartPanel, period: ChartPeriod) {
+private fun PageBar(state: HistoryState, onEarlier: () -> Unit, onLater: () -> Unit) {
+  val resources = LocalResources.current
+  val year = state.period == ChartPeriod.Year
+  Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    IconButton(onClick = onEarlier, enabled = state.canGoEarlier) {
+      Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = stringResource(if (year) R.string.history_year_before else R.string.history_month_before), modifier = Modifier.rotate(180f))
+    }
+    Text(resources.windowTitle(state.window, state.zone), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+    IconButton(onClick = onLater, enabled = state.canGoLater) {
+      Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = stringResource(if (year) R.string.history_year_after else R.string.history_month_after))
+    }
+  }
+}
+
+/** One chart: its title, a band for each sensor it draws, and under them the two ends of the window. */
+@Composable
+private fun PanelCard(panel: ChartPanel, window: ChartWindow, zone: ZoneId) {
   val resources = LocalResources.current
   val quiet = MaterialTheme.colorScheme.onSurfaceVariant
   val compare = panel.spec is ChartSpec.Compare
   CiscCard {
     Text(panelTitle(panel.spec), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = Spacing.S))
     panel.lanes.forEachIndexed { index, lane ->
-      LaneBody(lane, laneColor(index), period, showName = compare, height = if (compare) BandHeight else ChartHeight)
+      LaneBody(lane, laneColor(index), window, zone, showName = compare, height = if (compare) BandHeight else ChartHeight)
     }
     if (!panel.isEmpty) {
       Row(modifier = Modifier.fillMaxWidth().padding(top = Spacing.S), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(resources.sinceText(period), style = MaterialTheme.typography.bodySmall, color = quiet)
-        Text(stringResource(R.string.history_now), style = MaterialTheme.typography.bodySmall, color = quiet)
+        Text(resources.windowStartText(window, zone), style = MaterialTheme.typography.bodySmall, color = quiet)
+        Text(resources.windowEndText(window, zone), style = MaterialTheme.typography.bodySmall, color = quiet)
       }
     }
   }
 }
 
 @Composable
-private fun LaneBody(lane: Lane, color: Color, period: ChartPeriod, showName: Boolean, height: Dp) {
+private fun LaneBody(lane: Lane, color: Color, window: ChartWindow, zone: ZoneId, showName: Boolean, height: Dp) {
   val resources = LocalResources.current
   val quiet = MaterialTheme.colorScheme.onSurfaceVariant
   val label = sensorLabel(lane.sensor)
@@ -152,7 +192,7 @@ private fun LaneBody(lane: Lane, color: Color, period: ChartPeriod, showName: Bo
     }
     return
   }
-  LineChart(chart, resources.chartDescription(label, period, chart.min, chart.max, lane.sensor.unit), line = color, height = height)
+  LineChart(chart, resources.chartDescription(label, window, zone, chart.min, chart.max, lane.sensor.unit), line = color, height = height)
   Row(modifier = Modifier.fillMaxWidth().padding(top = Spacing.Xs), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(resources.minText(chart.min, lane.sensor.unit), style = MaterialTheme.typography.bodyMedium)
     Text(resources.maxText(chart.max, lane.sensor.unit), style = MaterialTheme.typography.bodyMedium)

@@ -41,5 +41,7 @@ class RoomHistoryStore(database: HistoryDatabase) : HistoryStore {
       .map { rows -> rows.map { HourlyReading(Instant.ofEpochMilli(it.hourMs), it.lowest, it.highest) } }
       .distinctUntilChanged()
 
+  override fun firstHour(): Flow<Instant?> = dao.firstHour().map { hourMs -> hourMs?.let(Instant::ofEpochMilli) }.distinctUntilChanged()
+
   override suspend fun forgetReadingsBefore(before: Instant) = dao.deleteReadingsBefore(before.toEpochMilli())
 }

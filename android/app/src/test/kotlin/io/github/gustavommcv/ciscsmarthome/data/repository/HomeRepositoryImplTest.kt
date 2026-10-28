@@ -317,6 +317,12 @@ class HomeRepositoryImplTest {
   }
 
   @Test
+  fun `the first hour comes from the stored history`() = runTest {
+    store.save(listOf(StoredSample(A, 10_000, Instant.parse("2026-10-27T10:10:00Z"), mapOf(GAS to 5.0))))
+    assertEquals(Instant.parse("2026-10-27T10:00:00Z"), repository().firstHour().first())
+  }
+
+  @Test
   fun `after connecting it lets go of the readings older than they are kept`() = runTest {
     boardHas(house())
     start(repository())
