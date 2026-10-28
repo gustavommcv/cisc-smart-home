@@ -70,22 +70,27 @@ class HomeRepositoryImpl(
     }
 
   override suspend fun keepSynced(): Nothing {
-    // The stream connects again by itself when it is lost, so this only has to react to what it says.
-    events.updates().collect { update ->
-      when (update) {
-        BoardStreamUpdate.Connected -> onConnected()
-        is BoardStreamUpdate.Received -> {
-          // Whatever the board sends proves the connection is alive.
-          connectionState.value = ConnectionState.Connected
-          when (val event = update.event) {
-            is HomeEvent.HomeUpdated -> accept(event.home)
-            is HomeEvent.GasLeak -> leaks.onLeakEvent(event)
+    try {
+      // The stream connects again by itself when it is lost, so this only has to react to what it says.
+      events.updates().collect { update ->
+        when (update) {
+          BoardStreamUpdate.Connected -> onConnected()
+          is BoardStreamUpdate.Received -> {
+            // Whatever the board sends proves the connection is alive.
+            connectionState.value = ConnectionState.Connected
+            when (val event = update.event) {
+              is HomeEvent.HomeUpdated -> accept(event.home)
+              is HomeEvent.GasLeak -> leaks.onLeakEvent(event)
+            }
           }
+          is BoardStreamUpdate.Lost -> connectionState.value = ConnectionState.Disconnected(update.error.toProblem())
         }
-        is BoardStreamUpdate.Lost -> connectionState.value = ConnectionState.Disconnected(update.error.toProblem())
       }
+      throw IllegalStateException("the event stream ended, and it is meant to go on")
+    } finally {
+      // Nobody is listening to the board now, so nothing is known about it; the last home stays, as it was.
+      connectionState.value = ConnectionState.Connecting
     }
-    throw IllegalStateException("the event stream ended, and it is meant to go on")
   }
 
   /** The board accepted the connection: ask for the whole house (this also tells if the board can be used), then catch up on the history. */

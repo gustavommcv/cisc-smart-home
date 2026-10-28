@@ -23,4 +23,7 @@ interface AppDependencies {
 
   /** Starts the service that keeps the app in touch with the board, also when the screen is gone. */
   fun startMonitoring()
+
+  /** Closes every screen of the app and takes it out of the recent apps: what the service does when the user stops the monitoring. */
+  fun closeApp()
 }

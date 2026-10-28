@@ -31,6 +31,12 @@ class CiscApplicationTest {
   }
 
   @Test
+  fun `closing the app with no screen open does nothing`() {
+    app.closeApp()
+    assertNull(shadowOf(app).nextStartedService)
+  }
+
+  @Test
   fun `the choice of theme is one object for the whole app, so a change in the settings reaches the screen`() {
     assertSame(app.themeSettings, app.themeSettings)
   }

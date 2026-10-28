@@ -161,6 +161,20 @@ class HomeRepositoryImplTest {
   }
 
   @Test
+  fun `when the sync stops, nothing is known about the board any more, but the last home stays`() = runTest {
+    boardHas(house())
+    val repository = repository()
+    val sync = backgroundScope.launch { repository.keepSynced() }
+    runCurrent()
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(ConnectionState.Connected, repository.connection.value)
+    sync.cancel()
+    runCurrent()
+    assertEquals(ConnectionState.Connecting, repository.connection.value)
+    assertEquals(house(), repository.home.value)
+  }
+
+  @Test
   fun `it is connected again when the board accepts again`() = runTest {
     boardHas(house())
     val repository = repository()

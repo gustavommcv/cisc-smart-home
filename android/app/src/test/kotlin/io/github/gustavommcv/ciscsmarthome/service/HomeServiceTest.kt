@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
 import android.os.Looper
@@ -134,6 +135,122 @@ class HomeServiceTest {
     running = null
     idle()
     assertTrue(repository.syncCancelled)
+  }
+
+  // ---- stopping the monitoring, which is the user's to do --------------------------------
+
+  private fun stopIntent() = Intent(app, HomeService::class.java).setAction("io.github.gustavommcv.ciscsmarthome.action.STOP_MONITORING")
+
+  /** What touching "stop" on the notice does: the service gets the intent the notice carries. */
+  private fun HomeService.stopFromTheNotice(): Int = onStartCommand(stopIntent(), 0, 2)
+
+  @Test
+  fun `the notice that stays has a button to stop monitoring`() {
+    val action = shadowOf(start()).lastForegroundNotification.actions.single()
+    assertEquals(text(R.string.notice_stop_monitoring), action.title.toString())
+  }
+
+  @Test
+  fun `the button asks the service to stop, and does not open the app`() {
+    val button = shadowOf(shadowOf(start()).lastForegroundNotification.actions.single().actionIntent)
+    assertTrue(button.isServiceIntent)
+    val intent = button.savedIntent
+    assertEquals(HomeService::class.java.name, intent.component?.className)
+    assertEquals("io.github.gustavommcv.ciscsmarthome.action.STOP_MONITORING", intent.action)
+  }
+
+  @Test
+  fun `the button is the only action of the notice`() {
+    assertEquals(1, shadowOf(start()).lastForegroundNotification.actions.size)
+  }
+
+  @Test
+  fun `stopping from the notice stops the sync`() {
+    val service = start()
+    service.stopFromTheNotice()
+    idle()
+    assertTrue(repository.syncCancelled)
+  }
+
+  @Test
+  fun `stopping from the notice takes the notice away and stops the service`() {
+    val service = start()
+    service.stopFromTheNotice()
+    idle()
+    assertTrue(shadowOf(service).isForegroundStopped)
+    assertFalse(shadowOf(service).isLastForegroundNotificationAttached)
+    assertTrue(shadowOf(service).isStoppedBySelf)
+  }
+
+  @Test
+  fun `Android does not start the service again after the user stopped it`() {
+    assertEquals(Service.START_NOT_STICKY, start().stopFromTheNotice())
+  }
+
+  @Test
+  fun `stopping from the notice closes the app, so nothing of it is left on the screen`() {
+    start().stopFromTheNotice()
+    idle()
+    assertEquals(1, app.appsClosed)
+  }
+
+  @Test
+  fun `stopping from the notice takes the warning of a lost board away, for nobody is watching on purpose`() {
+    val service = start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    pass(61)
+    assertEquals(1, lostNotifications().size)
+    service.stopFromTheNotice()
+    idle()
+    assertEquals(0, lostNotifications().size)
+  }
+
+  @Test
+  fun `stopping from the notice leaves the warning of a leak that is going on`() {
+    val service = start()
+    repository.announce(leak(count = 1))
+    idle()
+    service.stopFromTheNotice()
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `stopping from the notice takes the countdown with it`() {
+    val service = start()
+    repository.connection.value = ConnectionState.Disconnected(ConnectionProblem.Unreachable)
+    idle()
+    service.stopFromTheNotice()
+    pass(120)
+    assertEquals(0, lostNotifications().size)
+  }
+
+  @Test
+  fun `a leak after the user stopped is not warned of, for nothing is listening`() {
+    val service = start()
+    service.stopFromTheNotice()
+    idle()
+    repository.announce(leak(count = 1))
+    idle()
+    assertEquals(0, leakNotifications().size)
+  }
+
+  @Test
+  fun `starting the monitoring again after it was stopped keeps the repository in step again`() {
+    start().stopFromTheNotice()
+    idle()
+    running!!.destroy()
+    start()
+    assertEquals(2, repository.syncsStarted)
+  }
+
+  @Test
+  fun `a stop that comes with nothing running does no harm`() {
+    val controller = Robolectric.buildService(HomeService::class.java).create()
+    running = controller
+    controller.get().stopFromTheNotice()
+    idle()
+    assertEquals(0, repository.syncsStarted)
   }
 
   // ---- announcing a leak -------------------------------------------------------------

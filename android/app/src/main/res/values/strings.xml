@@ -118,6 +118,7 @@
     <string name="option_automatic">Automático</string>
     <string name="option_manual">Manual</string>
 
+    <string name="notice_stop_monitoring">Parar de monitorar</string>
     <string name="channel_monitoring">Monitoramento da casa</string>
     <string name="channel_gas_alert">Alerta de vazamento de gás</string>
     <string name="channel_connection_lost">Perda de conexão com a placa</string>
