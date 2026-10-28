@@ -126,7 +126,7 @@ internal fun RoomScreen(
           ) }
         item { LockedCard(R.string.device_add) }
         // Shown, so it is clear it is to come; a room cannot be taken out of the board's house from the phone.
-        item { LockedCard(R.string.room_delete) }
+        item { LockedCard(R.string.room_delete, tone = Tone.Alert) }
       }
     }
   }
