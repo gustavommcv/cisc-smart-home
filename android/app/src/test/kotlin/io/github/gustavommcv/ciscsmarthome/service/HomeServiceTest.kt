@@ -20,6 +20,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.ConnectionProblem
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
 import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import java.util.concurrent.TimeUnit
 import org.junit.After
@@ -382,6 +383,92 @@ class HomeServiceTest {
     repository.announce(leak(count = 1))
     idle()
     assertTrue(leakNotifications().single().flags and Notification.FLAG_AUTO_CANCEL != 0)
+  }
+
+  // ---- the way the user chose to be warned ---------------------------------------------
+
+  private fun noticeLeaks(): List<Notification> = shadowNotifications.allNotifications.filter { it.channelId == "gas_notice" }
+
+  @Test
+  fun `a room the user chose a notification for is warned of on the quiet channel, without the alarm`() {
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Notice)
+    start()
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(0, leakNotifications().size)
+    val notice = noticeLeaks().single()
+    assertEquals(text(R.string.alert_gas_title), notice.title())
+    assertEquals(text(R.string.alert_gas_text, text(R.string.area_kitchen)), notice.body())
+  }
+
+  @Test
+  fun `a notification of a leak does not repeat its sound, which the alarm does`() {
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Notice)
+    start()
+    repository.announce(leak(count = 1))
+    idle()
+    assertEquals(0, noticeLeaks().single().flags and Notification.FLAG_INSISTENT)
+  }
+
+  @Test
+  fun `a notification of a leak opens the app and goes away when touched, like the alarm`() {
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Notice)
+    start()
+    repository.announce(leak(count = 1))
+    idle()
+    val notice = noticeLeaks().single()
+    assertEquals("io.github.gustavommcv.ciscsmarthome.ui.MainActivity", shadowOf(notice.contentIntent).savedIntent.component?.className)
+    assertTrue(notice.flags and Notification.FLAG_AUTO_CANCEL != 0)
+  }
+
+  @Test
+  fun `a room the user turned the warning off for is not warned of at all`() {
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Off)
+    start()
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(0, leakNotifications().size)
+    assertEquals(0, noticeLeaks().size)
+  }
+
+  @Test
+  fun `the way chosen for the kitchen does not change the warning of the bedroom`() {
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Off)
+    start()
+    repository.announce(leak(count = 1, area = "bedroom"))
+    idle()
+    assertEquals(1, leakNotifications().size)
+  }
+
+  @Test
+  fun `a way chosen after the service started is the way of the next leak`() {
+    start()
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Notice)
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(1, noticeLeaks().size)
+  }
+
+  @Test
+  fun `the notification of a leak goes away by itself when the board says the leak is over, like the alarm`() {
+    app.leakModes.choose(AreaId("kitchen"), LeakAlertMode.Notice)
+    start()
+    repository.announce(leak(count = 1))
+    repository.home.value = house("emergency", alerts = 1)
+    idle()
+    assertEquals(1, noticeLeaks().size)
+    repository.home.value = house("normal", alerts = 1)
+    idle()
+    assertEquals(0, noticeLeaks().size)
+  }
+
+  @Test
+  fun `the channel of the notification is loud enough to be seen, and is an ordinary notification, not an alarm`() {
+    start()
+    val channel = notificationManager.getNotificationChannel("gas_notice")
+    assertEquals(NotificationManager.IMPORTANCE_HIGH, channel.importance)
+    assertEquals(AudioAttributes.USAGE_NOTIFICATION, channel.audioAttributes.usage)
+    assertEquals(text(R.string.channel_gas_notice), channel.name.toString())
   }
 
   // ---- repeating until someone acts ----------------------------------------------------

@@ -9,6 +9,7 @@ import android.content.Intent
 import android.media.AudioAttributes
 import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.messageRes
@@ -18,6 +19,9 @@ internal object Notices {
   const val MONITORING_CHANNEL = "monitoring"
   // A channel keeps the sound it was made with, whatever the app asks later, so a new sound is a new channel; the first one used the alarm ringtone of the phone.
   const val GAS_ALERT_CHANNEL = "gas_alarm"
+
+  /** The channel of a leak the user chose to be warned of by a notification only: an ordinary one, with the sound of notifications. */
+  const val GAS_NOTICE_CHANNEL = "gas_notice"
   private const val OLD_GAS_ALERT_CHANNEL = "gas_alert"
   const val CONNECTION_LOST_CHANNEL = "connection_lost"
   const val MONITORING_ID = 1
@@ -39,6 +43,9 @@ internal object Notices {
       }
     manager.deleteNotificationChannel(OLD_GAS_ALERT_CHANNEL)
     manager.createNotificationChannel(gasAlert)
+    manager.createNotificationChannel(
+      NotificationChannel(GAS_NOTICE_CHANNEL, context.getString(R.string.channel_gas_notice), NotificationManager.IMPORTANCE_HIGH).apply { lockscreenVisibility = Notification.VISIBILITY_PUBLIC },
+    )
     // Loud, so it is noticed, but not the alarm: a house nobody watches is serious, and it is not gas.
     manager.createNotificationChannel(NotificationChannel(CONNECTION_LOST_CHANNEL, context.getString(R.string.channel_connection_lost), NotificationManager.IMPORTANCE_HIGH))
   }
@@ -58,21 +65,24 @@ internal object Notices {
       .addAction(0, context.getString(R.string.notice_stop_monitoring), stopMonitoring(context))
       .build()
 
-  /** The warning of a leak in [areaName]. */
-  fun gasLeak(context: Context, areaName: String): Notification =
-    NotificationCompat.Builder(context, GAS_ALERT_CHANNEL)
+  /** The warning of a leak in [areaName]: the alarm, with its own sound that repeats, or, for [LeakAlertMode.Notice], an ordinary notification. A warning that is off is never made. */
+  fun gasLeak(context: Context, areaName: String, mode: LeakAlertMode): Notification {
+    require(mode != LeakAlertMode.Off) { "a leak the user turned the warning off for is not warned of" }
+    val alarm = mode == LeakAlertMode.Alarm
+    return NotificationCompat.Builder(context, if (alarm) GAS_ALERT_CHANNEL else GAS_NOTICE_CHANNEL)
       .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle(context.getString(R.string.alert_gas_title))
       .setContentText(context.getString(R.string.alert_gas_text, areaName))
       .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setCategory(if (alarm) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_STATUS)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setAutoCancel(true)
       .setContentIntent(openApp(context))
       .build()
-      // The sound goes on until the warning is opened or cancelled, which the board's own rearming does: a leak
-      // is not a thing to miss because the sound played once while someone slept. The builder has no setter for it.
-      .apply { flags = flags or Notification.FLAG_INSISTENT }
+      // The sound of the alarm goes on until the warning is opened or cancelled, which the board's own rearming does: a leak is not a thing to miss because the sound played once
+      // while someone slept. The builder has no setter for it. A notification the user chose keeps to the sound it has: it plays once.
+      .apply { if (alarm) flags = flags or Notification.FLAG_INSISTENT }
+  }
 
   /** The warning that the board has been out of reach for a while, so nothing is watching the house. */
   fun connectionLost(context: Context, connection: ConnectionState.Disconnected): Notification =

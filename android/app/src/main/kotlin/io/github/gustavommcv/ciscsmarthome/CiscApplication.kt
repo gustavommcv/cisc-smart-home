@@ -19,6 +19,8 @@ class CiscApplication : Application(), AppDependencies {
 
   override val nameBook get() = container.nameBook
 
+  override val leakAlertSettings get() = container.leakAlertSettings
+
   override fun startMonitoring() {
     ContextCompat.startForegroundService(this, Intent(this, HomeService::class.java))
   }

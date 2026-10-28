@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -50,10 +51,13 @@ import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.Device
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceIds
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
 import io.github.gustavommcv.ciscsmarthome.domain.HumidityLimits
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertModes
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
@@ -71,6 +75,7 @@ internal fun RoomScreen(
   connection: ConnectionState,
   names: Names,
   icons: AreaIcons,
+  leakModes: LeakAlertModes,
   pending: Set<EntityId>,
   notice: CommandNotice?,
   onBack: () -> Unit,
@@ -79,6 +84,7 @@ internal fun RoomScreen(
   onNoticeShown: () -> Unit,
   onRenameRoom: (String?) -> Unit,
   onChooseIcon: (RoomIcon?) -> Unit,
+  onChooseLeakAlertMode: (LeakAlertMode) -> Unit,
   onRenameDevice: (DeviceId, String?) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -106,7 +112,18 @@ internal fun RoomScreen(
         item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = Spacing.S)) }
         item { SectionTitle(R.string.section_devices) }
         if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
-        items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, names, connection, pending, onCommand, onCommandsInOrder, onRename = { renamingDevice = device.id.value }) }
+        items(area.devices, key = { it.id.value }) { device -> DeviceCard(
+            device,
+            names,
+            connection,
+            pending,
+            onCommand,
+            onCommandsInOrder,
+            // Only the gas monitor warns of a leak, so it is the one that says how.
+            leakMode = if (device.id == DeviceIds.GasMonitor) leakModes.of(area.id) else null,
+            onChooseLeakMode = onChooseLeakAlertMode,
+            onRename = { renamingDevice = device.id.value },
+          ) }
         item { LockedCard(R.string.device_add) }
         // Shown, so it is clear it is to come; a room cannot be taken out of the board's house from the phone.
         item { LockedCard(R.string.room_delete) }
@@ -183,6 +200,8 @@ private fun DeviceCard(
   pending: Set<EntityId>,
   onCommand: (EntityId, CommandValue) -> Unit,
   onCommandsInOrder: (List<Pair<EntityId, CommandValue>>) -> Unit,
+  leakMode: LeakAlertMode?,
+  onChooseLeakMode: (LeakAlertMode) -> Unit,
   onRename: () -> Unit,
 ) {
   val emergency = device.isInEmergency()
@@ -217,6 +236,10 @@ private fun DeviceCard(
         else -> ReadRow(entity)
       }
     }
+    if (leakMode != null) {
+      HorizontalDivider(thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outlineVariant)
+      LeakModeRow(leakMode, onChooseLeakMode)
+    }
     if (limits != null) {
       val limitIds = setOf(EntityIds.DehumidifierOnAt, EntityIds.DehumidifierOffAt)
       LimitsFooter(
@@ -225,6 +248,44 @@ private fun DeviceCard(
         onRestore = { onCommandsInOrder(limits.restore().map { (id, value) -> id to CommandValue.Number(value) }) },
       )
     }
+  }
+}
+
+/** How the phone warns of a leak in this room: the alarm, a notification, or nothing. Turning it off asks first. */
+@Composable
+private fun LeakModeRow(mode: LeakAlertMode, onChoose: (LeakAlertMode) -> Unit) {
+  var confirmingOff by rememberSaveable { mutableStateOf(false) }
+  Column(verticalArrangement = Arrangement.spacedBy(Spacing.S), modifier = Modifier.padding(vertical = Spacing.S)) {
+    Text(stringResource(R.string.leak_mode_title), style = MaterialTheme.typography.bodyLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+      LeakAlertMode.entries.forEach { option ->
+        FilterChip(
+          selected = option == mode,
+          // Asking for what already is would only be a choice for nothing.
+          onClick = { if (option != mode) if (option.needsConfirmation) confirmingOff = true else onChoose(option) },
+          label = { Text(stringResource(option.labelRes())) },
+        )
+      }
+    }
+    Text(stringResource(mode.hintRes()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+  if (confirmingOff) {
+    AlertDialog(
+      onDismissRequest = { confirmingOff = false },
+      title = { Text(stringResource(R.string.leak_off_title)) },
+      text = { Text(stringResource(R.string.leak_off_text)) },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmingOff = false
+            onChoose(LeakAlertMode.Off)
+          },
+        ) {
+          Text(stringResource(R.string.leak_off_confirm))
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirmingOff = false }) { Text(stringResource(R.string.rename_cancel)) } },
+    )
   }
 }
 

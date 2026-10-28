@@ -52,7 +52,7 @@ class HomeService : Service() {
     if (syncing == null) {
       val notifier = AndroidNotifier(this, (application as AppDependencies).nameBook).also { notifier = it }
       val connectionWatch = ConnectionWatch(notifier)
-      val leakWarnings = LeakWarnings(notifier)
+      val leakWarnings = LeakWarnings(notifier, (application as AppDependencies).leakAlertSettings)
       syncing =
         scope.launch {
           launch { repository.keepSynced() }

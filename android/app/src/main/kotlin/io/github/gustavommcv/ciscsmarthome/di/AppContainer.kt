@@ -12,6 +12,7 @@ import io.github.gustavommcv.ciscsmarthome.data.link.RoutedBoardApi
 import io.github.gustavommcv.ciscsmarthome.data.link.RoutedBoardEvents
 import io.github.gustavommcv.ciscsmarthome.data.link.WifiAccessPointLink
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesAlertMemory
+import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesLeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesLinkSettings
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesNameBook
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesThemeSettings
@@ -20,6 +21,7 @@ import io.github.gustavommcv.ciscsmarthome.data.remote.BoardClient
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardEventStream
 import io.github.gustavommcv.ciscsmarthome.data.repository.HomeRepositoryImpl
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.domain.LinkKind
 import io.github.gustavommcv.ciscsmarthome.domain.LinkSettings
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
@@ -47,6 +49,8 @@ class AppContainer(context: Context) {
   val themeSettings: ThemeSettings = PreferencesThemeSettings(context.applicationContext.getSharedPreferences(THEME_FILE, Context.MODE_PRIVATE))
 
   val nameBook: NameBook = PreferencesNameBook(context.applicationContext.getSharedPreferences(NAMES_FILE, Context.MODE_PRIVATE))
+
+  val leakAlertSettings: LeakAlertSettings = PreferencesLeakAlertSettings(context.applicationContext.getSharedPreferences(LEAK_ALERT_FILE, Context.MODE_PRIVATE))
 
   val linkSettings: LinkSettings = PreferencesLinkSettings(context.applicationContext.getSharedPreferences(LINK_FILE, Context.MODE_PRIVATE))
 
@@ -88,5 +92,6 @@ class AppContainer(context: Context) {
     private const val THEME_FILE = "theme-settings"
     private const val NAMES_FILE = "user-names"
     private const val LINK_FILE = "link-settings"
+    private const val LEAK_ALERT_FILE = "leak-alert-settings"
   }
 }
