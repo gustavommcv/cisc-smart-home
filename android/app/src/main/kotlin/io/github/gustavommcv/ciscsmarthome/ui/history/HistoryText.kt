@@ -17,3 +17,9 @@ internal fun Resources.sinceText(period: ChartPeriod): String = getString(R.stri
 /** What a screen reader says of a chart it cannot see: what it is, how far back it goes and the range it covers. */
 internal fun Resources.chartDescription(label: String, period: ChartPeriod, min: Double, max: Double, unit: String?): String =
   getString(R.string.history_chart_description, label, getString(period.labelRes), valueText(min, unit), valueText(max, unit))
+
+/** The second line of a device of the list: the room it is in and how many charts it has. */
+internal fun Resources.deviceSubtitle(room: String, charts: Int): String = getQuantityString(R.plurals.history_device_subtitle, charts, charts, room)
+
+/** The title of the chart that compares two sensors: both names, the first one the one above. */
+internal fun Resources.compareTitle(upper: String, lower: String): String = getString(R.string.history_compare_title, upper, lower.replaceFirstChar { it.lowercase() })

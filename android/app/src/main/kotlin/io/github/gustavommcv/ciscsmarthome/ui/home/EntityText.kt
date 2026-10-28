@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
+import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.Device
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
 import io.github.gustavommcv.ciscsmarthome.domain.Names
@@ -13,11 +15,17 @@ import io.github.gustavommcv.ciscsmarthome.nameRes
 
 /** The name of a room: the one the user gave it, else ours in Portuguese for the rooms we know, else the board's. */
 @Composable
-internal fun roomName(area: Area, names: Names): String = names.nameOfArea(area.id, area.id.nameRes()?.let { stringResource(it) }, area.name)
+internal fun roomName(id: AreaId, board: String, names: Names): String = names.nameOfArea(id, id.nameRes()?.let { stringResource(it) }, board)
+
+@Composable
+internal fun roomName(area: Area, names: Names): String = roomName(area.id, area.name, names)
 
 /** The name of a device: the one the user gave it, else ours in Portuguese for the ones we know, else the board's. */
 @Composable
-internal fun deviceName(device: Device, names: Names): String = names.nameOfDevice(device.id, device.id.nameRes()?.let { stringResource(it) }, device.name)
+internal fun deviceName(id: DeviceId, board: String, names: Names): String = names.nameOfDevice(id, id.nameRes()?.let { stringResource(it) }, board)
+
+@Composable
+internal fun deviceName(device: Device, names: Names): String = deviceName(device.id, device.name, names)
 
 /** The label of an entity: ours in Portuguese for the ones we know, the board's otherwise. */
 @Composable

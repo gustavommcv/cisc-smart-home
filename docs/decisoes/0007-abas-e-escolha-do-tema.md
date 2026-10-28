@@ -8,7 +8,7 @@ O app deixou de ser uma lista e ganhou lugares de nível alto: a casa, o histór
 
 ## Decisão
 
-**Três abas numa barra de baixo:** Início, Histórico e Ajustes. Cada aba tem o seu `ViewModel` e guarda o próprio estado, então sair de uma e voltar a encontra como estava (um cômodo que estava aberto continua aberto). A aba aberta é um estado salvo com a tela; o botão de voltar leva do Histórico ou dos Ajustes para o Início, e do Início fecha o cômodo e, depois, o app. A navegação é **feita à mão**, sem biblioteca.
+**Três abas numa barra de baixo:** Início, Histórico e Ajustes. Cada aba tem o seu `ViewModel` e guarda o próprio estado, então sair de uma e voltar a encontra como estava (um cômodo que estava aberto continua aberto). A aba aberta é um estado salvo com a tela; o botão de voltar leva dos Ajustes para o Início, no Histórico fecha o dispositivo aberto e, depois, leva ao Início, e do Início fecha o cômodo e, depois, o app. A navegação é **feita à mão**, sem biblioteca.
 
 **O tema tem três valores** (`ThemeMode`): `Claro`, `Escuro` e `Automático`. O **padrão é o automático**, que é o que o app já fazia. A escolha fica no celular, num arquivo de preferências com uma palavra (o nome do valor), como a memória dos alertas; é lida ao abrir o app e vale **na mesma hora** em que muda. Uma palavra que o app não conhece (um arquivo de uma versão futura, um arquivo estragado) vale como nenhuma escolha, para nunca impedir o app de abrir.
 

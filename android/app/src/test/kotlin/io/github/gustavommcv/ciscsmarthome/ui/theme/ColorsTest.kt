@@ -72,6 +72,40 @@ class ColorsTest {
   }
 
   @Test
+  fun `the two lines of a chart that compares are seen against the card they are drawn on`() {
+    schemes.forEach { (name, scheme) ->
+      assertContrast(
+        name,
+        scheme,
+        3.0,
+        { s: ColorScheme -> s.primary } to { s: ColorScheme -> s.surface },
+        { s: ColorScheme -> s.tertiary } to { s: ColorScheme -> s.surface },
+        label = listOf("primary/surface", "tertiary/surface"),
+      )
+    }
+  }
+
+  @Test
+  fun `the amber is readable as text, and what is written on it`() {
+    schemes.forEach { (name, scheme) ->
+      assertContrast(
+        name,
+        scheme,
+        4.5,
+        { s: ColorScheme -> s.tertiary } to { s: ColorScheme -> s.surface },
+        { s: ColorScheme -> s.onTertiary } to { s: ColorScheme -> s.tertiary },
+        { s: ColorScheme -> s.onTertiaryContainer } to { s: ColorScheme -> s.tertiaryContainer },
+        label = listOf("tertiary/surface", "onTertiary/tertiary", "onTertiaryContainer/tertiaryContainer"),
+      )
+    }
+  }
+
+  @Test
+  fun `the second line is not the first one in the same color`() {
+    schemes.forEach { (name, scheme) -> assertTrue("$name: the lines of a chart that compares would be one color", scheme.tertiary != scheme.primary) }
+  }
+
+  @Test
   fun `the light theme is light and the dark theme is dark`() {
     assertTrue(LightColors.background.luminance() > 0.8)
     assertTrue(LightColors.surface.luminance() > 0.8)

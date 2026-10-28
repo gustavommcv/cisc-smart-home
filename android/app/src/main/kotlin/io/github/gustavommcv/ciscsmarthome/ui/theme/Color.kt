@@ -4,7 +4,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// A calm teal on a cool grey, and a red kept for what is wrong. ColorsTest holds every pair that is read to its contrast.
+// A calm teal on a cool grey, an amber for the second line of a chart that compares two, and a red kept for what is wrong. ColorsTest holds every pair that is read to its contrast.
 // Material 3 has more roles than the app uses; the ones left over take the primary family, so none of the default purple shows.
 
 internal val LightColors =
@@ -17,10 +17,10 @@ internal val LightColors =
     onSecondary = Color(0xFFFFFFFF),
     secondaryContainer = Color(0xFFD9F1EC),
     onSecondaryContainer = Color(0xFF0B4F45),
-    tertiary = Color(0xFF1F7A6D),
+    tertiary = Color(0xFFB45309),
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFD9F1EC),
-    onTertiaryContainer = Color(0xFF0B4F45),
+    tertiaryContainer = Color(0xFFFDE9CF),
+    onTertiaryContainer = Color(0xFF6B3003),
     background = Color(0xFFF4F6F8),
     onBackground = Color(0xFF1B1F24),
     surface = Color(0xFFFFFFFF),
@@ -56,10 +56,10 @@ internal val DarkColors =
     onSecondary = Color(0xFF00382F),
     secondaryContainer = Color(0xFF14423B),
     onSecondaryContainer = Color(0xFFBDEFE6),
-    tertiary = Color(0xFF6FD3C2),
-    onTertiary = Color(0xFF00382F),
-    tertiaryContainer = Color(0xFF14423B),
-    onTertiaryContainer = Color(0xFFBDEFE6),
+    tertiary = Color(0xFFF2B45C),
+    onTertiary = Color(0xFF4A2800),
+    tertiaryContainer = Color(0xFF5A3406),
+    onTertiaryContainer = Color(0xFFFFDDB3),
     background = Color(0xFF0F1317),
     onBackground = Color(0xFFE6E9ED),
     surface = Color(0xFF1A1F25),

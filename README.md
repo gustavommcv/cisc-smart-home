@@ -10,7 +10,7 @@ Projeto acadêmico da disciplina de Sistemas Eletroeletrônicos (Atividade 03), 
 
 ![As telas do aplicativo Android: o início, um cômodo, o histórico e um vazamento de gás](docs/imagens/telas.png)
 
-> **Estado atual:** o firmware e o aplicativo estão funcionando juntos, com a maquete. O app mostra como a casa está, comanda o desumidificador, mostra o histórico num gráfico, avisa de um vazamento de gás por notificação e deixa escolher o tema (claro, escuro ou automático). O usuário pode dar nome aos cômodos e aos dispositivos. O app entra sozinho no Wi-Fi da placa, por uma conexão que se pode trocar (a nuvem e a VPN ficam para depois). Falta o material da apresentação. Veja o [plano](#fases).
+> **Estado atual:** o firmware e o aplicativo estão funcionando juntos, com a maquete. O app mostra como a casa está, comanda o desumidificador, mostra o histórico de cada dispositivo em gráficos (um deles põe a temperatura e a umidade uma sobre a outra), avisa de um vazamento de gás por notificação e deixa escolher o tema (claro, escuro ou automático). O usuário pode dar nome aos cômodos e aos dispositivos. O app entra sozinho no Wi-Fi da placa, por uma conexão que se pode trocar (a nuvem e a VPN ficam para depois). Falta o material da apresentação. Veja o [plano](#fases).
 
 ## O que ele faz
 

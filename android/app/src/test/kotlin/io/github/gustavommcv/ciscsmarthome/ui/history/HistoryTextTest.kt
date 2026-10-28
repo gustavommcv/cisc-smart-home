@@ -37,4 +37,16 @@ class HistoryTextTest {
   fun `a screen reader is told what the chart is, how far back it goes and its range`() {
     assertEquals("Gráfico de Gás nas últimas 6 h, de 45 adc a 260 adc", resources.chartDescription("Gás", ChartPeriod.SixHours, 45.0, 260.0, "adc"))
   }
+
+  @Test
+  fun `a device of the list says its room and how many charts it has`() {
+    assertEquals("Cozinha · 1 gráfico", resources.deviceSubtitle("Cozinha", 1))
+    assertEquals("Quarto · 3 gráficos", resources.deviceSubtitle("Quarto", 3))
+  }
+
+  @Test
+  fun `the chart that compares is named by both sensors, the second one in lower case`() {
+    assertEquals("Temperatura e umidade", resources.compareTitle("Temperatura", "Umidade"))
+    assertEquals("Gás e vento", resources.compareTitle("Gás", "Vento"))
+  }
 }

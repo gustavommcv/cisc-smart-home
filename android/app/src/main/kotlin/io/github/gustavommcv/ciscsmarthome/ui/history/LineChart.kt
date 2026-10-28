@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -16,7 +17,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/** The height of the chart of one sensor, and of each band of the chart that compares two. */
 internal val ChartHeight = 160.dp
+internal val BandHeight = 96.dp
 private val LineWidth = 2.dp
 private val DotRadius = 3.dp
 
@@ -24,14 +27,13 @@ private val DotRadius = 3.dp
 private val PlotPadding = 8.dp
 
 /**
- * A line chart, drawn by hand: one line, in the color of the app, over three lines of grid. Each stretch the app heard is a line of its own, so
- * the time it heard nothing stays empty, and a stretch of a single reading is a dot. [description] is what a screen reader says.
+ * A line chart, drawn by hand: one line, in the [line] color (the color of the app by default), over three lines of grid. Each stretch the app heard
+ * is a line of its own, so the time it heard nothing stays empty, and a stretch of a single reading is a dot. [description] is what a screen reader says.
  */
 @Composable
-internal fun LineChart(chart: Chart, description: String, modifier: Modifier = Modifier) {
-  val line = MaterialTheme.colorScheme.primary
+internal fun LineChart(chart: Chart, description: String, modifier: Modifier = Modifier, line: Color = MaterialTheme.colorScheme.primary, height: Dp = ChartHeight) {
   val grid = MaterialTheme.colorScheme.outlineVariant
-  Canvas(modifier = modifier.fillMaxWidth().height(ChartHeight).semantics { contentDescription = description }) {
+  Canvas(modifier = modifier.fillMaxWidth().height(height).semantics { contentDescription = description }) {
     val padding = PlotPadding.toPx()
     val plotHeight = size.height - 2 * padding
     fun ChartPoint.place() = Offset(x * size.width, padding + (1 - y) * plotHeight)
