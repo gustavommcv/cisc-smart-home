@@ -10,7 +10,7 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 
 | Início | Cômodo | Histórico |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador e a escolha entre automático e manual, e um lápis para renomear o cômodo e o dispositivo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
+| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador, a escolha entre automático e manual e os limites de umidade (liga a partir de 85 % e desliga até 83 %, cada um com menos e mais), um lápis para editar o cômodo e o dispositivo, e os cartões bloqueados Adicionar dispositivo e Excluir cômodo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
 
 | Vazamento de gás (tema escuro) | Ajustes | Editar o cômodo |
 |:---:|:---:|:---:|
