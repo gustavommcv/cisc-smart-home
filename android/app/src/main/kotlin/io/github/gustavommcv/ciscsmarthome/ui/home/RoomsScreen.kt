@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +18,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
+import io.github.gustavommcv.ciscsmarthome.ui.components.LockedCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 import io.github.gustavommcv.ciscsmarthome.R
@@ -32,7 +32,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Home
 internal fun RoomsScreen(home: Home, connection: ConnectionState, onOpenRoom: (AreaId) -> Unit, modifier: Modifier = Modifier) {
   val lastReading = connection is ConnectionState.Disconnected
   LazyColumn(
-    modifier = modifier.fillMaxSize().safeDrawingPadding(),
+    modifier = modifier.fillMaxSize(),
     contentPadding = PaddingValues(Spacing.Xl),
     verticalArrangement = Arrangement.spacedBy(Spacing.M),
   ) {
