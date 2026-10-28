@@ -17,6 +17,9 @@ interface HomeRepository {
   /** The readings of [entityId] taken at [since] or later, oldest first, sent again when they change. */
   fun series(entityId: EntityId, since: Instant): Flow<List<Reading>>
 
+  /** The least and the greatest reading of each hour of [entityId] that starts at [since] or later and before [until], oldest first, sent again when they change. */
+  fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>>
+
   /** Asks an entity to become [value]. */
   suspend fun send(entityId: EntityId, value: CommandValue): CommandResult
 

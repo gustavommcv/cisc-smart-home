@@ -7,6 +7,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
@@ -50,6 +51,23 @@ class FakeHomeRepository : HomeRepository {
   override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> {
     seriesRequests += entityId to since
     return readingsOf(entityId).map { all -> all.filter { it.at >= since } }
+  }
+
+  private val hours = mutableMapOf<EntityId, MutableStateFlow<List<HourlyReading>>>()
+
+  private fun hoursOf(entityId: EntityId) = hours.getOrPut(entityId) { MutableStateFlow(emptyList()) }
+
+  /** What the history has kept of the hours of an entity; setting it again is what a new reading does. */
+  fun setHours(entityId: EntityId, values: List<HourlyReading>) {
+    hoursOf(entityId).value = values
+  }
+
+  /** The hours that were asked for, in order: the entity, and the window from where to where. */
+  val hourlyRequests = mutableListOf<Triple<EntityId, Instant, Instant>>()
+
+  override fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>> {
+    hourlyRequests += Triple(entityId, since, until)
+    return hoursOf(entityId).map { all -> all.filter { it.hour >= since && it.hour < until } }
   }
 
   /** What the board answers to a command; a test replaces it, and may make it wait. */

@@ -17,11 +17,13 @@ import io.github.gustavommcv.ciscsmarthome.domain.HistoryPage
 import io.github.gustavommcv.ciscsmarthome.domain.HistorySample
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeEvent
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
 import io.github.gustavommcv.ciscsmarthome.testing.FakeAlertMemory
 import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import java.io.IOException
+import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -303,6 +305,70 @@ class HomeRepositoryImplTest {
     assertEquals(ConnectionState.Connected, repository.connection.value)
     assertEquals(house(), repository.home.value)
     assertEquals(emptyList<StoredSample>(), store.saved)
+  }
+
+  // ---- the hours and what is let go of ----------------------------------------------------
+
+  @Test
+  fun `the hours come from the stored history`() = runTest {
+    store.save(listOf(StoredSample(A, 10_000, Instant.parse("2026-10-27T10:10:00Z"), mapOf(GAS to 5.0)), StoredSample(A, 20_000, Instant.parse("2026-10-27T10:40:00Z"), mapOf(GAS to 9.0))))
+    val hours = repository().hourly(GAS, Instant.parse("2026-10-27T00:00:00Z"), Instant.parse("2026-10-28T00:00:00Z")).first()
+    assertEquals(listOf(HourlyReading(Instant.parse("2026-10-27T10:00:00Z"), 5.0, 9.0)), hours)
+  }
+
+  @Test
+  fun `after connecting it lets go of the readings older than they are kept`() = runTest {
+    boardHas(house())
+    start(repository())
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(listOf(clock.now.minus(HomeRepositoryImpl.READINGS_KEPT)), store.forgotten)
+  }
+
+  @Test
+  fun `the readings are kept for a week`() {
+    assertEquals(Duration.ofDays(7), HomeRepositoryImpl.READINGS_KEPT)
+  }
+
+  @Test
+  fun `the old readings are looked for at most once an hour`() {
+    assertEquals(Duration.ofHours(1), HomeRepositoryImpl.LET_GO_EVERY)
+  }
+
+  @Test
+  fun `it lets go of the old readings before it fetches the history`() = runTest {
+    boardHas(house())
+    api.history = { _, _ -> page(A, 10_000) }
+    start(repository())
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(listOf("forget", "save"), store.calls)
+  }
+
+  @Test
+  fun `a board that connects again within the hour does not make it look through everything again`() = runTest {
+    boardHas(house())
+    start(repository())
+    feed(BoardStreamUpdate.Connected)
+    clock.now = clock.now.plus(HomeRepositoryImpl.LET_GO_EVERY).minusSeconds(1)
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(1, store.forgotten.size)
+  }
+
+  @Test
+  fun `a board that connects again after the hour makes it let go again, from the new moment`() = runTest {
+    boardHas(house())
+    start(repository())
+    feed(BoardStreamUpdate.Connected)
+    clock.now = clock.now.plus(HomeRepositoryImpl.LET_GO_EVERY)
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(listOf(Instant.parse("2026-10-27T12:00:00Z"), Instant.parse("2026-10-27T13:00:00Z")).map { it.minus(HomeRepositoryImpl.READINGS_KEPT) }, store.forgotten)
+  }
+
+  @Test
+  fun `a board that cannot be used lets nothing go`() = runTest {
+    api.home = { BoardResult.Failure(unreachable()) }
+    start(repository())
+    feed(BoardStreamUpdate.Connected)
+    assertEquals(emptyList<Instant>(), store.forgotten)
   }
 
   @Test

@@ -12,6 +12,12 @@ data class StoredSample(val bootId: BootId, val uptimeMs: Long, val at: Instant,
 /** One reading of one entity; a null [value] means the entity had no valid reading. */
 data class Reading(val at: Instant, val value: Double?)
 
+/**
+ * The least and the greatest reading of one hour of one entity, which is what the app keeps for good once the readings themselves are let go of.
+ * [hour] is the moment the hour starts, on the phone's clock.
+ */
+data class HourlyReading(val hour: Instant, val lowest: Double, val highest: Double)
+
 /** The history of the board that the app remembers, also after the app is closed. */
 interface HistoryStore {
   /** Keeps the samples. One that is already kept (same boot, same uptime) is left as it was. */
@@ -22,4 +28,10 @@ interface HistoryStore {
 
   /** The readings of [entityId] taken at [since] or later, oldest first, sent again when they change. */
   fun series(entityId: EntityId, since: Instant): Flow<List<Reading>>
+
+  /** The hours of [entityId] that start at [since] or later and before [until], oldest first, sent again when they change. */
+  fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>>
+
+  /** Lets go of the readings taken before [before]. What was kept of each hour stays: it is what a month or a year is read from. */
+  suspend fun forgetReadingsBefore(before: Instant)
 }

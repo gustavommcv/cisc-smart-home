@@ -144,13 +144,16 @@ Em `data/local`, o `RoomHistoryStore` guarda o histórico num banco do Room, no 
 
 | Arquivo | O que faz |
 |---|---|
-| `HistoryDatabase` | O banco: uma tabela, `reading`, com **uma linha por entidade de cada amostra**. Uma entidade nova (um terceiro sensor, por exemplo) não precisa de coluna nova nem de migração |
+| `HistoryDatabase` | O banco, na versão 2: a tabela `reading`, com **uma linha por entidade de cada amostra** (uma entidade nova não precisa de coluna nem de migração), e a `reading_hour`, com **o menor e o maior valor de cada hora de cada entidade**. Traz também a `MIGRATION_1_2` |
 | `RoomHistoryStore` | Implementa o `HistoryStore`: traduz o domínio para as linhas e de volta |
 
 - **A chave é (partida, `uptimeMs`, entidade)**, o par que o contrato manda usar para saber se uma amostra já existe. Salvar uma amostra que já está lá deixa a que estava: o app pode pedir a mesma página duas vezes sem repetir nada.
 - **A hora é gravada, não calculada na leitura.** Quem salva (o `HistorySync`) converte o `uptimeMs` pelo `DeviceClock` e passa a hora do celular. Assim o histórico de uma partida antiga continua certo depois de o app fechar, quando o `DeviceClock` já esqueceu a diferença dela.
-- **O formato do banco fica no Git**, em [`app/schemas`](app/schemas). O Room o gera a cada compilação, então uma mudança no formato aparece na revisão, e uma versão futura pode ser migrada a partir dele.
-- **Por enquanto o app guarda tudo**: a placa faz uma amostra a cada 10 s e hoje são três entidades no histórico, então uns 26 mil registros por dia, alguns megabytes. Limpar o que for muito antigo entra quando houver a tela do histórico e se souber quanto ele precisa mostrar.
+- **As horas são gravadas junto com as leituras, na mesma transação.** Cada hora de cada entidade só **alarga**: o menor só desce e o maior só sobe (um `INSERT ... ON CONFLICT DO UPDATE`). Gravar de novo uma leitura que já estava lá não muda a hora. Uma leitura sem valor não entra em hora nenhuma. A hora é a do relógio absoluto (de hora em hora desde a época); agrupar em dias e meses, no fuso do celular, é coisa da tela.
+- **As leituras ficam uma semana; as horas, para sempre.** Quando a placa conecta, o `HomeRepositoryImpl` manda o `HistoryStore` esquecer as leituras de mais de 7 dias (`forgetReadingsBefore`), no máximo uma vez por hora, **antes** de buscar o histórico da placa. As horas de uma leitura esquecida continuam lá: é delas que o mês e o ano são lidos. A [decisão 0013](../docs/decisoes/0013-historico-longo-guarda-o-minimo-e-o-maximo-de-cada-hora.md) conta por que o menor e o maior, e não a média, e por que uma semana.
+- **A migração da versão 1 para a 2 faz as horas das leituras que o celular já tem** (`MIGRATION_1_2`); o `HistoryMigrationTest` cria um banco da versão 1 à mão, abre-o com a migração e confere as horas e as leituras.
+- **O formato do banco fica no Git**, em [`app/schemas`](app/schemas) (`1.json` e `2.json`). O Room o gera a cada compilação, então uma mudança no formato aparece na revisão, e uma versão futura pode ser migrada a partir dele.
+- **O que o banco ocupa:** a placa faz uma amostra a cada 10 s e hoje são três entidades no histórico, então uns 26 mil registros por dia; com a semana de leituras são uns 180 mil registros, alguns megabytes, e as horas somam umas 26 mil linhas por ano.
 
 Os testes usam o **Robolectric**, que roda um Android de verdade no computador, para o Room trabalhar com o banco de verdade, sem celular e sem emulador. Dois detalhes: o Robolectric só roda o Android 16 (SDK 36) no Java 21, e o app compila com o 17, então estes testes rodam no SDK 35 (veja `robolectric.properties`); e na primeira vez ele baixa o Android para `~/.m2` (uns 200 MB), o que a próxima execução não repete.
 
