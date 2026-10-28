@@ -23,6 +23,7 @@ struct Hardware {
   Output& alarmLed;
   Output& buzzer;
   Output& dehumidifier;
+  SettingsStore& settingsStore;
 };
 
 // Runs the house: reads the sensors at their own pace, hands the readings to the
@@ -45,6 +46,11 @@ class HouseController {
   void turnDehumidifier(bool on);
   // Automatic hands control back to the humidity rule. Manual keeps the current state.
   void setDehumidifierMode(ControlMode mode);
+  // Change the limits of the automatic mode. Each says whether the new value was allowed (a whole
+  // percent in the range, the lower limit far enough below the upper one); if not, nothing
+  // changes. A change is kept for the next time the board starts.
+  bool setDehumidifierOnAt(float percent);
+  bool setDehumidifierOffAt(float percent);
 
   HouseSnapshot snapshot() const;
   const History& history() const { return history_; }
@@ -56,6 +62,7 @@ class HouseController {
     bool value = false;
   };
 
+  bool changeLimits(float onAtPercent, float offAtPercent);
   void readClimate();
   void trackAlert(GasState before);
   void applyOutputs();

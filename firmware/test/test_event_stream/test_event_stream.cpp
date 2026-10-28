@@ -77,6 +77,23 @@ void test_a_change_is_sent_as_a_home_event() {
   TEST_ASSERT_TRUE(contains(events[0].data, "\"dehumidifier-power\",\"kind\":\"switch\",\"name\":\"Power\",\"value\":true"));
 }
 
+void test_a_new_limit_of_the_dehumidifier_is_a_change_and_is_sent() {
+  Fixture f;
+  f.rig.controller.setDehumidifierOnAt(90.0f);
+  f.rig.run(100);
+  const std::vector<Event> events = f.stream.poll();
+  TEST_ASSERT_EQUAL_UINT(1, events.size());
+  TEST_ASSERT_EQUAL_STRING("home", events[0].name.c_str());
+  TEST_ASSERT_TRUE(contains(events[0].data, "\"id\":\"dehumidifier-on-at\",\"kind\":\"number\",\"name\":\"Turn on at\",\"value\":90"));
+}
+
+void test_the_lower_limit_changing_is_a_change_too() {
+  Fixture f;
+  f.rig.controller.setDehumidifierOffAt(60.0f);
+  f.rig.run(100);
+  TEST_ASSERT_EQUAL_UINT(1, f.stream.poll().size());
+}
+
 void test_changes_are_held_back_until_the_minimum_interval_has_passed() {
   Fixture f;
   f.rig.run(10);
@@ -197,6 +214,8 @@ int main() {
   RUN_TEST(test_a_new_client_gets_the_whole_state_as_a_home_event);
   RUN_TEST(test_nothing_is_sent_while_nothing_happens);
   RUN_TEST(test_a_change_is_sent_as_a_home_event);
+  RUN_TEST(test_a_new_limit_of_the_dehumidifier_is_a_change_and_is_sent);
+  RUN_TEST(test_the_lower_limit_changing_is_a_change_too);
   RUN_TEST(test_changes_are_held_back_until_the_minimum_interval_has_passed);
   RUN_TEST(test_the_same_state_is_not_sent_twice);
   RUN_TEST(test_only_the_uptime_changing_is_not_a_change);

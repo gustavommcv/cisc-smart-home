@@ -14,6 +14,13 @@ void HumidityController::update(float humidityPercent, bool readingValid) {
   }
 }
 
+bool HumidityController::setLimits(float onAtPercent, float offAtPercent) {
+  const HumiditySettings candidate{onAtPercent, offAtPercent};
+  if (!isValid(candidate)) return false;
+  settings_ = candidate;
+  return true;
+}
+
 void HumidityController::setManual(bool on) {
   mode_ = ControlMode::Manual;
   on_ = on;

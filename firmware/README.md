@@ -9,10 +9,10 @@ Em [`lib/domain/src`](lib/domain/src):
 | Arquivo | O que faz |
 |---|---|
 | `GasGuard` | Máquina de estados do gás: decide a válvula, o LED e o buzzer. Só reabre com o botão, depois de um tempo sem gás |
-| `HumidityController` | Liga e desliga o desumidificador com dois limites. Modo Automático ou Manual |
+| `HumidityController` | Liga e desliga o desumidificador com dois limites. Modo Automático ou Manual. Os limites **podem ser mudados** (`setLimits`) dentro do que `Settings.h` permite: números inteiros de 40 a 95 %, com o de desligar pelo menos 2 pontos abaixo do de ligar |
 | `ButtonDebouncer` | Transforma o sinal do botão, que tremula, em um único evento por aperto |
 | `RingBuffer` e `Sample` | O histórico: um buffer de tamanho fixo que sobrescreve o dado mais antigo |
-| `Settings.h` | Todos os limites e tempos, em um só lugar, para calibrar com o sensor real |
+| `Settings.h` | Todos os limites e tempos, em um só lugar, para calibrar com o sensor real. Os valores de fábrica dos limites de umidade são **85 % (liga) e 83 % (desliga)**, e a regra do que se pode escolher (`isValid`) mora aqui também |
 | `Time.h` | Comparação de tempo que continua certa quando o `millis()` dá a volta |
 
 O código é C++ puro, sem `Arduino.h`, sem exceções e sem alocação dinâmica. Compila também com o compilador do ESP32.
@@ -23,8 +23,8 @@ Em [`lib/application/src`](lib/application/src):
 
 | Arquivo | O que faz |
 |---|---|
-| `Ports.h` | As **portas**: o que a aplicação precisa do mundo (relógio, sensor de gás, sensor de clima, botão, saídas liga/desliga e display). O hardware real as implementa nos adaptadores, e os testes usam versões falsas |
-| `HouseController` | Roda a casa: lê os sensores no ritmo de cada um, entrega as leituras às regras do domínio, aciona as saídas só quando o valor muda, guarda o histórico, conta os vazamentos e recebe os comandos do app |
+| `Ports.h` | As **portas**: o que a aplicação precisa do mundo (relógio, sensor de gás, sensor de clima, botão, saídas liga/desliga, display e o **`SettingsStore`**, onde ficam guardados os limites de umidade que o usuário mudou). O hardware real as implementa nos adaptadores, e os testes usam versões falsas |
+| `HouseController` | Roda a casa: lê os sensores no ritmo de cada um, entrega as leituras às regras do domínio, aciona as saídas só quando o valor muda, guarda o histórico, conta os vazamentos e recebe os comandos do app, entre eles **mudar os limites de umidade**: o que mudou é guardado e, ao ligar, o que estava guardado vale no lugar dos valores de fábrica (se ainda for permitido) |
 | `HouseSnapshot` | Tudo o que o mundo de fora pode querer saber da casa, em um instante |
 | `DisplayText` | A regra do que escrever em cada linha do display, em português e sem acentos, que o LCD não tem |
 | `DisplayPresenter` | Mantém um display em dia: olha a casa no seu ritmo e só escreve quando o texto mudou, para um barramento lento nunca atrasar o controle |
@@ -71,6 +71,7 @@ Em [`lib/adapters/src`](lib/adapters/src): uma classe por peça, cada uma implem
 | `OpenDrainOutput` | O relé. "Ligado" puxa o pino para o GND e "desligado" **solta** o pino. O módulo não desliga de forma confiável com o pino em 3,3 V |
 | `ServoValve` | O servo que faz o papel da válvula |
 | `I2cLcdDisplay` | O LCD 16x2 com módulo I2C. A biblioteca acha o endereço sozinha, e sem LCD o resto continua funcionando |
+| `NvsSettingsStore` | Guarda os limites de umidade na memória não volátil da placa (NVS), que sobrevive a uma queda de energia. Cada limite é um byte |
 | `AccessPoint` | O Wi-Fi da maquete. A placa cria a própria rede, em um endereço fixo (`192.168.4.1`) |
 | `ApiServer` | Leva a API por HTTP com a ESPAsyncWebServer: lê a requisição, pergunta à `Api` o que responder e escreve a resposta, e entrega os eventos do `EventStream` aos clientes. Não tem regra própria |
 
