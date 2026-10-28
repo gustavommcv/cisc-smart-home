@@ -39,7 +39,11 @@ class MainActivity : ComponentActivity() {
   }
 
   private val settingsViewModel: SettingsViewModel by viewModels {
-    viewModelFactory { initializer { SettingsViewModel((application as AppDependencies).themeSettings) } }
+    viewModelFactory { initializer { SettingsViewModel(
+          (application as AppDependencies).themeSettings,
+          (application as AppDependencies).linkSettings,
+          (application as AppDependencies).homeRepository.connection,
+        ) } }
   }
 
   // Without this, Android (13 and later) hides every notification of the app, the warning of a leak included.

@@ -148,6 +148,9 @@ class HomeRepositoryImplTest {
         BoardError.Rejected(406, ErrorCode.NotAcceptable, "no") to ConnectionProblem.Incompatible,
         BoardError.Rejected(404, ErrorCode.Unknown, "?") to ConnectionProblem.Incompatible,
         BoardError.Unexpected("not an event stream") to ConnectionProblem.Incompatible,
+        BoardError.NoRoute(ConnectionProblem.NetworkNotSet) to ConnectionProblem.NetworkNotSet,
+        BoardError.NoRoute(ConnectionProblem.NetworkNotJoined) to ConnectionProblem.NetworkNotJoined,
+        BoardError.NoRoute(ConnectionProblem.Unreachable) to ConnectionProblem.Unreachable,
       )
     val repository = repository()
     start(repository)
@@ -468,6 +471,12 @@ class HomeRepositoryImplTest {
   fun `a command that cannot reach the board fails with the reason`() = runTest {
     api.command = { _, _ -> BoardResult.Failure(unreachable()) }
     assertEquals(CommandResult.Failed(ConnectionProblem.Unreachable), repository().send(POWER.id, CommandValue.Flag(true)))
+  }
+
+  @Test
+  fun `a command with no way to the board fails with the reason there is none`() = runTest {
+    api.command = { _, _ -> BoardResult.Failure(BoardError.NoRoute(ConnectionProblem.NetworkNotJoined)) }
+    assertEquals(CommandResult.Failed(ConnectionProblem.NetworkNotJoined), repository().send(POWER.id, CommandValue.Flag(true)))
   }
 
   @Test

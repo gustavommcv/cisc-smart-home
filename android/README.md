@@ -2,7 +2,7 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras num gráfico**, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). O usuário também pode **dar nome aos cômodos e aos dispositivos**, e o alarme diz o nome que ele deu. Falta a entrada automática na rede da placa (veja as [fases](../README.md#fases)).
+> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras num gráfico**, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). O usuário também pode **dar nome aos cômodos e aos dispositivos**, e o alarme diz o nome que ele deu. O app **entra sozinho no Wi-Fi da placa**, sem mudar o Wi-Fi do celular, por uma conexão que se pode trocar (a nuvem e a VPN ficam para depois; veja as [fases](../README.md#fases)).
 
 ## Como é o app
 
@@ -14,7 +14,7 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 
 | Vazamento de gás (tema escuro) | Ajustes | Renomear |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes, com a escolha do tema: claro, escuro ou automático"> | <img src="../docs/imagens/renomear.png" width="250" alt="A janela para renomear o cômodo, com o nome atual selecionado, o contador de letras e os botões Salvar, Voltar ao nome padrão e Cancelar"> |
+| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes: a escolha do tema (claro, escuro ou automático) e a conexão, com o Wi-Fi da placa (Conectado à placa, e o botão Esquecer a senha), a rede do celular e os cartões Nuvem e VPN ou endereço próprio, em breve"> | <img src="../docs/imagens/renomear.png" width="250" alt="A janela para renomear o cômodo, com o nome atual selecionado, o contador de letras e os botões Salvar, Voltar ao nome padrão e Cancelar"> |
 
 As imagens mostram só o app: a barra de status do celular foi cortada. Para refazê-las, com o celular em modo de depuração e ligado à maquete, use `adb exec-out screencap -p > tela.png` e corte os primeiros 110 pixels de cima.
 
@@ -53,7 +53,7 @@ O APK de teste é assinado com a chave de depuração do Android, que basta para
 ```text
 app/src/main/kotlin/io/github/gustavommcv/ciscsmarthome/
 ├── domain/    modelos e regras, sem Android (Home, Area, Device, Entity, e as regras de tempo e de alerta)
-├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/local` com o histórico e `data/repository` com o repositório
+├── data/      o cliente do ESP32 (REST + SSE), o histórico local e os repositórios; hoje, `data/remote` com o cliente REST e o dos eventos, `data/link` com a conexão à placa, `data/local` com o histórico e `data/repository` com o repositório
 ├── ui/        as telas em Compose e um ViewModel por tela; `ui/theme` guarda o visual (cores, formas, espaços), `ui/components` as peças que as telas repartem, `ui/navigation` a barra de baixo e `ui/history` o gráfico
 ├── service/   o serviço que mantém a conexão e dispara as notificações
 ├── di/        a montagem das dependências, sem framework
@@ -152,10 +152,40 @@ Os testes usam o **Robolectric**, que roda um Android de verdade no computador, 
 
 ### A montagem e a primeira conexão
 
-O `AppContainer`, em `di/`, monta as peças à mão: o cliente HTTP (com tempo limite de 5 s, porque a placa está na rede do próprio celular e responde em milissegundos ou não responde), o banco do histórico, o cliente REST, o fluxo de eventos e o repositório. É o único lugar onde as camadas se encontram. Um framework de injeção seria mais para ler do que a montagem em si. O container só monta: quem põe o `keepSynced` do repositório para rodar é o serviço (veja abaixo). A `CiscApplication` o cria quando algo o pede pela primeira vez, e **não inicia nada sozinha**.
+O `AppContainer`, em `di/`, monta as peças à mão: o cliente HTTP (com tempo limite de 5 s, porque a placa está na rede do próprio celular e responde em milissegundos ou não responde), o banco do histórico, o link até a placa (veja [A conexão com a placa](#a-conexão-com-a-placa)), o cliente REST, o fluxo de eventos e o repositório. É o único lugar onde as camadas se encontram. Um framework de injeção seria mais para ler do que a montagem em si. O container só monta: quem põe o `keepSynced` do repositório para rodar é o serviço (veja abaixo). A `CiscApplication` o cria quando algo o pede pela primeira vez, e **não inicia nada sozinha**.
 
 
 A placa fala HTTP sem certificado, então o HTTP puro é **liberado só para `192.168.4.1`** e recusado para todo o resto, em [`network_security_config.xml`](app/src/main/res/xml/network_security_config.xml). O `ManifestTest` guarda isso: a recusa por padrão, o único endereço liberado, e que ele é o mesmo que o app usa (`AppContainer.BOARD_URL`).
+
+### A conexão com a placa
+
+Como o app chega à placa é decidido num lugar só, o `BoardLink`, em `data/link`. O `BoardClient` e o `BoardEventStream` falam o contrato com o endereço e o cliente HTTP que recebem; quem **escolhe o caminho** é o link. A [decisão 0010](../docs/decisoes/0010-conexao-do-app-com-a-placa.md) diz por quê, com o que se mediu no celular.
+
+| Peça | Onde | O que faz |
+|---|---|---|
+| `BoardLink` e `BoardRoute` | `data/link` | O link diz uma **rota**: `Joining` (está entrando), `Open` (o endereço e um cliente HTTP que já anda pelo caminho certo) ou `Closed` (não há caminho, e o motivo). `keepUp()` faz o que o link precisa fazer e continua fazendo, até ser cancelado; cancelar devolve o que ele segurava |
+| `WifiAccessPointLink` | `data/link` | Faz o celular entrar no Wi-Fi da placa pelo nome e pela senha. Sem senha, a rota diz isso e **nada é pedido**. Um pedido que o celular desiste, ou uma rede que cai, é refeito depois de uma espera que cresce (5 s até 30 s), **depois de soltar o pedido anterior**: o celular nunca recebe dois. Uma senha nova troca o pedido na hora |
+| `NetworkJoiner` e `AndroidNetworkJoiner` | `data/link` | O celular, pedido para entrar numa rede. O `AndroidNetworkJoiner` usa o `WifiNetworkSpecifier` e diz o que o Android diz (entrou, perdeu, não deu); o pedido vale enquanto o fluxo é coletado. Cada rede que entra traz um cliente HTTP com os **soquetes presos a ela**, e nada mais é preso. O tempo limite de cada tentativa é de 40 s |
+| `DirectLink` | `data/link` | Não faz nada: usa a rede em que o celular já está. É a opção "Rede do celular", o plano B |
+| `ChosenLink` | `data/link` | O link que o usuário escolheu. Quando a escolha muda, para o link em uso e levanta o novo, sem reiniciar o app |
+| `RoutedBoardApi` e `RoutedBoardEvents` | `data/link` | O `BoardApi` e o `BoardEvents` pela rota do momento. Sem caminho, a chamada falha sem tentar, dizendo por quê (`BoardError.NoRoute`); uma rota que fecha é uma **perda** como outra qualquer. O `RoutedBoardEvents` mantém o link de pé enquanto o repositório sincroniza |
+| `LinkKind` e `LinkSettings` | `domain` | As escolhas do usuário (`BoardWifi`, `CurrentNetwork`) e o que o app guarda delas: a escolha e a senha do Wi-Fi da placa |
+| `PreferencesLinkSettings` | `data/local` | Guarda as duas num arquivo só do app (`link-settings`, chaves `link` e `board-password`). Uma escolha que o app não conhece vale como nenhuma, e o padrão é o Wi-Fi da placa |
+| `WifiPanel` | `ui/settings` | Decide o que o cartão do Wi-Fi da placa mostra: o campo da senha só sem senha ou quando o celular não entra na rede, e o "Esquecer a senha" quando há uma |
+| `WifiPassword` | `domain` | O que uma senha WPA2 pode ser: de 8 a 63 caracteres ASCII imprimíveis. A tela recusa o resto antes de pedir ao celular |
+
+O `AppContainer` é onde se escolhe o que cada `LinkKind` constrói. **Para chegar à placa de outro jeito** (a nuvem, uma VPN), acrescenta-se um valor em `LinkKind`, um link em `data/link` e uma linha no `when` do `AppContainer`. As telas, o serviço e o repositório não mudam.
+
+Na aba de Ajustes, **Conexão** mostra as duas escolhas e, **embaixo da que está valendo, se ela funciona** (o mesmo "Conectado à placa" do início, ou o motivo de não estar conectado). **A senha só aparece quando é preciso**: quando ainda não há uma ou quando o celular não consegue entrar na rede (a senha pode estar errada). Com a placa ouvida, o cartão mostra só o estado e o botão **Esquecer a senha**, que joga a senha fora, solta a rede e traz o campo de volta. A senha digitada não se vê, a não ser pelo "Mostrar", e o campo é limpo depois de guardada. "Nuvem" e "VPN ou endereço próprio" aparecem como cartões de "Em breve" (veja a [decisão 0010](../docs/decisoes/0010-conexao-do-app-com-a-placa.md) sobre por que são dois tipos diferentes).
+
+**Dois motivos novos de conexão perdida**, ditos no banner e na notificação: **falta a senha** do Wi-Fi da placa, e **não deu para entrar** nela (a placa está desligada ou longe, a senha está errada, ou o aviso do Android não foi aceito).
+
+**O que o usuário vê:**
+
+- **Na primeira vez**, o Android pergunta se o app pode entrar na rede `cisc-smart-home`. Aceite. Ele lembra a resposta, a não ser que você "esqueça" a rede nas configurações do Wi-Fi.
+- **O Wi-Fi de casa do celular fica de lado** enquanto o app está ligado à placa, porque o rádio é um só. Voltar para a "Rede do celular", ou fechar o app, o devolve.
+- Se a placa some e volta (ficou sem energia, por exemplo), **o app volta sozinho**, em cerca de um minuto.
+- **Testado só no Android 16** (um Moto G85). Em versões mais antigas, o Android pode pedir outras permissões.
 
 ### As telas
 
@@ -165,7 +195,7 @@ Dentro da aba Início há três telas, escolhidas por `HomeContent` a partir do 
 |---|---|---|
 | **Cômodos** (`RoomsScreen`) | Há uma casa para mostrar | No topo, **um cartão que diz como a casa está** ("Tudo certo", ou "Vazamento de gás" com o cômodo e o que fazer). Depois, a seção "Cômodos", com **um cartão por cômodo**: o ícone, o nome e uma linha como "1 dispositivo · tudo certo", com uma seta. O cartão não mostra leituras; elas estão no cômodo. O cômodo com vazamento fica **vermelho, com um aviso**. No fim, o cartão **bloqueado** "Adicionar cômodo / Em breve" |
 | **Cômodo** (`RoomScreen`) | Toque num cartão | A seção "Dispositivos", com **um cartão por dispositivo**: o ícone, o nome e como ele está ("Normal", "Desumidificador desligado") e, dentro do cartão, o que ele lê e **os controles do que a placa aceita comandar** (no quarto, um interruptor para ligar e desligar o desumidificador e a escolha entre Automático e Manual). O dispositivo que lê o vazamento fica vermelho. No fim, o cartão bloqueado "Adicionar dispositivo". O botão de voltar do sistema volta para a lista |
-| **Sem casa** (`NoHomeScreen`) | O app ainda não ouviu a placa | Uma espera, ou, se a placa não pode ser alcançada, o que conferir (o texto muda com o motivo: outra rede, conexões demais, versão diferente) |
+| **Sem casa** (`NoHomeScreen`) | O app ainda não ouviu a placa | Uma espera, ou, se a placa não pode ser alcançada, o que conferir (o texto muda com o motivo: outra rede, conexões demais, versão diferente, falta a senha do Wi-Fi da placa, não deu para entrar nele) |
 
 **Os controles** seguem poucas regras, todas em funções puras e no `HomeViewModel`, testadas sem celular:
 
@@ -238,7 +268,7 @@ O app tem **três abas**, numa barra de baixo (`BottomBar`): **Início** (a list
 | `Tab` | `ui/navigation/Tab.kt` | As três abas, a ordem, a palavra e o ícone de cada uma, e para onde o voltar vai (`back()`) |
 | `BottomBar` | `ui/navigation/BottomBar.kt` | A barra: a aba aberta fica numa pílula tingida e com a palavra forte; as outras, na cor discreta |
 | `HistoryScreen` e `HistoryViewModel` | `ui/history/` | O gráfico das leituras de um sensor, no período escolhido. Veja [O histórico e o gráfico](#o-histórico-e-o-gráfico) |
-| `SettingsScreen` e `SettingsViewModel` | `ui/settings/` | A escolha do tema, em três linhas inteiras que recebem o toque (Claro, Escuro, Automático, este com "Segue o tema do celular") |
+| `SettingsScreen` e `SettingsViewModel` | `ui/settings/` | A escolha do tema, em três linhas inteiras que recebem o toque (Claro, Escuro, Automático, este com "Segue o tema do celular"), e a conexão com a placa (veja [A conexão com a placa](#a-conexão-com-a-placa)) |
 
 **O tema** é um `ThemeMode` (`Claro`, `Escuro`, `Automático`) do domínio, com a regra de quando o app fica escuro (`isDark`): o claro nunca, o escuro sempre, o automático como o celular estiver. **O padrão é o automático.** A escolha é guardada pelo `PreferencesThemeSettings`, num arquivo de preferências com uma palavra (o nome do valor), lida ao abrir e válida na mesma hora em que muda; uma palavra desconhecida vale como nenhuma escolha. A tela chega a ela por `AppDependencies.themeSettings`, o mesmo caminho do repositório. O arquivo se chama `theme-settings` e a chave `theme`: são o que o usuário já tem no celular, e um teste os guarda.
 
@@ -312,18 +342,18 @@ O app pede cinco permissões, cada uma por um motivo:
 | `INTERNET` | Falar com a placa |
 | `FOREGROUND_SERVICE` e `FOREGROUND_SERVICE_CONNECTED_DEVICE` | O serviço em primeiro plano, do tipo dispositivo conectado |
 | `POST_NOTIFICATIONS` | Sem ela, o Android (13 em diante) esconde toda notificação do app, o aviso de vazamento incluído. A tela a pede ao abrir |
-| `CHANGE_NETWORK_STATE` | O Android exige uma de poucas permissões, esta entre elas, de um serviço desse tipo; a ligação do app à rede da placa (4d2) também a usa |
+| `CHANGE_NETWORK_STATE` | O Android exige uma de poucas permissões, esta entre elas, de um serviço desse tipo; é também a que o app usa para pedir ao celular a rede da placa |
 
 O `ManifestTest` guarda a lista exata, que o serviço é privado e declarado como dispositivo conectado, e que a única peça que outro app pode iniciar é a tela.
 
 **Para ver funcionando no celular, com a maquete ligada:**
 
-1. Entre no Wi-Fi `cisc-smart-home` e escolha **manter conectado** quando o Android avisar que não há internet.
-2. **Desligue os dados móveis.** O Android prefere o 4G a um Wi-Fi sem internet, e o app ainda não se prende à rede da placa (isso é a 4d2).
-3. Instale o app (`adb install -r ...`) e abra. O Android pergunta se o app pode enviar notificações: **permita**. Em poucos segundos deve aparecer **Conectado à placa** e a lista de cômodos com os valores, e na barra de notificações a notificação fixa "Conectado à placa".
+1. Instale o app (`adb install -r ...`) e abra. O Android pergunta se o app pode enviar notificações: **permita**.
+2. Vá em **Ajustes**, digite a **senha do Wi-Fi da placa** (a que está no `WifiSecrets.h` do firmware) e toque em **Guardar senha**. Na primeira vez o Android pergunta se o app pode entrar na rede `cisc-smart-home`: **aceite**. Você não precisa mexer no Wi-Fi do celular nem nos dados móveis.
+3. Em alguns segundos deve aparecer **Conectado à placa** e a lista de cômodos com os valores, e na barra de notificações a notificação fixa "Conectado à placa". Se não conectar, o banner diz o que conferir. **Plano B:** entre no Wi-Fi da placa pelas configurações do celular, desligue os dados móveis e escolha **Rede do celular** em Ajustes.
 4. **Teste do vazamento, com a tela apagada:** aproxime o gás do isqueiro (sem acender) do MQ-2 e espere passar do limite. O celular deve tocar o alarme e mostrar **Vazamento de gás!** com o local. O som **continua tocando** até você abrir a notificação.
 5. **O alarme parando sozinho:** deixe-o tocando, afaste o gás e aperte o botão da maquete para rearmar. Em um ou dois segundos o som cessa e a notificação some, sem você tocar no celular. Se você abrir o app de novo com o mesmo vazamento, ele **não** avisa outra vez.
-6. **A casa sem vigia:** tire o USB da maquete por mais de 1 minuto. Aparece **A casa não está sendo vigiada**. Ligue de novo: a notificação some quando a placa volta.
+6. **A casa sem vigia:** tire o USB da maquete por mais de 1 minuto. Aparece **A casa não está sendo vigiada**. Ligue de novo: a notificação some quando a placa volta, e o app entra sozinho de novo na rede dela, em cerca de um minuto.
 
 ### A regra de dependência é testada
 

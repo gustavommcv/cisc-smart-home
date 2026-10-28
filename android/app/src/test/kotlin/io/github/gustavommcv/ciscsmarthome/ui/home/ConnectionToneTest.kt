@@ -21,7 +21,7 @@ class ConnectionToneTest {
 
   @Test
   fun `a board that is lost is an alert, whatever the reason`() {
-    listOf(ConnectionProblem.Unreachable, ConnectionProblem.TooManyClients, ConnectionProblem.Incompatible).forEach { problem ->
+    ConnectionProblem.entries.forEach { problem ->
       assertEquals(problem.toString(), Tone.Alert, ConnectionState.Disconnected(problem).tone())
     }
   }
@@ -34,7 +34,7 @@ class ConnectionToneTest {
 
   @Test
   fun `a lost board is a short word in the pill, whatever the reason, and the reason follows`() {
-    listOf(ConnectionProblem.Unreachable, ConnectionProblem.TooManyClients, ConnectionProblem.Incompatible).forEach { problem ->
+    ConnectionProblem.entries.forEach { problem ->
       assertEquals(problem.toString(), R.string.no_connection_title, ConnectionState.Disconnected(problem).pillRes())
     }
   }

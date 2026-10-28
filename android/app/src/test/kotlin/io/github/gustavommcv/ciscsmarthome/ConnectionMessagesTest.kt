@@ -14,6 +14,8 @@ class ConnectionMessagesTest {
     assertEquals(R.string.connection_unreachable, ConnectionState.Disconnected(ConnectionProblem.Unreachable).messageRes())
     assertEquals(R.string.connection_too_many_clients, ConnectionState.Disconnected(ConnectionProblem.TooManyClients).messageRes())
     assertEquals(R.string.connection_incompatible, ConnectionState.Disconnected(ConnectionProblem.Incompatible).messageRes())
+    assertEquals(R.string.connection_network_not_set, ConnectionState.Disconnected(ConnectionProblem.NetworkNotSet).messageRes())
+    assertEquals(R.string.connection_network_not_joined, ConnectionState.Disconnected(ConnectionProblem.NetworkNotJoined).messageRes())
   }
 
   @Test

@@ -21,6 +21,6 @@ O ESP32 funciona como **ponto de acesso** (SoftAP). O celular se conecta à rede
 ## Consequências
 
 - A demonstração não depende de nenhuma infraestrutura externa.
-- A rede do ESP32 não tem internet. O Android costuma abandonar redes assim, então o app precisa **pedir a rede explicitamente e prender o tráfego nela**. Isso é parte do trabalho da fase 6.
+- A rede do ESP32 não tem internet. O Android costuma abandonar redes assim, então o app precisa **pedir a rede explicitamente e prender o tráfego nela**. É o que ele faz, por um link que se pode trocar (decisão [0010](0010-conexao-do-app-com-a-placa.md)).
 - Um ESP32 atende poucos celulares ao mesmo tempo, o que basta para o projeto.
 - Serviços na internet (notificações da nuvem, por exemplo) ficam fora do caminho principal. É a razão da [decisão 0006](0006-alertas-por-notificacao-local.md).

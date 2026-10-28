@@ -34,7 +34,7 @@ internal fun CommandNotice.messageRes(): Int =
     CommandNotice.Refused -> R.string.command_refused
     is CommandNotice.Failed ->
       when (problem) {
-        ConnectionProblem.Unreachable, ConnectionProblem.TooManyClients -> R.string.command_unreachable
+        ConnectionProblem.Unreachable, ConnectionProblem.TooManyClients, ConnectionProblem.NetworkNotSet, ConnectionProblem.NetworkNotJoined -> R.string.command_unreachable
         ConnectionProblem.Incompatible -> R.string.command_incompatible
       }
   }

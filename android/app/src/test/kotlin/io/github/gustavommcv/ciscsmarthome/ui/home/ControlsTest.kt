@@ -68,6 +68,8 @@ class ControlsTest {
     assertEquals(R.string.command_refused, CommandNotice.Refused.messageRes())
     assertEquals(R.string.command_unreachable, CommandNotice.Failed(ConnectionProblem.Unreachable).messageRes())
     assertEquals(R.string.command_unreachable, CommandNotice.Failed(ConnectionProblem.TooManyClients).messageRes())
+    assertEquals(R.string.command_unreachable, CommandNotice.Failed(ConnectionProblem.NetworkNotSet).messageRes())
+    assertEquals(R.string.command_unreachable, CommandNotice.Failed(ConnectionProblem.NetworkNotJoined).messageRes())
     assertEquals(R.string.command_incompatible, CommandNotice.Failed(ConnectionProblem.Incompatible).messageRes())
   }
 
