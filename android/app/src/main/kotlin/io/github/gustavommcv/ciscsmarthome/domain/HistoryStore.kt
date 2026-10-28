@@ -32,6 +32,9 @@ interface HistoryStore {
   /** The hours of [entityId] that start at [since] or later and before [until], oldest first, sent again when they change. */
   fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>>
 
+  /** The start of the earliest hour kept, of any entity, or null when there is none; sent again when it changes. It says how far back the history goes. */
+  fun firstHour(): Flow<Instant?>
+
   /** Lets go of the readings taken before [before]. What was kept of each hour stays: it is what a month or a year is read from. */
   suspend fun forgetReadingsBefore(before: Instant)
 }

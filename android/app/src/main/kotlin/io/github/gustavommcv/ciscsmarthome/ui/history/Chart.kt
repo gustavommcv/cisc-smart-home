@@ -19,6 +19,12 @@ internal object ChartRules {
 
   /** A day of readings is 8 640 points, more than a screen has pixels to tell apart: each stretch is cut in this many parts. */
   const val Buckets = 150
+
+  /**
+   * The silence that breaks a line made of hours. An hour is drawn as two points half an hour apart, so the gap between an hour and the next one is
+   * half an hour, and a missing hour makes an hour and a half: the line breaks there, and not before.
+   */
+  val HourlyMaxGap: Duration = Duration.ofHours(1)
 }
 
 private data class Sample(val at: Instant, val value: Double)
@@ -28,7 +34,7 @@ private data class Sample(val at: Instant, val value: Double)
  * time without a reading. A stretch with more readings than the screen can show is reduced keeping, for each part of it, the least and the
  * greatest, so a peak (a leak lasts seconds) is never smoothed away.
  */
-internal fun chartOf(readings: List<Reading>, since: Instant, until: Instant): Chart? {
+internal fun chartOf(readings: List<Reading>, since: Instant, until: Instant, maxGap: Duration = ChartRules.MaxGap): Chart? {
   val samples =
     readings
       .mapNotNull { reading -> reading.value?.takeIf { !reading.at.isBefore(since) && !reading.at.isAfter(until) }?.let { Sample(reading.at, it) } }
@@ -37,15 +43,15 @@ internal fun chartOf(readings: List<Reading>, since: Instant, until: Instant): C
   val min = samples.minOf { it.value }
   val max = samples.maxOf { it.value }
   val window = Duration.between(since, until).toMillis().coerceAtLeast(1)
-  val lines = stretches(samples).map { stretch -> reduced(stretch, since, window).map { point(it, since, window, min, max) } }
+  val lines = stretches(samples, maxGap).map { stretch -> reduced(stretch, since, window).map { point(it, since, window, min, max) } }
   return Chart(lines, min, max)
 }
 
-/** The samples in runs with no silence longer than [ChartRules.MaxGap] inside. */
-private fun stretches(samples: List<Sample>): List<List<Sample>> {
+/** The samples in runs with no silence longer than [maxGap] inside. */
+private fun stretches(samples: List<Sample>, maxGap: Duration): List<List<Sample>> {
   val runs = mutableListOf(mutableListOf(samples.first()))
   samples.zipWithNext().forEach { (before, after) ->
-    if (Duration.between(before.at, after.at) > ChartRules.MaxGap) runs += mutableListOf(after) else runs.last() += after
+    if (Duration.between(before.at, after.at) > maxGap) runs += mutableListOf(after) else runs.last() += after
   }
   return runs
 }

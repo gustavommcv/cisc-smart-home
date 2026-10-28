@@ -12,6 +12,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -34,13 +35,18 @@ internal sealed interface ChartsState {
 }
 
 /**
- * What the history tab shows: the devices it lists, the one that is [open] (none while it shows the list), how far back the charts go, the charts
- * of the open device, and the names and icons the user gave, for the list and for the title.
+ * What the history tab shows: the devices it lists, the one that is [open] (none while it shows the list), how far back the charts go, the stretch
+ * of time of the [window] (and whether the page before or the page after it exists), the charts of the open device, and the names and icons the user
+ * gave, for the list and for the title.
  */
 internal data class HistoryState(
   val devices: List<HistoryDevice>,
   val open: HistoryDevice?,
   val period: ChartPeriod,
+  val window: ChartWindow,
+  val zone: ZoneId,
+  val canGoEarlier: Boolean,
+  val canGoLater: Boolean,
   val charts: ChartsState,
   val names: Names,
   val icons: AreaIcons,
@@ -50,12 +56,33 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
   private val openId = MutableStateFlow<DeviceId?>(null)
   private val chosenPeriod = MutableStateFlow(ChartPeriod.Default)
 
-  private data class Choice(val devices: List<HistoryDevice>, val open: DeviceId?, val period: ChartPeriod, val names: Names, val icons: AreaIcons)
+  // How many months or years back the chart is. It is the same for every device, and goes back to the present when another period is chosen.
+  private val page = MutableStateFlow(0)
+
+  private val zone: ZoneId = clock.zone
+
+  private data class Choice(
+    val devices: List<HistoryDevice>,
+    val open: DeviceId?,
+    val period: ChartPeriod,
+    val page: Int,
+    val firstHour: Instant?,
+    val names: Names,
+    val icons: AreaIcons,
+  )
+
+  private data class Customs(val devices: List<HistoryDevice>, val names: Names, val icons: AreaIcons)
 
   @OptIn(ExperimentalCoroutinesApi::class)
   val state: StateFlow<HistoryState> =
-    combine(repository.home, openId, chosenPeriod, nameBook.names, nameBook.icons) { home, open, period, names, icons ->
-        Choice(historyDevices(home), open, period, names, icons)
+    combine(
+        combine(repository.home, nameBook.names, nameBook.icons) { home, names, icons -> Customs(historyDevices(home), names, icons) },
+        openId,
+        chosenPeriod,
+        page,
+        repository.firstHour(),
+      ) { customs, open, period, page, firstHour ->
+        Choice(customs.devices, open, period, page, firstHour, customs.names, customs.icons)
       }
       // The house is heard again at each reading, and the charts are asked for again only when what they are made of changed.
       .distinctUntilChanged()
@@ -77,32 +104,71 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
 
   fun choosePeriod(period: ChartPeriod) {
     chosenPeriod.value = period
+    page.value = 0
   }
 
-  private fun initial() = HistoryState(historyDevices(repository.home.value), null, ChartPeriod.Default, ChartsState.Loading, nameBook.names.value, nameBook.icons.value)
+  /** Goes to the month or the year before, when the history has hours before the ones of this window. */
+  fun earlier() {
+    if (state.value.canGoEarlier) page.value += 1
+  }
+
+  /** Goes to the month or the year after, up to the present. */
+  fun later() {
+    if (page.value > 0) page.value -= 1
+  }
+
+  private fun initial() =
+    HistoryState(
+      devices = historyDevices(repository.home.value),
+      open = null,
+      period = ChartPeriod.Default,
+      window = windowOf(ChartPeriod.Default, 0, clock.instant(), zone),
+      zone = zone,
+      canGoEarlier = false,
+      canGoLater = false,
+      charts = ChartsState.Loading,
+      names = nameBook.names.value,
+      icons = nameBook.icons.value,
+    )
 
   // A device that is not in the house any more cannot stay open: the list takes its place.
   @OptIn(ExperimentalCoroutinesApi::class)
   private fun stateOf(choice: Choice): Flow<HistoryState> {
     val open = choice.devices.firstOrNull { it.id == choice.open }
-    fun stateWith(charts: ChartsState) = HistoryState(choice.devices, open, choice.period, charts, choice.names, choice.icons)
-    if (open == null) return flowOf(stateWith(ChartsState.Loading))
+    fun stateWith(window: ChartWindow, charts: ChartsState) =
+      HistoryState(
+        devices = choice.devices,
+        open = open,
+        period = choice.period,
+        window = window,
+        zone = zone,
+        // There is a page before when the history has hours before the start of this one: a month with nothing before it is the first.
+        canGoEarlier = window.period.isCalendar && choice.firstHour != null && choice.firstHour < window.since,
+        canGoLater = window.offset > 0,
+        charts = charts,
+        names = choice.names,
+        icons = choice.icons,
+      )
+    if (open == null) return flowOf(stateWith(windowOf(choice.period, choice.page, clock.instant(), zone), ChartsState.Loading))
     // A sensor drawn by more than one chart (the temperature is in its own and in the comparison) is read once.
     val sensors = open.charts.flatMap { it.sensors }.distinctBy { it.id }
     // The window starts where it did a moment ago and is asked for again, so it moves on with time even when nothing new is read.
     return ticks()
       .flatMapLatest { now ->
-        val since = now.minus(choice.period.duration)
-        combine(sensors.map { sensor -> repository.series(sensor.id, since).map { sensor.id to it } }) { it.toMap() }
+        val asked = windowOf(choice.period, choice.page, now, zone)
+        combine(sensors.map { sensor -> pointsOf(sensor.id, asked).map { sensor.id to it } }) { it.toMap() }
       }
-      .map { readings -> stateWith(ChartsState.Ready(panelsOf(open, readings, choice.period))) }
+      .map { readings ->
+        // The window ends when the charts are made, so a reading that came after the last tick is in them.
+        val window = windowOf(choice.period, choice.page, clock.instant(), zone)
+        val gap = if (window.period.isCalendar) ChartRules.HourlyMaxGap else ChartRules.MaxGap
+        stateWith(window, ChartsState.Ready(open.charts.map { panelOf(it, readings, window.since, window.until, gap) }))
+      }
   }
 
-  // The window ends when the charts are made, so a reading that came after the last tick is in them.
-  private fun panelsOf(device: HistoryDevice, readings: Map<EntityId, List<Reading>>, period: ChartPeriod): List<ChartPanel> {
-    val until = clock.instant()
-    return device.charts.map { panelOf(it, readings, until.minus(period.duration), until) }
-  }
+  // The last hours are made of the readings, and a month or a year of the least and the greatest of each hour.
+  private fun pointsOf(sensor: EntityId, window: ChartWindow): Flow<List<Reading>> =
+    if (window.period.isCalendar) repository.hourly(sensor, window.since, window.until).map { it.points() } else repository.series(sensor, window.since)
 
   private fun ticks(): Flow<Instant> = flow {
     while (true) {

@@ -186,6 +186,53 @@ class RoomHistorySummariesTest {
     }
   }
 
+  // ---- how far back the hours go ------------------------------------------------------------
+
+  private fun firstHour(): Instant? = runBlocking { store.firstHour().first() }
+
+  @Test
+  fun `with no hours there is no first hour`() {
+    assertNull(firstHour())
+  }
+
+  @Test
+  fun `the first hour is the earliest of any entity`() {
+    save(sample(A, 1_000, at(5, 10), GAS to 1.0), sample(A, 2_000, at(3, 10), TEMPERATURE to 20.0), sample(A, 3_000, at(9, 10), GAS to 2.0))
+    assertEquals(at(3), firstHour())
+  }
+
+  @Test
+  fun `a reading with no value does not start an hour`() {
+    save(sample(A, 1_000, at(1, 10), GAS to null), sample(A, 2_000, at(4, 10), GAS to 1.0))
+    assertEquals(at(4), firstHour())
+  }
+
+  @Test
+  fun `the first hour stays when its readings are let go of`() {
+    save(sample(A, 1_000, at(2, 10), GAS to 1.0))
+    runBlocking { store.forgetReadingsBefore(at(50)) }
+    assertEquals(at(2), firstHour())
+  }
+
+  @Test
+  fun `the first hour is sent again when an earlier hour arrives, and not when a later one does`() {
+    runBlocking {
+      val seen = Channel<Instant?>(Channel.UNLIMITED)
+      val following = launch(Dispatchers.Default) { store.firstHour().collect { seen.send(it) } }
+      assertNull(withTimeout(5.seconds) { seen.receive() })
+
+      store.save(listOf(sample(A, 1_000, at(5, 10), GAS to 1.0)))
+      assertEquals(at(5), withTimeout(5.seconds) { seen.receive() })
+
+      store.save(listOf(sample(A, 2_000, at(8, 10), GAS to 1.0)))
+      assertNull("sent again although the first hour did not change", withTimeoutOrNull(500.milliseconds) { seen.receive() })
+
+      store.save(listOf(sample(A, 3_000, at(2, 10), GAS to 1.0)))
+      assertEquals(at(2), withTimeout(5.seconds) { seen.receive() })
+      following.cancel()
+    }
+  }
+
   // ---- letting go of the readings ------------------------------------------------------
 
   @Test

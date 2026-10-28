@@ -61,6 +61,8 @@ class HomeRepositoryImpl(
 
   override fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>> = store.hourly(entityId, since, until)
 
+  override fun firstHour(): Flow<Instant?> = store.firstHour()
+
   override suspend fun send(entityId: EntityId, value: CommandValue): CommandResult =
     when (val result = api.sendCommand(entityId, value)) {
       is BoardResult.Success -> {

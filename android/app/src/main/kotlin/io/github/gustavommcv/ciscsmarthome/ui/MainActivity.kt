@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
   }
 
   private val historyViewModel: HistoryViewModel by viewModels {
-    viewModelFactory { initializer { HistoryViewModel((application as AppDependencies).homeRepository, (application as AppDependencies).nameBook, Clock.systemUTC()) } }
+    viewModelFactory { initializer { HistoryViewModel((application as AppDependencies).homeRepository, (application as AppDependencies).nameBook, Clock.systemDefaultZone()) } }
   }
 
   private val settingsViewModel: SettingsViewModel by viewModels {

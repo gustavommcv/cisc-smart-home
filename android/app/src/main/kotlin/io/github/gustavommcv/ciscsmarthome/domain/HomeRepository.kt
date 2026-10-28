@@ -20,6 +20,9 @@ interface HomeRepository {
   /** The least and the greatest reading of each hour of [entityId] that starts at [since] or later and before [until], oldest first, sent again when they change. */
   fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>>
 
+  /** The start of the earliest hour the history has, of any entity, or null when it has none: how far back the history goes. */
+  fun firstHour(): Flow<Instant?>
+
   /** Asks an entity to become [value]. */
   suspend fun send(entityId: EntityId, value: CommandValue): CommandResult
 

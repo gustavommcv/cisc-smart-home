@@ -2,6 +2,7 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import java.time.Duration
 import java.time.Instant
 
 /** A band of a chart: the line of one [sensor], or null when it read nothing in the window. */
@@ -13,6 +14,6 @@ internal data class ChartPanel(val spec: ChartSpec, val lanes: List<Lane>) {
   val isEmpty: Boolean get() = lanes.all { it.chart == null }
 }
 
-/** The chart of [spec] made of the [readings] of its sensors, in the window from [since] to [until]. */
-internal fun panelOf(spec: ChartSpec, readings: Map<EntityId, List<Reading>>, since: Instant, until: Instant): ChartPanel =
-  ChartPanel(spec, spec.sensors.map { sensor -> Lane(sensor, chartOf(readings[sensor.id].orEmpty(), since, until)) })
+/** The chart of [spec] made of the [readings] of its sensors, in the window from [since] to [until], a line breaking where nothing was heard for longer than [maxGap]. */
+internal fun panelOf(spec: ChartSpec, readings: Map<EntityId, List<Reading>>, since: Instant, until: Instant, maxGap: Duration = ChartRules.MaxGap): ChartPanel =
+  ChartPanel(spec, spec.sensors.map { sensor -> Lane(sensor, chartOf(readings[sensor.id].orEmpty(), since, until, maxGap)) })

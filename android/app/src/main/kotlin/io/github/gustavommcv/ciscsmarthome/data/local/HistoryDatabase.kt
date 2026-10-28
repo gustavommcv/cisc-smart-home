@@ -63,6 +63,8 @@ abstract class HistoryDao {
   @Query("SELECT * FROM reading_hour WHERE entityId = :entityId AND hourMs >= :sinceMs AND hourMs < :untilMs ORDER BY hourMs")
   abstract fun hourly(entityId: String, sinceMs: Long, untilMs: Long): Flow<List<HourRow>>
 
+  @Query("SELECT MIN(hourMs) FROM reading_hour") abstract fun firstHour(): Flow<Long?>
+
   @Query("DELETE FROM reading WHERE atMs < :beforeMs") abstract suspend fun deleteReadingsBefore(beforeMs: Long)
 }
 

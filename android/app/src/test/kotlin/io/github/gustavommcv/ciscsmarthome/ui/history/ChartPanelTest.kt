@@ -80,6 +80,14 @@ class ChartPanelTest {
   }
 
   @Test
+  fun `the bands break their lines where the silence given is longer`() {
+    val readings = mapOf(temperature.id to listOf(reading(90, 20.0), reading(60, 21.0)))
+    val spec = ChartSpec.Single(temperature)
+    assertEquals(2, panelOf(spec, readings, since, until).lanes.single().chart!!.lines.size)
+    assertEquals(1, panelOf(spec, readings, since, until, maxGap = Duration.ofHours(1)).lanes.single().chart!!.lines.size)
+  }
+
+  @Test
   fun `the panel keeps the spec it was made from`() {
     val spec = ChartSpec.Single(temperature)
     assertEquals(spec, panelOf(spec, emptyMap(), since, until).spec)

@@ -16,6 +16,7 @@ Desenhar no `Canvas` do Compose: **uma faixa** é uma linha sobre três linhas d
 - **Os vazios ficam vazios.** Um silêncio de mais de **2 minutos** entre duas leituras quebra a linha; o tempo sem leitura continua em branco, e uma leitura sem valor (`null`) também conta como tempo sem leitura.
 - **A redução guarda os picos.** Um trecho com mais leituras do que a tela mostra é cortado em 150 partes, e de cada parte ficam **a menor e a maior** leitura, na ordem do tempo. A média nunca é usada.
 - **A janela anda com o tempo.** Ela é pedida de novo a cada 30 segundos, e termina na hora em que o gráfico é feito, então a leitura que acabou de chegar entra.
+- **O mês e o ano desenham as horas, e não as leituras.** Cada hora guardada (o menor e o maior valor; veja a [decisão 0013](0013-historico-longo-guarda-o-minimo-e-o-maximo-de-cada-hora.md)) vira dois pontos, e a linha só quebra quando falta uma hora inteira. A redução em 150 partes guarda o menor e o maior de cada uma, então o pico de uma hora continua sendo o pico do mês.
 - **Cada faixa tem a escala do seu sensor, e todas a mesma janela.** Uma leitura do mesmo minuto fica no mesmo lugar nas duas.
 - **O histórico se lê sem a placa.** Ele está no celular; sem a casa carregada, a aba lista os dois dispositivos da maquete.
 

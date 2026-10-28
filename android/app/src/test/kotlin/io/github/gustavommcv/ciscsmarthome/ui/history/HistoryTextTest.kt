@@ -3,6 +3,8 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 import android.content.Context
 import android.content.res.Resources
 import androidx.test.core.app.ApplicationProvider
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,6 +14,11 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class HistoryTextTest {
   private val resources: Resources = ApplicationProvider.getApplicationContext<Context>().resources
+  private val zone = ZoneId.of("America/Sao_Paulo")
+  private val now = Instant.parse("2026-10-27T12:00:00Z")
+  private val recent = windowOf(ChartPeriod.SixHours, 0, now, zone)
+  private val october = windowOf(ChartPeriod.Month, 0, now, zone)
+  private val year2026 = windowOf(ChartPeriod.Year, 0, now, zone)
 
   @Test
   fun `the least and the greatest say the number the way the app writes numbers, with the unit`() {
@@ -35,7 +42,54 @@ class HistoryTextTest {
 
   @Test
   fun `a screen reader is told what the chart is, how far back it goes and its range`() {
-    assertEquals("Gráfico de Gás nas últimas 6 h, de 45 adc a 260 adc", resources.chartDescription("Gás", ChartPeriod.SixHours, 45.0, 260.0, "adc"))
+    assertEquals("Gráfico de Gás nas últimas 6 h, de 45 adc a 260 adc", resources.chartDescription("Gás", recent, zone, 45.0, 260.0, "adc"))
+  }
+
+  @Test
+  fun `a screen reader is told which month or which year a chart is of`() {
+    assertEquals("Gráfico de Temperatura em outubro de 2026, de 17,5 °C a 21,6 °C", resources.chartDescription("Temperatura", october, zone, 17.5, 21.6, "°C"))
+    assertEquals("Gráfico de Umidade em 2026, de 40 % a 90 %", resources.chartDescription("Umidade", year2026, zone, 40.0, 90.0, "%"))
+  }
+
+  // ---- the ends of the window and its title ------------------------------------------------------
+
+  @Test
+  fun `the last hours say how far back they go and end now`() {
+    assertEquals("há 6 h", resources.windowStartText(recent, zone))
+    assertEquals("agora", resources.windowEndText(recent, zone))
+  }
+
+  @Test
+  fun `a month begins on its first day and ends on its last`() {
+    assertEquals("1 out.", resources.windowStartText(october, zone))
+    assertEquals("31 out.", resources.windowEndText(october, zone))
+    assertEquals("29 fev.", resources.windowEndText(windowOf(ChartPeriod.Month, 0, Instant.parse("2028-02-10T12:00:00Z"), zone), zone))
+  }
+
+  @Test
+  fun `a year begins in january and ends in december`() {
+    assertEquals("jan.", resources.windowStartText(year2026, zone))
+    assertEquals("dez.", resources.windowEndText(year2026, zone))
+  }
+
+  @Test
+  fun `the title of a month is its name and its year, and the one of a year is the year`() {
+    assertEquals("Outubro de 2026", resources.windowTitle(october, zone))
+    assertEquals("Fevereiro de 2028", resources.windowTitle(windowOf(ChartPeriod.Month, 0, Instant.parse("2028-02-10T12:00:00Z"), zone), zone))
+    assertEquals("2026", resources.windowTitle(year2026, zone))
+  }
+
+  @Test
+  fun `the title follows the zone, so the last evening of a month is still that month`() {
+    assertEquals("Outubro de 2026", resources.windowTitle(windowOf(ChartPeriod.Month, 0, Instant.parse("2026-11-01T01:00:00Z"), zone), zone))
+  }
+
+  @Test
+  fun `the caption of the hours says what each point is`() {
+    assertEquals(
+      "Cada hora mostra o menor e o maior valor que a placa leu. Os vazios são o tempo em que o app não ouviu a placa.",
+      resources.getString(io.github.gustavommcv.ciscsmarthome.R.string.history_caption_hours),
+    )
   }
 
   @Test

@@ -9,6 +9,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
@@ -39,8 +40,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The clock of the tests of time: it is the start plus what the test scheduler has let pass. */
-private class VirtualClock(private val scheduler: TestCoroutineScheduler, private val start: Instant) : Clock() {
-  override fun getZone(): ZoneId = ZoneOffset.UTC
+private class VirtualClock(private val scheduler: TestCoroutineScheduler, private val start: Instant, private val zone: ZoneId = ZoneOffset.UTC) : Clock() {
+  override fun getZone(): ZoneId = zone
 
   override fun withZone(zone: ZoneId): Clock = this
 
@@ -80,9 +81,9 @@ class HistoryViewModelTest {
   private fun reading(minutesBeforeStart: Long, value: Double?) = Reading(start.minus(Duration.ofMinutes(minutesBeforeStart)), value)
 
   /** A view model that someone is watching, on the time of the test. */
-  private fun TestScope.watched(): Pair<HistoryViewModel, StateFlow<HistoryState>> {
+  private fun TestScope.watched(zone: ZoneId = ZoneOffset.UTC): Pair<HistoryViewModel, StateFlow<HistoryState>> {
     Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-    val viewModel = HistoryViewModel(repository, nameBook, VirtualClock(testScheduler, start))
+    val viewModel = HistoryViewModel(repository, nameBook, VirtualClock(testScheduler, start, zone))
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect {} }
     return viewModel to viewModel.state
   }
@@ -324,5 +325,258 @@ class HistoryViewModelTest {
     val first = repository.seriesRequests.last().second
     advanceTimeBy(HistoryViewModel.REFRESH.toMillis() + 1)
     assertTrue("the window did not move: $first", repository.seriesRequests.last().second.isAfter(first))
+  }
+
+  // ---- the month and the year ------------------------------------------------------------------
+
+  private val october = Instant.parse("2026-10-01T00:00:00Z")
+  private val november = Instant.parse("2026-11-01T00:00:00Z")
+  private val september = Instant.parse("2026-09-01T00:00:00Z")
+
+  private fun hour(day: Int, hourOfDay: Int, lowest: Double, highest: Double) =
+    HourlyReading(Instant.parse("2026-10-%02dT%02d:00:00Z".format(day, hourOfDay)), lowest, highest)
+
+  @Test
+  fun `a month asks the history for the hours of that calendar month, and not for the readings`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    viewModel.openDevice(gasMonitor)
+    val readingsAsked = repository.seriesRequests.size
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertEquals(Triple(gasLevel, october, november), repository.hourlyRequests.last())
+    assertEquals(readingsAsked, repository.seriesRequests.size)
+  }
+
+  @Test
+  fun `a month is read once for each sensor`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    viewModel.openDevice(closetMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertEquals(setOf(temperature, humidity), repository.hourlyRequests.map { it.first }.toSet())
+    assertEquals(2, repository.hourlyRequests.size)
+  }
+
+  @Test
+  fun `the chart of a month is made of the least and the greatest of its hours`() = runTest {
+    repository.home.value = maquette
+    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 90.0), hour(6, 10, 44.0, 60.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    val chart = panels(state.value).single().lanes.single().chart!!
+    assertEquals(40.0, chart.min, 0.0)
+    assertEquals(90.0, chart.max, 0.0)
+    assertEquals(ChartPeriod.Month, state.value.window.period)
+  }
+
+  @Test
+  fun `hours that follow each other are one line, and a missing hour breaks it`() = runTest {
+    repository.home.value = maquette
+    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 50.0), hour(5, 11, 41.0, 51.0), hour(5, 13, 42.0, 52.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertEquals(listOf(4, 2), panels(state.value).single().lanes.single().chart!!.lines.map { it.size })
+  }
+
+  @Test
+  fun `the hours of another month are not in the chart`() = runTest {
+    repository.home.value = maquette
+    repository.setHours(gasLevel, listOf(HourlyReading(Instant.parse("2026-09-30T23:00:00Z"), 1.0, 2.0), HourlyReading(Instant.parse("2026-11-01T00:00:00Z"), 8.0, 9.0), hour(5, 10, 40.0, 90.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertEquals(40.0 to 90.0, panels(state.value).single().lanes.single().chart!!.let { it.min to it.max })
+  }
+
+  @Test
+  fun `a year is the whole calendar year`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Year)
+    assertEquals(Triple(gasLevel, Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z")), repository.hourlyRequests.last())
+    assertEquals(ChartPeriod.Year, state.value.period)
+  }
+
+  @Test
+  fun `a month begins at midnight in the zone of the phone`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched(zone = ZoneId.of("America/Sao_Paulo"))
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertEquals(Triple(gasLevel, Instant.parse("2026-10-01T03:00:00Z"), Instant.parse("2026-11-01T03:00:00Z")), repository.hourlyRequests.last())
+  }
+
+  // ---- the pages --------------------------------------------------------------------------------
+
+  @Test
+  fun `going back shows the month before, and says it can go forward`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2026-07-10T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertFalse(state.value.canGoLater)
+    viewModel.earlier()
+    assertEquals(1, state.value.window.offset)
+    assertEquals(Triple(gasLevel, september, october), repository.hourlyRequests.last())
+    assertTrue(state.value.canGoLater)
+  }
+
+  @Test
+  fun `going forward again comes back to the month before it`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2026-07-10T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    viewModel.earlier()
+    viewModel.earlier()
+    viewModel.later()
+    assertEquals(1, state.value.window.offset)
+    viewModel.later()
+    assertEquals(0, state.value.window.offset)
+    assertEquals(Triple(gasLevel, october, november), repository.hourlyRequests.last())
+  }
+
+  @Test
+  fun `it cannot go forward from the present`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    viewModel.later()
+    assertEquals(0, state.value.window.offset)
+    assertFalse(state.value.canGoLater)
+  }
+
+  @Test
+  fun `it goes back only while the history has hours before the window`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2026-09-20T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertTrue(state.value.canGoEarlier)
+    viewModel.earlier()
+    assertFalse("nothing is before September 20, which is in September", state.value.canGoEarlier)
+    viewModel.earlier()
+    assertEquals(1, state.value.window.offset)
+  }
+
+  @Test
+  fun `the first hour of the history being the first moment of the window is nothing before it`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(october)
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertFalse(state.value.canGoEarlier)
+  }
+
+  @Test
+  fun `with no history there is nowhere to go back to`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Year)
+    assertFalse(state.value.canGoEarlier)
+    viewModel.earlier()
+    assertEquals(0, state.value.window.offset)
+  }
+
+  @Test
+  fun `the last hours have no pages`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2020-01-01T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    assertFalse(state.value.canGoEarlier)
+    viewModel.earlier()
+    assertEquals(0, state.value.window.offset)
+    assertEquals(gasLevel to start.minus(Duration.ofHours(6)), repository.seriesRequests.last())
+  }
+
+  @Test
+  fun `choosing a period goes back to the present`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2020-01-01T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    viewModel.earlier()
+    viewModel.earlier()
+    viewModel.choosePeriod(ChartPeriod.Year)
+    assertEquals(0, state.value.window.offset)
+    viewModel.earlier()
+    viewModel.choosePeriod(ChartPeriod.Month)
+    assertEquals(0, state.value.window.offset)
+  }
+
+  @Test
+  fun `the page stays when another device is opened`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2020-01-01T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    viewModel.earlier()
+    viewModel.back()
+    viewModel.openDevice(closetMonitor)
+    assertEquals(ChartPeriod.Month, state.value.window.period)
+    assertEquals(1, state.value.window.offset)
+  }
+
+  @Test
+  fun `before anyone watches, the window is the one of the period that opens and there are no pages`() = runTest {
+    Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+    val state = HistoryViewModel(repository, nameBook, VirtualClock(testScheduler, start)).state.value
+    assertEquals(ChartPeriod.SixHours, state.window.period)
+    assertEquals(start.minus(Duration.ofHours(6)), state.window.since)
+    assertEquals(start, state.window.until)
+    assertFalse(state.canGoEarlier)
+    assertFalse(state.canGoLater)
+  }
+
+  @Test
+  fun `going forward from the present does not make the next step back lose a page`() = runTest {
+    repository.home.value = maquette
+    repository.setFirstHour(Instant.parse("2020-01-01T00:00:00Z"))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    viewModel.later()
+    viewModel.later()
+    viewModel.earlier()
+    assertEquals(1, state.value.window.offset)
+  }
+
+  @Test
+  fun `the readings of the last hours break their line after two minutes of silence`() = runTest {
+    repository.home.value = maquette
+    repository.setReadings(gasLevel, listOf(reading(60, 40.0), reading(30, 50.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    assertEquals(2, panels(state.value).single().lanes.single().chart!!.lines.size)
+  }
+
+  @Test
+  fun `the state carries the zone the windows are made in, for the screen to write the dates in`() = runTest {
+    repository.home.value = maquette
+    val (_, state) = watched(zone = ZoneId.of("America/Sao_Paulo"))
+    assertEquals(ZoneId.of("America/Sao_Paulo"), state.value.zone)
+  }
+
+  @Test
+  fun `a month that is being read is read again when an hour changes`() = runTest {
+    repository.home.value = maquette
+    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 50.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 99.0)))
+    assertEquals(99.0, panels(state.value).single().lanes.single().chart!!.max, 0.0)
   }
 }
