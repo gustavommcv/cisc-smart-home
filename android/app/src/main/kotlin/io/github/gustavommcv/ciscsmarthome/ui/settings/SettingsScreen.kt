@@ -26,6 +26,7 @@ import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeMode
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
+import io.github.gustavommcv.ciscsmarthome.ui.components.SectionTitle
 import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 
@@ -40,7 +41,7 @@ internal fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = M
 internal fun SettingsContent(mode: ThemeMode, onChooseTheme: (ThemeMode) -> Unit, modifier: Modifier = Modifier) {
   Column(modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.L)) {
     Text(stringResource(R.string.tab_settings), style = MaterialTheme.typography.headlineLarge)
-    Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    SectionTitle(R.string.settings_theme)
     // The rows carry their own padding, so the whole row, edge to edge, is the target of the touch.
     CiscCard(contentPadding = PaddingValues()) {
       ThemeMode.entries.forEachIndexed { index, option ->

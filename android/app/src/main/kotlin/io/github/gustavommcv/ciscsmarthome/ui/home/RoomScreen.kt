@@ -12,8 +12,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -28,14 +30,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
+import io.github.gustavommcv.ciscsmarthome.domain.Device
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
+import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
+import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.LockedCard
+import io.github.gustavommcv.ciscsmarthome.ui.components.SectionTitle
+import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 
 /** One room: its devices, what each reads, and the controls of what can be commanded. The history chart comes to it next. */
@@ -66,29 +75,54 @@ internal fun RoomScreen(
         IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back)) }
         Text(roomName(area), style = MaterialTheme.typography.headlineSmall)
       }
-      LazyColumn(contentPadding = PaddingValues(start = Spacing.Xl, end = Spacing.Xl, bottom = Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.S)) {
+      LazyColumn(contentPadding = PaddingValues(start = Spacing.Xl, end = Spacing.Xl, bottom = Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
         item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = Spacing.S)) }
+        item { SectionTitle(R.string.section_devices) }
         if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
-        area.devices.forEach { device ->
-          item { Text(deviceName(device), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = Spacing.L)) }
-          items(device.entities, key = { it.id.value }) { entity ->
-            val enabled = entity.controlEnabled(connection, pending)
-            when {
-              entity is Entity.Switch && entity.commandable -> SwitchRow(entity, enabled) { onCommand(entity.id, entity.toggleCommand()) }
-              entity is Entity.Select && entity.commandable -> SelectRow(entity, enabled) { option -> onCommand(entity.id, CommandValue.Choice(option)) }
-              else -> ReadRow(entity)
-            }
-          }
-        }
-        item { LockedCard(R.string.device_add, modifier = Modifier.padding(top = Spacing.L)) }
+        items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, connection, pending, onCommand) }
+        item { LockedCard(R.string.device_add) }
       }
     }
   }
 }
 
+/** A device in a card: its icon, its name and how it is, and inside the card what it reads and what it lets the user command. */
+@Composable
+private fun DeviceCard(device: Device, connection: ConnectionState, pending: Set<EntityId>, onCommand: (EntityId, CommandValue) -> Unit) {
+  val emergency = device.isInEmergency()
+  val subtle = if (emergency) LocalContentColor.current else MaterialTheme.colorScheme.onSurfaceVariant
+  CiscCard(tone = if (emergency) Tone.Alert else null) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
+      IconBadge(device.id.iconRes(), if (emergency) Tone.Alert else Tone.Primary, solid = emergency)
+      Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
+        Text(deviceName(device), style = MaterialTheme.typography.titleMedium)
+        headlineText(device)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = subtle) }
+      }
+    }
+    device.rows().forEachIndexed { index, entity ->
+      // The first line sets the rows apart from the header; the rows carry the room above and below themselves, so each sits halfway between two lines.
+      HorizontalDivider(modifier = Modifier.padding(top = if (index == 0) Spacing.M else 0.dp), thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outlineVariant)
+      val enabled = entity.controlEnabled(connection, pending)
+      when {
+        entity is Entity.Switch && entity.commandable -> SwitchRow(entity, enabled) { onCommand(entity.id, entity.toggleCommand()) }
+        entity is Entity.Select && entity.commandable -> SelectRow(entity, enabled) { option -> onCommand(entity.id, CommandValue.Choice(option)) }
+        else -> ReadRow(entity)
+      }
+    }
+  }
+}
+
+/** The line under the name of a device: how it is, in its own words. */
+@Composable
+private fun headlineText(device: Device): String? =
+  device.headline()?.let { headline ->
+    val value = entityValue(headline.entity)
+    if (headline.withLabel) "${entityLabel(headline.entity)} $value" else value
+  }
+
 @Composable
 private fun ReadRow(entity: Entity) {
-  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+  Row(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.S), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(entityLabel(entity), style = MaterialTheme.typography.bodyLarge)
     Text(entityValue(entity), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
   }
@@ -99,7 +133,7 @@ private fun ReadRow(entity: Entity) {
 private fun SwitchRow(entity: Entity.Switch, enabled: Boolean, onToggle: () -> Unit) {
   Row(
     modifier =
-      Modifier.fillMaxWidth().toggleable(value = entity.on == true, enabled = enabled, role = Role.Switch, onValueChange = { onToggle() }).padding(vertical = Spacing.Xs),
+      Modifier.fillMaxWidth().toggleable(value = entity.on == true, enabled = enabled, role = Role.Switch, onValueChange = { onToggle() }).padding(vertical = Spacing.S),
     horizontalArrangement = Arrangement.SpaceBetween,
     verticalAlignment = Alignment.CenterVertically,
   ) {
@@ -110,7 +144,7 @@ private fun SwitchRow(entity: Entity.Switch, enabled: Boolean, onToggle: () -> U
 
 @Composable
 private fun SelectRow(entity: Entity.Select, enabled: Boolean, onChoose: (String) -> Unit) {
-  Column(verticalArrangement = Arrangement.spacedBy(Spacing.S), modifier = Modifier.padding(vertical = Spacing.Xs)) {
+  Column(verticalArrangement = Arrangement.spacedBy(Spacing.S), modifier = Modifier.padding(vertical = Spacing.S)) {
     Text(entityLabel(entity), style = MaterialTheme.typography.bodyLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
       entity.options.forEach { option ->
