@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Settings.h"
 #include "Time.h"
 
 // The ports: what the application needs from the outside world. The real
@@ -45,6 +46,15 @@ class Output {
  public:
   virtual ~Output() = default;
   virtual void set(bool on) = 0;
+};
+
+// What the user changed and the board keeps for the next time it starts.
+class SettingsStore {
+ public:
+  virtual ~SettingsStore() = default;
+  // Fills `out` with the limits that were saved and says true, or says false when none were.
+  virtual bool loadHumidity(HumiditySettings& out) = 0;
+  virtual void saveHumidity(const HumiditySettings& settings) = 0;
 };
 
 // A two-line character display, 16 columns wide. The lines are plain text without

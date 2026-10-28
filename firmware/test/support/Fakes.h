@@ -57,6 +57,22 @@ struct Display : cisc::Display {
   }
 };
 
+// The settings the user changed, kept in memory: what was saved, and what is there when the house starts.
+struct SettingsStore : cisc::SettingsStore {
+  bool has = false;
+  cisc::HumiditySettings humidity;
+  int saves = 0;
+  bool loadHumidity(cisc::HumiditySettings& out) override {
+    if (has) out = humidity;
+    return has;
+  }
+  void saveHumidity(const cisc::HumiditySettings& settings) override {
+    humidity = settings;
+    has = true;
+    ++saves;
+  }
+};
+
 // Small numbers keep the timelines in the tests readable.
 inline cisc::HouseSettings testSettings() {
   cisc::HouseSettings settings;
@@ -80,10 +96,11 @@ struct Rig {
   Output alarmLed;
   Output buzzer;
   Output dehumidifier;
+  SettingsStore store;
   cisc::HouseController controller;
 
   explicit Rig(const cisc::HouseSettings& settings = testSettings())
-      : controller(cisc::Hardware{clock, gas, climate, button, valve, alarmLed, buzzer, dehumidifier},
+      : controller(cisc::Hardware{clock, gas, climate, button, valve, alarmLed, buzzer, dehumidifier, store},
                    settings) {}
 
   void run(cisc::Millis durationMs) {

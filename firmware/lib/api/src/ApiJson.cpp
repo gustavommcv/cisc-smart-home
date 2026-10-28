@@ -25,6 +25,18 @@ JsonObject addEntity(JsonArray entities, const char* id, const char* kind, const
   return entity;
 }
 
+// A number the user can change: it comes with the range, the step and the value the house has when nothing was changed.
+void addPercentLimit(JsonArray entities, const char* id, const char* name, float value, float defaultValue) {
+  JsonObject entity = addEntity(entities, id, "number", name);
+  entity["value"] = static_cast<int>(std::lround(value));
+  entity["unit"] = "%";
+  entity["min"] = static_cast<int>(humidity_limits::kMinPercent);
+  entity["max"] = static_cast<int>(humidity_limits::kMaxPercent);
+  entity["step"] = static_cast<int>(humidity_limits::kStepPercent);
+  entity["default"] = static_cast<int>(std::lround(defaultValue));
+  entity["commandable"] = true;
+}
+
 JsonArray addArea(JsonArray areas, const char* id, const char* name) {
   JsonObject area = areas.add<JsonObject>();
   area["id"] = id;
@@ -86,6 +98,9 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
   options.add(toString(ControlMode::Automatic));
   options.add(toString(ControlMode::Manual));
   mode["commandable"] = true;
+  const HumiditySettings defaults;
+  addPercentLimit(closetMonitor, "dehumidifier-on-at", "Turn on at", s.dehumidifierOnAt, defaults.onAtPercent);
+  addPercentLimit(closetMonitor, "dehumidifier-off-at", "Turn off at", s.dehumidifierOffAt, defaults.offAtPercent);
 }
 
 }  // namespace

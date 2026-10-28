@@ -58,7 +58,11 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
             { "id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%" },
             { "id": "dehumidifier-power", "kind": "switch", "name": "Power", "value": false, "commandable": true },
             { "id": "dehumidifier-mode", "kind": "select", "name": "Mode", "value": "automatic",
-              "options": ["automatic", "manual"], "commandable": true }
+              "options": ["automatic", "manual"], "commandable": true },
+            { "id": "dehumidifier-on-at", "kind": "number", "name": "Turn on at", "value": 85, "unit": "%",
+              "min": 40, "max": 95, "step": 1, "default": 85, "commandable": true },
+            { "id": "dehumidifier-off-at", "kind": "number", "name": "Turn off at", "value": 83, "unit": "%",
+              "min": 40, "max": 95, "step": 1, "default": 83, "commandable": true }
           ]
         }
       ]
@@ -80,6 +84,7 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 | `value` | O valor atual. `null` quando não há leitura válida (por exemplo, o DHT11 não respondeu) |
 | `unit` | Unidade, quando faz sentido. `adc` quer dizer a escala de 0 a 1023 do sensor, **não ppm** |
 | `options` | As opções de um `select` |
+| `min`, `max`, `step`, `default` | Num `number`: o menor e o maior valor, de quanto em quanto ele anda, e o valor que a placa tem quando ninguém o mudou. O app desenha o controle com eles e usa o `default` para voltar ao padrão |
 | `commandable` | `true` se aceita comandos. Quando ausente, vale `false` |
 
 ### Tipos de entidade
@@ -90,6 +95,7 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 | `binary_sensor` | `true` ou `false` | não |
 | `switch` | `true` ou `false` | sim |
 | `select` | uma das `options` | sim |
+| `number` | um número entre `min` e `max`, em passos de `step` | sim |
 
 ### As entidades da maquete
 
@@ -103,6 +109,8 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 | | | `humidity` | `sensor` | porcentagem, ou `null` |
 | | | `dehumidifier-power` | `switch` | ligado ou desligado |
 | | | `dehumidifier-mode` | `select` | `automatic` ou `manual` |
+| | | `dehumidifier-on-at` | `number` | a umidade a partir da qual o desumidificador liga no modo automático: 40 a 95 %, de 1 em 1, padrão 85 |
+| | | `dehumidifier-off-at` | `number` | a umidade até a qual ele desliga: 40 a 95 %, de 1 em 1, padrão 83 |
 
 Um **dispositivo** é a unidade que se compra e se instala, como o monitor de gás ou o monitor do armário, e as **entidades** são o que ele lê e o que ele controla. O sensor, a válvula e o relé não são dispositivos: são partes de um. Na maquete, um ESP32 só roda os dois dispositivos porque o trabalho pede; numa casa real, cada um seria uma placa. O app não precisa saber disso: ele só vê cômodos, dispositivos e entidades.
 
@@ -130,6 +138,10 @@ A resposta `200` traz a entidade **como ficou**, no mesmo formato de `/home`:
 | `dehumidifier-power` = `true` ou `false` | Liga ou desliga **e passa para o modo manual** |
 | `dehumidifier-mode` = `"automatic"` | Devolve o controle à regra de umidade. O estado atual vale até a próxima leitura |
 | `dehumidifier-mode` = `"manual"` | Passa para manual **mantendo** o estado atual |
+| `dehumidifier-on-at` = número | Muda a umidade em que o modo automático **liga**. Não muda o modo nem o estado: o novo limite vale a partir da próxima leitura |
+| `dehumidifier-off-at` = número | Muda a umidade em que o modo automático **desliga**, do mesmo jeito |
+
+**Os limites têm regras**, e a placa recusa (`400 invalid-value`, sem mudar nada) o que as quebra: o número tem de ser **inteiro**, ficar **entre `min` e `max`** e deixar o limite de desligar **pelo menos 2 pontos abaixo** do de ligar. Por isso, para subir os dois, sobe-se primeiro o de ligar; para descer, desce-se primeiro o de desligar. O de ligar nunca desce abaixo do de desligar mais 2, nem o de desligar sobe acima do de ligar menos 2. **A placa guarda os limites** na própria memória, e eles continuam depois de uma queda de energia. Para voltar ao padrão, o app manda o `default` de cada um (na ordem que as regras permitem).
 
 Depois de um comando, o novo estado também chega pelo fluxo de eventos.
 
@@ -214,7 +226,7 @@ Qualquer resposta de erro tem este formato. A entidade é verificada **antes** d
 | HTTP | `code` | Quando |
 |---|---|---|
 | 400 | `invalid-body` | O corpo não é um JSON válido ou não tem `value` |
-| 400 | `invalid-value` | O `value` não serve para essa entidade (por exemplo, um texto em um `switch`) |
+| 400 | `invalid-value` | O `value` não serve para essa entidade (por exemplo, um texto em um `switch`, ou um limite de umidade fora da faixa, não inteiro ou perto demais do outro) |
 | 400 | `invalid-query` | O `after` ou o `limit` do histórico não é um número válido |
 | 403 | `not-commandable` | A entidade não aceita comandos |
 | 404 | `not-found` | A entidade ou a rota não existe |
@@ -233,6 +245,11 @@ curl http://192.168.4.1/api/v1/home
 ```bash
 curl -X PUT -H 'Content-Type: application/json' -d '{"value": true}' \
   http://192.168.4.1/api/v1/entities/dehumidifier-power/value
+```
+
+```bash
+curl -X PUT -H 'Content-Type: application/json' -d '{"value": 80}' \
+  http://192.168.4.1/api/v1/entities/dehumidifier-on-at/value
 ```
 
 ```bash

@@ -104,6 +104,87 @@ void test_a_mode_that_is_not_an_option_is_rejected() {
   assertError(put(f.api, "dehumidifier-mode", "{\"value\":\"turbo\"}"), 400, "invalid-value");
 }
 
+// ---- the limits of the dehumidifier -----------------------------------------
+
+void test_the_upper_limit_is_changed_and_the_entity_comes_back() {
+  Fixture f;
+  const Response response = put(f.api, "dehumidifier-on-at", "{\"value\":90}");
+  TEST_ASSERT_EQUAL_INT(200, response.status);
+  JsonDocument entity = parse(response.body);
+  TEST_ASSERT_EQUAL_STRING("dehumidifier-on-at", entity["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_STRING("number", entity["kind"].as<const char*>());
+  TEST_ASSERT_EQUAL_INT(90, entity["value"].as<int>());
+  TEST_ASSERT_EQUAL_FLOAT(90.0f, f.rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, f.rig.controller.snapshot().dehumidifierOffAt);
+}
+
+void test_the_lower_limit_is_changed_and_the_entity_comes_back() {
+  Fixture f;
+  const Response response = put(f.api, "dehumidifier-off-at", "{\"value\":60}");
+  TEST_ASSERT_EQUAL_INT(200, response.status);
+  JsonDocument entity = parse(response.body);
+  TEST_ASSERT_EQUAL_STRING("dehumidifier-off-at", entity["id"].as<const char*>());
+  TEST_ASSERT_EQUAL_INT(60, entity["value"].as<int>());
+  TEST_ASSERT_EQUAL_FLOAT(80.0f, f.rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(60.0f, f.rig.controller.snapshot().dehumidifierOffAt);
+}
+
+void test_a_limit_that_is_changed_is_saved_for_the_next_time() {
+  Fixture f;
+  put(f.api, "dehumidifier-on-at", "{\"value\":90}");
+  TEST_ASSERT_EQUAL(1, f.rig.store.saves);
+  TEST_ASSERT_EQUAL_FLOAT(90.0f, f.rig.store.humidity.onAtPercent);
+}
+
+void test_a_limit_outside_the_range_is_rejected() {
+  Fixture f;
+  assertError(put(f.api, "dehumidifier-on-at", "{\"value\":96}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-off-at", "{\"value\":39}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-off-at", "{\"value\":-5}"), 400, "invalid-value");
+}
+
+void test_the_upper_limit_cannot_come_closer_than_two_points_to_the_lower_one() {
+  Fixture f;
+  assertError(put(f.api, "dehumidifier-on-at", "{\"value\":71}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-on-at", "{\"value\":60}"), 400, "invalid-value");
+  TEST_ASSERT_EQUAL(200, put(f.api, "dehumidifier-on-at", "{\"value\":72}").status);
+}
+
+void test_the_lower_limit_cannot_come_closer_than_two_points_to_the_upper_one() {
+  Fixture f;
+  assertError(put(f.api, "dehumidifier-off-at", "{\"value\":79}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-off-at", "{\"value\":85}"), 400, "invalid-value");
+  TEST_ASSERT_EQUAL(200, put(f.api, "dehumidifier-off-at", "{\"value\":78}").status);
+}
+
+void test_a_limit_that_is_not_a_whole_number_is_rejected() {
+  Fixture f;
+  assertError(put(f.api, "dehumidifier-on-at", "{\"value\":85.5}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-off-at", "{\"value\":60.2}"), 400, "invalid-value");
+}
+
+void test_a_limit_that_is_not_a_number_is_rejected() {
+  Fixture f;
+  assertError(put(f.api, "dehumidifier-on-at", "{\"value\":\"90\"}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-on-at", "{\"value\":true}"), 400, "invalid-value");
+  assertError(put(f.api, "dehumidifier-off-at", "{\"value\":[60]}"), 400, "invalid-value");
+}
+
+void test_a_rejected_limit_changes_nothing_and_saves_nothing() {
+  Fixture f;
+  put(f.api, "dehumidifier-on-at", "{\"value\":96}");
+  put(f.api, "dehumidifier-off-at", "{\"value\":\"x\"}");
+  TEST_ASSERT_EQUAL_FLOAT(80.0f, f.rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, f.rig.controller.snapshot().dehumidifierOffAt);
+  TEST_ASSERT_EQUAL(0, f.rig.store.saves);
+}
+
+void test_a_limit_does_not_take_the_dehumidifier_out_of_automatic() {
+  Fixture f;
+  put(f.api, "dehumidifier-on-at", "{\"value\":90}");
+  TEST_ASSERT_EQUAL(cisc::ControlMode::Automatic, f.rig.controller.snapshot().dehumidifierMode);
+}
+
 void test_a_rejected_command_changes_nothing() {
   Fixture f;
   put(f.api, "dehumidifier-power", "{\"value\":\"yes\"}");
@@ -277,6 +358,16 @@ int main() {
   RUN_TEST(test_setting_the_mode_to_manual_keeps_the_current_state);
   RUN_TEST(test_a_value_of_the_wrong_type_is_rejected);
   RUN_TEST(test_a_mode_that_is_not_an_option_is_rejected);
+  RUN_TEST(test_the_upper_limit_is_changed_and_the_entity_comes_back);
+  RUN_TEST(test_the_lower_limit_is_changed_and_the_entity_comes_back);
+  RUN_TEST(test_a_limit_that_is_changed_is_saved_for_the_next_time);
+  RUN_TEST(test_a_limit_outside_the_range_is_rejected);
+  RUN_TEST(test_the_upper_limit_cannot_come_closer_than_two_points_to_the_lower_one);
+  RUN_TEST(test_the_lower_limit_cannot_come_closer_than_two_points_to_the_upper_one);
+  RUN_TEST(test_a_limit_that_is_not_a_whole_number_is_rejected);
+  RUN_TEST(test_a_limit_that_is_not_a_number_is_rejected);
+  RUN_TEST(test_a_rejected_limit_changes_nothing_and_saves_nothing);
+  RUN_TEST(test_a_limit_does_not_take_the_dehumidifier_out_of_automatic);
   RUN_TEST(test_a_rejected_command_changes_nothing);
   RUN_TEST(test_a_body_that_is_not_a_json_object_with_a_value_is_rejected);
   RUN_TEST(test_a_read_only_entity_does_not_accept_commands);

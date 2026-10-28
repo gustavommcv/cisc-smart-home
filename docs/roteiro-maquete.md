@@ -50,7 +50,7 @@ A tela é atualizada no máximo 4 vezes por segundo, e só quando o texto muda. 
 
 ## Passos
 
-Os limites atuais estão em [`Settings.h`](../firmware/lib/domain/src/Settings.h): gás acima de **160**, umidade liga em **85 %** e desliga em **84 %**.
+Os limites atuais estão em [`Settings.h`](../firmware/lib/domain/src/Settings.h): gás acima de **160**, umidade liga em **85 %** e desliga em **83 %**. Os dois limites de umidade podem ser mudados pelo app (o monitor do armário) e **ficam guardados na placa**; se o app mudou, os valores de agora são outros.
 
 | # | O que fazer | O que deve acontecer | Se não acontecer |
 |---|---|---|---|
@@ -60,7 +60,7 @@ Os limites atuais estão em [`Settings.h`](../firmware/lib/domain/src/Settings.h
 | 4 | Afastar o gás | O buzzer **para** quando `gas` volta a 160 ou menos. O LED continua aceso e `state` continua `emergency`. O LCD mostra `Alarme retido`, e depois de 2 s passa a pedir `Aperte o botao` | |
 | 5 | Esperar 2 s com o gás abaixo do limite e **apertar** o botão | `state=normal`, `valve=open`, LED apagado, servo na posição aberta e o LCD de volta à temperatura | Se nada acontece, aperte de novo depois de uns 2 s abaixo do limite. O botão só vale com o ar limpo |
 | 6 | Soprar no DHT11 até a umidade passar de 85 % | `dehumidifier=on`. O relé estala, o LED verde da maquete acende e o LCD mostra `LIG` | |
-| 7 | Esperar a umidade cair a 84 % ou menos | `dehumidifier=off`, o relé solta e o LED verde apaga, com `OFF` no LCD | Se o Serial diz `off` mas o LED continua aceso, o módulo não está soltando. O firmware já solta o pino do relé (dreno aberto) por causa disso, então confira o fio do IN |
+| 7 | Esperar a umidade cair a 83 % ou menos | `dehumidifier=off`, o relé solta e o LED verde apaga, com `OFF` no LCD | Se o Serial diz `off` mas o LED continua aceso, o módulo não está soltando. O firmware já solta o pino do relé (dreno aberto) por causa disso, então confira o fio do IN |
 | 8 | (Opcional) Soltar o fio DATA do DHT11 | `climate=n/a` e `dehumidifier=off`. Volte o fio e a leitura retorna | |
 
 O botão deste módulo dá nível alto quando apertado, então **o rearme acontece ao apertar**, e não ao soltar.

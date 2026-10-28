@@ -26,6 +26,8 @@ HouseSnapshot normalHouse() {
   snapshot.humidityPercent = 74.1f;
   snapshot.dehumidifierOn = false;
   snapshot.dehumidifierMode = ControlMode::Automatic;
+  snapshot.dehumidifierOnAt = 85.0f;
+  snapshot.dehumidifierOffAt = 83.0f;
   return snapshot;
 }
 
@@ -111,7 +113,7 @@ std::string idsOf(JsonArray entities) {
 void test_a_device_holds_everything_its_unit_senses_and_controls() {
   JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
   TEST_ASSERT_EQUAL_STRING("gas-level,gas-state,gas-alerts,valve-open", idsOf(home["areas"][0]["devices"][0]["entities"]).c_str());
-  TEST_ASSERT_EQUAL_STRING("temperature,humidity,dehumidifier-power,dehumidifier-mode", idsOf(home["areas"][1]["devices"][0]["entities"]).c_str());
+  TEST_ASSERT_EQUAL_STRING("temperature,humidity,dehumidifier-power,dehumidifier-mode,dehumidifier-on-at,dehumidifier-off-at", idsOf(home["areas"][1]["devices"][0]["entities"]).c_str());
 }
 
 void test_every_entity_id_is_unique_across_the_house() {
@@ -122,7 +124,7 @@ void test_every_entity_id_is_unique_across_the_house() {
     ids.insert(item["id"].as<const char*>());
     ++total;
   });
-  TEST_ASSERT_EQUAL_UINT(8, total);
+  TEST_ASSERT_EQUAL_UINT(10, total);
   TEST_ASSERT_EQUAL_UINT(total, ids.size());
 }
 
@@ -199,11 +201,38 @@ void test_the_dehumidifier_can_be_commanded_and_shows_its_mode() {
   TEST_ASSERT_EQUAL_STRING("manual", mode["options"][1].as<const char*>());
 }
 
+// The limits are numbers the user can change: they come with the range, the step and the value the house has when nothing was
+// changed, so the app can draw a control that knows what is allowed, and a way back, without knowing the rule.
+void test_the_limits_of_the_dehumidifier_are_numbers_with_their_range_and_default() {
+  std::string json;
+  TEST_ASSERT_TRUE(cisc::api::entityJson(normalHouse(), "dehumidifier-on-at", json));
+  TEST_ASSERT_EQUAL_STRING(
+      "{\"id\":\"dehumidifier-on-at\",\"kind\":\"number\",\"name\":\"Turn on at\",\"value\":85,\"unit\":\"%\",\"min\":40,\"max\":95,\"step\":1,\"default\":85,\"commandable\":true}",
+      json.c_str());
+  TEST_ASSERT_TRUE(cisc::api::entityJson(normalHouse(), "dehumidifier-off-at", json));
+  TEST_ASSERT_EQUAL_STRING(
+      "{\"id\":\"dehumidifier-off-at\",\"kind\":\"number\",\"name\":\"Turn off at\",\"value\":83,\"unit\":\"%\",\"min\":40,\"max\":95,\"step\":1,\"default\":83,\"commandable\":true}",
+      json.c_str());
+}
+
+void test_the_limits_show_the_values_the_house_has_not_the_defaults() {
+  HouseSnapshot snapshot = normalHouse();
+  snapshot.dehumidifierOnAt = 90.0f;
+  snapshot.dehumidifierOffAt = 60.0f;
+  JsonDocument home = parse(cisc::api::homeJson(snapshot, "x"));
+  JsonObject on = entity(home, "dehumidifier-on-at");
+  JsonObject off = entity(home, "dehumidifier-off-at");
+  TEST_ASSERT_EQUAL_INT(90, on["value"].as<int>());
+  TEST_ASSERT_EQUAL_INT(85, on["default"].as<int>());
+  TEST_ASSERT_EQUAL_INT(60, off["value"].as<int>());
+  TEST_ASSERT_EQUAL_INT(83, off["default"].as<int>());
+}
+
 void test_only_the_dehumidifier_entities_are_commandable() {
   JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
   forEachEntity(home, [](JsonObject item) {
     const std::string id = item["id"].as<const char*>();
-    const bool expected = id == "dehumidifier-power" || id == "dehumidifier-mode";
+    const bool expected = id == "dehumidifier-power" || id == "dehumidifier-mode" || id == "dehumidifier-on-at" || id == "dehumidifier-off-at";
     TEST_ASSERT_EQUAL_MESSAGE(expected, item["commandable"].as<bool>(), id.c_str());
   });
 }
@@ -245,6 +274,8 @@ int main() {
   RUN_TEST(test_without_a_valid_reading_the_climate_values_are_null);
   RUN_TEST(test_decimals_are_rounded_to_one_place);
   RUN_TEST(test_the_dehumidifier_can_be_commanded_and_shows_its_mode);
+  RUN_TEST(test_the_limits_of_the_dehumidifier_are_numbers_with_their_range_and_default);
+  RUN_TEST(test_the_limits_show_the_values_the_house_has_not_the_defaults);
   RUN_TEST(test_only_the_dehumidifier_entities_are_commandable);
   RUN_TEST(test_a_single_entity_has_the_exact_shape_of_the_contract);
   RUN_TEST(test_an_unknown_entity_is_reported_as_missing);

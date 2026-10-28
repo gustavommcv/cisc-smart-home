@@ -16,6 +16,9 @@ namespace {
 // with `after`. It keeps a response small enough for the board's memory.
 constexpr std::size_t kDefaultHistoryLimit = 100;
 
+const char* const kLimitMessage =
+    "The value must be a whole number from 40 to 95, and the turn-on limit at least 2 points above the turn-off limit";
+
 Response ok(std::string body) {
   return Response{200, std::move(body)};
 }
@@ -136,6 +139,11 @@ Response Api::command(const std::string& entityId, const std::string& body) {
     }
     const std::string mode = value.as<const char*>();
     house_.setDehumidifierMode(mode == "automatic" ? ControlMode::Automatic : ControlMode::Manual);
+  } else if (entityId == "dehumidifier-on-at" || entityId == "dehumidifier-off-at") {
+    if (!value.is<float>()) return error(400, "invalid-value", kLimitMessage);
+    const float percent = value.as<float>();
+    const bool applied = entityId == "dehumidifier-on-at" ? house_.setDehumidifierOnAt(percent) : house_.setDehumidifierOffAt(percent);
+    if (!applied) return error(400, "invalid-value", kLimitMessage);
   } else {
     return error(403, "not-commandable", "Entity '" + entityId + "' does not accept commands");
   }

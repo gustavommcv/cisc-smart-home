@@ -268,6 +268,100 @@ void test_snapshot_tells_no_sample_yet_from_an_invalid_sample() {
   TEST_ASSERT_FALSE(rig.controller.snapshot().climateValid);
 }
 
+// ---- the limits of the dehumidifier --------------------------------------------
+
+void test_the_snapshot_carries_the_limits_the_house_was_made_with() {
+  Rig rig;
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL_FLOAT(80.0f, rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, rig.controller.snapshot().dehumidifierOffAt);
+}
+
+void test_begin_takes_the_limits_the_user_saved() {
+  Rig rig;
+  rig.store.has = true;
+  rig.store.humidity = cisc::HumiditySettings{75.0f, 60.0f};
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL_FLOAT(75.0f, rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(60.0f, rig.controller.snapshot().dehumidifierOffAt);
+}
+
+void test_the_saved_limits_are_the_ones_the_rule_follows() {
+  Rig rig;
+  rig.store.has = true;
+  rig.store.humidity = cisc::HumiditySettings{60.0f, 50.0f};
+  rig.climate.reading = {true, 22.0f, 65.0f};
+  rig.bootToNormal();
+  TEST_ASSERT_TRUE(rig.dehumidifier.value);
+}
+
+void test_saved_limits_that_are_not_valid_are_left_out_and_the_house_keeps_its_own() {
+  Rig rig;
+  rig.store.has = true;
+  rig.store.humidity = cisc::HumiditySettings{90.0f, 89.0f};
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL_FLOAT(80.0f, rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, rig.controller.snapshot().dehumidifierOffAt);
+}
+
+void test_nothing_saved_is_nothing_written_at_start() {
+  Rig rig;
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL(0, rig.store.saves);
+}
+
+void test_changing_the_upper_limit_shows_in_the_snapshot_and_is_saved() {
+  Rig rig;
+  rig.controller.begin();
+  TEST_ASSERT_TRUE(rig.controller.setDehumidifierOnAt(90.0f));
+  TEST_ASSERT_EQUAL_FLOAT(90.0f, rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, rig.controller.snapshot().dehumidifierOffAt);
+  TEST_ASSERT_EQUAL(1, rig.store.saves);
+  TEST_ASSERT_EQUAL_FLOAT(90.0f, rig.store.humidity.onAtPercent);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, rig.store.humidity.offAtPercent);
+}
+
+void test_changing_the_lower_limit_shows_in_the_snapshot_and_is_saved() {
+  Rig rig;
+  rig.controller.begin();
+  TEST_ASSERT_TRUE(rig.controller.setDehumidifierOffAt(60.0f));
+  TEST_ASSERT_EQUAL_FLOAT(80.0f, rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(60.0f, rig.controller.snapshot().dehumidifierOffAt);
+  TEST_ASSERT_EQUAL(1, rig.store.saves);
+  TEST_ASSERT_EQUAL_FLOAT(60.0f, rig.store.humidity.offAtPercent);
+}
+
+void test_a_limit_that_is_not_valid_changes_nothing_and_saves_nothing() {
+  Rig rig;
+  rig.controller.begin();
+  TEST_ASSERT_FALSE(rig.controller.setDehumidifierOnAt(71.0f));
+  TEST_ASSERT_FALSE(rig.controller.setDehumidifierOffAt(79.0f));
+  TEST_ASSERT_FALSE(rig.controller.setDehumidifierOnAt(96.0f));
+  TEST_ASSERT_FALSE(rig.controller.setDehumidifierOffAt(39.0f));
+  TEST_ASSERT_EQUAL_FLOAT(80.0f, rig.controller.snapshot().dehumidifierOnAt);
+  TEST_ASSERT_EQUAL_FLOAT(70.0f, rig.controller.snapshot().dehumidifierOffAt);
+  TEST_ASSERT_EQUAL(0, rig.store.saves);
+}
+
+void test_the_new_limit_is_the_one_the_next_reading_is_judged_by() {
+  Rig rig;
+  rig.climate.reading = {true, 22.0f, 75.0f};
+  rig.bootToNormal();
+  TEST_ASSERT_FALSE(rig.dehumidifier.value);
+  rig.controller.setDehumidifierOnAt(75.0f);
+  rig.run(600);
+  TEST_ASSERT_TRUE(rig.dehumidifier.value);
+}
+
+void test_changing_a_limit_does_not_touch_the_relay_by_itself() {
+  Rig rig;
+  rig.climate.reading = {true, 22.0f, 75.0f};
+  rig.bootToNormal();
+  const int writes = rig.dehumidifier.writes;
+  rig.controller.setDehumidifierOnAt(90.0f);
+  TEST_ASSERT_EQUAL(writes, rig.dehumidifier.writes);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_begin_puts_every_output_in_a_safe_state);
@@ -295,5 +389,15 @@ int main() {
   RUN_TEST(test_snapshot_reports_gas_only_while_it_is_present);
   RUN_TEST(test_snapshot_reports_when_the_button_is_accepted_again);
   RUN_TEST(test_snapshot_tells_no_sample_yet_from_an_invalid_sample);
+  RUN_TEST(test_the_snapshot_carries_the_limits_the_house_was_made_with);
+  RUN_TEST(test_begin_takes_the_limits_the_user_saved);
+  RUN_TEST(test_the_saved_limits_are_the_ones_the_rule_follows);
+  RUN_TEST(test_saved_limits_that_are_not_valid_are_left_out_and_the_house_keeps_its_own);
+  RUN_TEST(test_nothing_saved_is_nothing_written_at_start);
+  RUN_TEST(test_changing_the_upper_limit_shows_in_the_snapshot_and_is_saved);
+  RUN_TEST(test_changing_the_lower_limit_shows_in_the_snapshot_and_is_saved);
+  RUN_TEST(test_a_limit_that_is_not_valid_changes_nothing_and_saves_nothing);
+  RUN_TEST(test_the_new_limit_is_the_one_the_next_reading_is_judged_by);
+  RUN_TEST(test_changing_a_limit_does_not_touch_the_relay_by_itself);
   return UNITY_END();
 }

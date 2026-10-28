@@ -26,6 +26,8 @@ struct HouseSnapshot {
 
   bool dehumidifierOn;
   ControlMode dehumidifierMode;
+  float dehumidifierOnAt;   // the limits of the automatic mode, in percent
+  float dehumidifierOffAt;
 };
 
 }  // namespace cisc

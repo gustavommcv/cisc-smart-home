@@ -15,6 +15,10 @@ void HouseController::begin() {
   lastClimateAt_ = now_;
   lastHistoryAt_ = now_;
 
+  // What the user saved comes before what the board was built with; a saved value that is no longer allowed is left out.
+  HumiditySettings saved;
+  if (hardware_.settingsStore.loadHumidity(saved)) humidity_.setLimits(saved.onAtPercent, saved.offAtPercent);
+
   gasGuard_.begin(now_);
   button_.begin(hardware_.button.isPressed(), now_);
 
@@ -64,6 +68,20 @@ void HouseController::setDehumidifierMode(ControlMode mode) {
   }
 }
 
+bool HouseController::setDehumidifierOnAt(float percent) {
+  return changeLimits(percent, humidity_.limits().offAtPercent);
+}
+
+bool HouseController::setDehumidifierOffAt(float percent) {
+  return changeLimits(humidity_.limits().onAtPercent, percent);
+}
+
+bool HouseController::changeLimits(float onAtPercent, float offAtPercent) {
+  if (!humidity_.setLimits(onAtPercent, offAtPercent)) return false;
+  hardware_.settingsStore.saveHumidity(humidity_.limits());
+  return true;
+}
+
 HouseSnapshot HouseController::snapshot() const {
   return HouseSnapshot{
       now_,
@@ -79,6 +97,8 @@ HouseSnapshot HouseController::snapshot() const {
       climate_.humidityPercent,
       humidity_.dehumidifierOn(),
       humidity_.mode(),
+      humidity_.limits().onAtPercent,
+      humidity_.limits().offAtPercent,
   };
 }
 

@@ -20,6 +20,7 @@
 #include "I2cLcdDisplay.h"
 #include "ModuleButton.h"
 #include "Mq2GasSensor.h"
+#include "NvsSettingsStore.h"
 #include "OpenDrainOutput.h"
 #include "ServoValve.h"
 #include "StatusPrinter.h"
@@ -35,11 +36,12 @@ adapters::ServoValve valve(board::kValveServoPin, board::kValveOpenDegrees, boar
 adapters::GpioOutput alarmLed(board::kAlarmLedPin, board::kAlarmLedActiveHigh);
 adapters::GpioOutput buzzer(board::kBuzzerPin, board::kBuzzerActiveHigh);
 adapters::OpenDrainOutput dehumidifier(board::kDehumidifierRelayPin);
+adapters::NvsSettingsStore settingsStore;
 adapters::I2cLcdDisplay lcd(board::kLcdSdaPin, board::kLcdSclPin, board::kLcdColumns, board::kLcdRows);
 
 // A global, not a local: it keeps the whole history (about 7 KB).
 cisc::HouseController house(cisc::Hardware{systemClock, gasSensor, climateSensor, button, valve, alarmLed, buzzer,
-                                           dehumidifier});
+                                           dehumidifier, settingsStore});
 cisc::DisplayPresenter lcdPresenter(house, lcd, board::kLcdRefreshMs);
 StatusPrinter statusPrinter(house, 1000);
 
