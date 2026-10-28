@@ -1,6 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.ui.home
 
 import io.github.gustavommcv.ciscsmarthome.domain.Area
+import io.github.gustavommcv.ciscsmarthome.domain.AreaIcons
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.CommandResult
@@ -12,6 +13,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Names
+import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
 import io.github.gustavommcv.ciscsmarthome.testing.FakeNameBook
 import kotlinx.coroutines.CompletableDeferred
@@ -314,5 +316,41 @@ class HomeViewModelTest {
     viewModel.renameDevice(DeviceId("gas-monitor"), null)
     assertEquals(listOf<Pair<AreaId, String?>>(AreaId("kitchen") to null), names.areaRenames)
     assertEquals(listOf<Pair<DeviceId, String?>>(DeviceId("gas-monitor") to null), names.deviceRenames)
+  }
+
+  // ---- the icons the user gave to the rooms ---------------------------------------------
+
+  @Test
+  fun `the state carries the icons the user gave`() = runTest {
+    names.chooseAreaIcon(AreaId("kitchen"), RoomIcon.Dining)
+    val state = HomeViewModel(repository, names).state
+    backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { state.collect {} }
+    assertEquals(AreaIcons(mapOf(AreaId("kitchen") to RoomIcon.Dining)), state.value.icons)
+  }
+
+  @Test
+  fun `before anyone watches, the state already has the icons, so a screen does not flash the defaults`() {
+    names.chooseAreaIcon(AreaId("kitchen"), RoomIcon.Yard)
+    assertEquals(RoomIcon.Yard, HomeViewModel(repository, names).state.value.icons.of(AreaId("kitchen")))
+  }
+
+  @Test
+  fun `an icon given while the screen is open shows at once`() = runTest {
+    val state = HomeViewModel(repository, names).state
+    backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { state.collect {} }
+    names.chooseAreaIcon(AreaId("kitchen"), RoomIcon.Garage)
+    assertEquals(RoomIcon.Garage, state.value.icons.of(AreaId("kitchen")))
+  }
+
+  @Test
+  fun `choosing the icon of a room hands it to the book`() {
+    HomeViewModel(repository, names).chooseRoomIcon(AreaId("kitchen"), RoomIcon.Dining)
+    assertEquals(listOf<Pair<AreaId, RoomIcon?>>(AreaId("kitchen") to RoomIcon.Dining), names.iconChoices)
+  }
+
+  @Test
+  fun `going back to the default icon hands over no icon`() {
+    HomeViewModel(repository, names).chooseRoomIcon(AreaId("kitchen"), null)
+    assertEquals(listOf<Pair<AreaId, RoomIcon?>>(AreaId("kitchen") to null), names.iconChoices)
   }
 }

@@ -12,9 +12,9 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 |:---:|:---:|:---:|
 | <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador e a escolha entre automático e manual, e um lápis para renomear o cômodo e o dispositivo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
 
-| Vazamento de gás (tema escuro) | Ajustes | Renomear |
+| Vazamento de gás (tema escuro) | Ajustes | Editar o cômodo |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes: a escolha do tema (claro, escuro ou automático) e a conexão, com o Wi-Fi da placa (Conectado à placa, e o botão Esquecer a senha), a rede do celular e os cartões Nuvem e VPN ou endereço próprio, em breve"> | <img src="../docs/imagens/renomear.png" width="250" alt="A janela para renomear o cômodo, com o nome atual selecionado, o contador de letras e os botões Salvar, Voltar ao nome padrão e Cancelar"> |
+| <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes: a escolha do tema (claro, escuro ou automático) e a conexão, com o Wi-Fi da placa (Conectado à placa, e o botão Esquecer a senha), a rede do celular e os cartões Nuvem e VPN ou endereço próprio, em breve"> | <img src="../docs/imagens/editar-comodo.png" width="250" alt="A janela para editar o cômodo, com o nome atual selecionado, o contador de letras, os treze ícones para escolher (o do quarto de criança marcado) e os botões Cancelar e Salvar"> |
 
 As imagens mostram só o app: a barra de status do celular foi cortada. Para refazê-las, com o celular em modo de depuração e ligado à maquete, use `adb exec-out screencap -p > tela.png` e corte os primeiros 110 pixels de cima.
 
@@ -248,12 +248,16 @@ Para pôr um ícone novo: baixe `symbols/android/<nome>/materialsymbolsoutlined/
 
 Um **lápis** no cabeçalho do cômodo e no cartão de cada dispositivo abre uma janela para **renomear**: o campo vem com o nome de agora, todo selecionado, e há **Salvar**, **Cancelar** e, quando o usuário já deu um nome, **Voltar ao nome padrão**. As leituras ("Temperatura", "Nível de gás") não se renomeiam. A [decisão 0009](../docs/decisoes/0009-nomes-dados-pelo-usuario.md) conta o porquê.
 
+**O cômodo também tem o seu ícone.** A janela do cômodo ("Editar o cômodo") mostra, sob o nome, os **13 ícones** que se pode escolher (casa, cozinha, quarto, sala, sala de jantar, banheiro, lavanderia, escritório, quarto de criança, entrada, varanda, quintal e garagem), com o escolhido marcado e o nome dele escrito embaixo. Nada muda até **Salvar**. **Voltar ao padrão** tira o nome e o ícone do usuário de uma vez. O ícone de um cômodo que o usuário não escolheu é o padrão: a cozinha é uma cozinha, o quarto uma cama, e um cômodo que o app não conhece é uma casa. **Escolher o ícone que o cômodo já tem por padrão não guarda nada**, e o mesmo vale para o nome: o cômodo continua seguindo o padrão. Abaixo dos dispositivos, o cartão bloqueado **Excluir cômodo, em breve** mostra onde fica essa opção: o app ainda não exclui cômodos.
+
 | Peça | Onde | O que faz |
 |---|---|---|
 | `Names` | `domain/Names.kt` | Os nomes dados, por id, e a regra de qual vale: **o que o usuário digitou, depois o nome em português do app, depois o da placa**. Diz também o que é um nome: sem o espaço das pontas, no máximo **30 caracteres**, e em branco não é nome |
-| `NameBook` | `domain/NameBook.kt` | A interface do que está dado e de como dar ou tirar um nome |
-| `PreferencesNameBook` | `data/local/` | Guarda os nomes num arquivo de preferências, um por entrada (`area:<id>`, `device:<id>`), então um cômodo e um dispositivo que dividam um id têm cada um o seu. O que o arquivo tem e não é nome é ignorado |
-| `RenameDialog` | `ui/components/` | A janela: o campo para no limite, mostra quantas letras já foram e salva também pelo "Concluído" do teclado |
+| `RoomIcon` e `AreaIcons` | `domain/RoomIcon.kt` | Os 13 ícones, cada um com a **chave** que fica guardada no celular (a do ícone do Material Symbols: `bed`, `weekend`, `local_laundry_service`…), que nunca muda, e o ícone de cada cômodo: **o do usuário, ou o padrão** (`defaultOf`) |
+| `NameBook` | `domain/NameBook.kt` | A interface do que está dado e de como dar ou tirar um nome ou um ícone |
+| `PreferencesNameBook` | `data/local/` | Guarda tudo num arquivo de preferências, um por entrada (`area:<id>`, `device:<id>` para os nomes, `area-icon:<id>` para os ícones), então um cômodo e um dispositivo que dividam um id têm cada um o seu. O que o arquivo tem e não é nome ou ícone (um ícone que o app não conhece, por exemplo) é ignorado |
+| `RenameDialog` | `ui/components/` | A janela: o campo para no limite, mostra quantas letras já foram e salva também pelo "Concluído" do teclado. Recebe um espaço extra, que o cômodo usa para o ícone |
+| `RoomIconChoice` | `ui/home/` | Os ícones, todos à vista, em botões redondos do tamanho de um dedo, cada um dizendo o próprio nome ao leitor de tela |
 
 - **O nome aparece em todo lugar**: no cartão do cômodo, no resumo do Início ("Local: …"), no cabeçalho e nos cartões da tela do cômodo.
 - **O alarme diz o nome do usuário.** O `AndroidNotifier` o lê na hora de montar o aviso ("Local: Cozinha da vó"), então um nome dado um instante antes já vale. Numa emergência, a mensagem fala a palavra que a pessoa usa para o lugar.

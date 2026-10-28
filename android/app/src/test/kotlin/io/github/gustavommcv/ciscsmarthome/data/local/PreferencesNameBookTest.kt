@@ -2,9 +2,11 @@ package io.github.gustavommcv.ciscsmarthome.data.local
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import io.github.gustavommcv.ciscsmarthome.domain.AreaIcons
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Names
+import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -113,6 +115,79 @@ class PreferencesNameBookTest {
   fun `what the file has that is not a name is ignored`() {
     preferences.edit().putInt("area:garage", 3).putString("device:doorbell", "    ").putString("other:thing", "x").putString("area:", "no id").commit()
     assertEquals(Names(), book().names.value)
+  }
+
+  // ---- the icons of the rooms ------------------------------------------------------
+
+  @Test
+  fun `no room has an icon of the user's at first`() {
+    assertEquals(AreaIcons(), book().icons.value)
+  }
+
+  @Test
+  fun `a room that is given an icon has it at once`() {
+    val book = book()
+    book.chooseAreaIcon(kitchen, RoomIcon.Dining)
+    assertEquals(mapOf(kitchen to RoomIcon.Dining), book.icons.value.areas)
+  }
+
+  @Test
+  fun `the icons come back after the app restarts`() {
+    book().apply {
+      chooseAreaIcon(kitchen, RoomIcon.Dining)
+      chooseAreaIcon(AreaId("bedroom"), RoomIcon.Nursery)
+    }
+    assertEquals(AreaIcons(mapOf(kitchen to RoomIcon.Dining, AreaId("bedroom") to RoomIcon.Nursery)), book().icons.value)
+  }
+
+  @Test
+  fun `a later icon replaces the earlier one`() {
+    val book = book()
+    book.chooseAreaIcon(kitchen, RoomIcon.Dining)
+    book.chooseAreaIcon(kitchen, RoomIcon.Yard)
+    assertEquals(RoomIcon.Yard, book().icons.value.areas.getValue(kitchen))
+  }
+
+  @Test
+  fun `no icon takes the icon of the user away and the default comes back, in the file too`() {
+    val book = book()
+    book.chooseAreaIcon(kitchen, RoomIcon.Dining)
+    book.chooseAreaIcon(AreaId("bedroom"), RoomIcon.Nursery)
+    book.chooseAreaIcon(kitchen, null)
+    assertEquals(mapOf(AreaId("bedroom") to RoomIcon.Nursery), book.icons.value.areas)
+    assertEquals(mapOf(AreaId("bedroom") to RoomIcon.Nursery), book().icons.value.areas)
+  }
+
+  @Test
+  fun `the icons are kept under the room and the key of the icon, so a file from an earlier version still reads`() {
+    book().chooseAreaIcon(kitchen, RoomIcon.Laundry)
+    assertEquals("local_laundry_service", preferences.getString("area-icon:kitchen", null))
+  }
+
+  @Test
+  fun `a name and an icon of the same room do not take each other away`() {
+    val book = book()
+    book.renameArea(kitchen, "Copa")
+    book.chooseAreaIcon(kitchen, RoomIcon.Dining)
+    book.renameArea(kitchen, null)
+    assertEquals(Names(), book().names.value)
+    assertEquals(RoomIcon.Dining, book().icons.value.areas.getValue(kitchen))
+    book.renameArea(kitchen, "Copa")
+    book.chooseAreaIcon(kitchen, null)
+    assertEquals("Copa", book().names.value.areas.getValue(kitchen))
+    assertEquals(AreaIcons(), book().icons.value)
+  }
+
+  @Test
+  fun `an icon is not read as a name, whatever its room is called`() {
+    book().chooseAreaIcon(AreaId("kitchen"), RoomIcon.Dining)
+    assertEquals(Names(), book().names.value)
+  }
+
+  @Test
+  fun `what the file has that is not an icon is ignored`() {
+    preferences.edit().putInt("area-icon:garage", 3).putString("area-icon:attic", "spaceship").putString("area-icon:", "bed").putString("device-icon:doorbell", "bed").commit()
+    assertEquals(AreaIcons(), book().icons.value)
   }
 
   @Test

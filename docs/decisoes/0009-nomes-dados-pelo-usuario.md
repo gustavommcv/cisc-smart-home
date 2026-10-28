@@ -28,6 +28,7 @@ Um nome que o usuário deu também aparece no **alarme de vazamento**, e ali ele
 ## Consequências
 
 - O arquivo `user-names` e as chaves `area:<id>` e `device:<id>` são o que o usuário já terá no celular: mudar o nome deles apagaria os nomes. Um teste os guarda.
+- **O cômodo também ganhou um ícone** à escolha (13, entre os do Material Symbols), guardado no mesmo arquivo e do mesmo jeito, por id (`area-icon:<id>`), com o nome do ícone como chave. A janela do cômodo mostra o nome e os ícones, e **"Voltar ao padrão"** tira os dois. Escolher o que o cômodo já tem por padrão, ou deixar o nome como estava, **não guarda nada**, para o cômodo continuar seguindo o padrão do app. Os dispositivos não têm ícone à escolha, porque o ícone diz o que o aparelho faz.
 - Os nomes são do aparelho: um segundo celular não os vê. Se a placa mudar o id de um cômodo, o nome dado a ele deixa de valer, porque o nome está ligado ao id.
 - O limite de 30 caracteres vale para o alarme também: o nome cabe numa linha de notificação.
 - A aparência da janela de renomear não tem teste automático (o app não usa a biblioteca de teste do Compose); a regra (o que é um nome, qual vale, onde fica guardado, o que o alarme diz) tem.
