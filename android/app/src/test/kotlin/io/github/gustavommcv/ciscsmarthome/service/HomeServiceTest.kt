@@ -1,12 +1,15 @@
 package io.github.gustavommcv.ciscsmarthome.service
 
 import android.app.Notification
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import io.github.gustavommcv.ciscsmarthome.R
@@ -22,7 +25,9 @@ import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,7 +71,7 @@ class HomeServiceTest {
   private fun Notification.body(): String? = extras.getString(Notification.EXTRA_TEXT)
 
   /** The notifications of the gas alert channel, as the user would see them. */
-  private fun leakNotifications(): List<Notification> = shadowNotifications.allNotifications.filter { it.channelId == "gas_alert" }
+  private fun leakNotifications(): List<Notification> = shadowNotifications.allNotifications.filter { it.channelId == "gas_alarm" }
 
   private fun leak(count: Long, area: String = "kitchen", boot: String = "aaaa1111") = GasAlert(BootId(boot), AreaId(area), count)
 
@@ -581,11 +586,41 @@ class HomeServiceTest {
   @Test
   fun `the alert channel is loud and sounds like an alarm`() {
     start()
-    val channel = notificationManager.getNotificationChannel("gas_alert")
+    val channel = notificationManager.getNotificationChannel("gas_alarm")
     assertEquals(NotificationManager.IMPORTANCE_HIGH, channel.importance)
     assertEquals(AudioAttributes.USAGE_ALARM, channel.audioAttributes.usage)
     assertTrue(channel.shouldVibrate())
     assertEquals(text(R.string.channel_gas_alert), channel.name.toString())
+  }
+
+  @Test
+  fun `the alert has a sound of its own, not the alarm ringtone of the phone, which is the sound of the alarm clock`() {
+    start()
+    val channel = notificationManager.getNotificationChannel("gas_alarm")
+    assertEquals(Uri.parse("android.resource://${app.packageName}/${R.raw.gas_alarm}"), channel.sound)
+    assertNotEquals(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), channel.sound)
+  }
+
+  @Test
+  fun `the alert vibrates in three strong pulses, like the three beeps of its sound`() {
+    start()
+    val pattern = notificationManager.getNotificationChannel("gas_alarm").vibrationPattern
+    assertEquals(listOf(0L, 400L, 150L, 400L, 150L, 400L, 600L), pattern.toList())
+  }
+
+  @Test
+  fun `the channel the alert used to have, with the alarm ringtone, is taken away, for a channel keeps its sound for good`() {
+    notificationManager.createNotificationChannel(NotificationChannel("gas_alert", "old", NotificationManager.IMPORTANCE_HIGH))
+    start()
+    assertNull(notificationManager.getNotificationChannel("gas_alert"))
+  }
+
+  @Test
+  fun `starting the service again keeps the channel as it is`() {
+    start()
+    running!!.destroy()
+    start()
+    assertNotNull(notificationManager.getNotificationChannel("gas_alarm"))
   }
 
   @Test
