@@ -7,8 +7,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
-import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.messageRes
@@ -16,7 +16,9 @@ import io.github.gustavommcv.ciscsmarthome.messageRes
 /** The channels and the notifications of the service: one that stays while it works, and the one that warns of a leak. */
 internal object Notices {
   const val MONITORING_CHANNEL = "monitoring"
-  const val GAS_ALERT_CHANNEL = "gas_alert"
+  // A channel keeps the sound it was made with, whatever the app asks later, so a new sound is a new channel; the first one used the alarm ringtone of the phone.
+  const val GAS_ALERT_CHANNEL = "gas_alarm"
+  private const val OLD_GAS_ALERT_CHANNEL = "gas_alert"
   const val CONNECTION_LOST_CHANNEL = "connection_lost"
   const val MONITORING_ID = 1
   const val CONNECTION_LOST_ID = 2
@@ -28,15 +30,20 @@ internal object Notices {
     val alarm = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
     val gasAlert =
       NotificationChannel(GAS_ALERT_CHANNEL, context.getString(R.string.channel_gas_alert), NotificationManager.IMPORTANCE_HIGH).apply {
-        // A leak is a warning to wake someone up, so it uses the alarm sound and the alarm volume.
-        setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), alarm)
-        enableVibration(true)
+        // A leak is a warning to wake someone up, so it uses the alarm volume, and a sound of its own: the alarm ringtone of the phone is the sound of the alarm
+        // clock, and a leak must not be taken for it. Three strong pulses, like the three beeps.
+        setSound("android.resource://${context.packageName}/${R.raw.gas_alarm}".toUri(), alarm)
+        // Giving a pattern turns the vibration on.
+        vibrationPattern = GAS_VIBRATION
         lockscreenVisibility = Notification.VISIBILITY_PUBLIC
       }
+    manager.deleteNotificationChannel(OLD_GAS_ALERT_CHANNEL)
     manager.createNotificationChannel(gasAlert)
     // Loud, so it is noticed, but not the alarm: a house nobody watches is serious, and it is not gas.
     manager.createNotificationChannel(NotificationChannel(CONNECTION_LOST_CHANNEL, context.getString(R.string.channel_connection_lost), NotificationManager.IMPORTANCE_HIGH))
   }
+
+  private val GAS_VIBRATION = longArrayOf(0, 400, 150, 400, 150, 400, 600)
 
   /** The notice that stays while the service works: it says whether the board is being heard. */
   fun monitoring(context: Context, connection: ConnectionState): Notification =
