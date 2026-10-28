@@ -92,7 +92,7 @@ class BoardClientTest {
     val home = runBlocking { client.getHome() }.value()
     val ids = { area: Int -> home.areas[area].devices.single().entities.map { it.id.value } }
     assertEquals(listOf("gas-level", "gas-state", "gas-alerts", "valve-open"), ids(0))
-    assertEquals(listOf("temperature", "humidity", "dehumidifier-power", "dehumidifier-mode"), ids(1))
+    assertEquals(listOf("temperature", "humidity", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at"), ids(1))
   }
 
   @Test
@@ -128,6 +128,51 @@ class BoardClientTest {
       Entity.Select(EntityId("dehumidifier-mode"), "Mode", "automatic", listOf("automatic", "manual"), commandable = true),
       home.findEntity(EntityId("dehumidifier-mode")),
     )
+    assertEquals(
+      Entity.Number(EntityId("dehumidifier-off-at"), "Turn off at", 83.0, "%", min = 40.0, max = 95.0, step = 1.0, default = 83.0, commandable = true),
+      home.findEntity(EntityId("dehumidifier-off-at")),
+    )
+  }
+
+  @Test
+  fun `a number comes with its range, its step and its default`() {
+    assertEquals(
+      Entity.Number(EntityId("dehumidifier-on-at"), "Turn on at", 85.0, "%", min = 40.0, max = 95.0, step = 1.0, default = 85.0, commandable = true),
+      getFirstEntity("""{"id":"dehumidifier-on-at","kind":"number","name":"Turn on at","value":85,"unit":"%","min":40,"max":95,"step":1,"default":85,"commandable":true}"""),
+    )
+  }
+
+  @Test
+  fun `a number that has no value is a number with no reading`() {
+    assertEquals(
+      Entity.Number(EntityId("n"), "N", null, null, min = 0.0, max = 10.0, step = 1.0, default = null, commandable = false),
+      getFirstEntity("""{"id":"n","kind":"number","name":"N","value":null,"min":0,"max":10,"step":1}"""),
+    )
+  }
+
+  @Test
+  fun `a number whose value is a text has no reading`() {
+    val entity = getFirstEntity("""{"id":"n","kind":"number","name":"N","value":"high","min":0,"max":10,"step":1}""") as Entity.Number
+    assertNull(entity.value)
+  }
+
+  @Test
+  fun `a number written as text is not a reading, even when the text looks like one`() {
+    val entity = getFirstEntity("""{"id":"n","kind":"number","name":"N","value":"85","min":0,"max":100,"step":1}""") as Entity.Number
+    assertNull(entity.value)
+  }
+
+  @Test
+  fun `a number the board did not give a range or a step for is left out, for the app cannot draw it`() {
+    assertNull(getFirstEntity("""{"id":"n","kind":"number","name":"N","value":5,"max":10,"step":1}"""))
+    assertNull(getFirstEntity("""{"id":"n","kind":"number","name":"N","value":5,"min":0,"step":1}"""))
+    assertNull(getFirstEntity("""{"id":"n","kind":"number","name":"N","value":5,"min":0,"max":10}"""))
+  }
+
+  @Test
+  fun `a number with a step of zero or less is left out, for it would never move`() {
+    assertNull(getFirstEntity("""{"id":"n","kind":"number","name":"N","value":5,"min":0,"max":10,"step":0}"""))
+    assertNull(getFirstEntity("""{"id":"n","kind":"number","name":"N","value":5,"min":0,"max":10,"step":-1}"""))
   }
 
   @Test
@@ -291,6 +336,27 @@ class BoardClientTest {
   }
 
   @Test
+  fun `a whole number is sent as a whole number`() {
+    reply(200, """{"id":"dehumidifier-on-at","kind":"number","name":"Turn on at","value":90,"unit":"%","min":40,"max":95,"step":1,"default":85,"commandable":true}""")
+    runBlocking { client.sendCommand(EntityId("dehumidifier-on-at"), CommandValue.Number(90.0)) }
+    assertEquals("""{"value":90}""", server.takeRequest(1, TimeUnit.SECONDS)!!.body!!.utf8())
+  }
+
+  @Test
+  fun `a number with decimals is sent with them`() {
+    reply(200, """{"id":"dehumidifier-on-at","kind":"number","name":"Turn on at","value":90.5,"unit":"%","min":40,"max":95,"step":0.5,"default":85,"commandable":true}""")
+    runBlocking { client.sendCommand(EntityId("dehumidifier-on-at"), CommandValue.Number(90.5)) }
+    assertEquals("""{"value":90.5}""", server.takeRequest(1, TimeUnit.SECONDS)!!.body!!.utf8())
+  }
+
+  @Test
+  fun `the answer to a number command is the number as it ended up`() {
+    reply(200, """{"id":"dehumidifier-off-at","kind":"number","name":"Turn off at","value":80,"unit":"%","min":40,"max":95,"step":1,"default":83,"commandable":true}""")
+    val entity = runBlocking { client.sendCommand(EntityId("dehumidifier-off-at"), CommandValue.Number(80.0)) }.value()
+    assertEquals(Entity.Number(EntityId("dehumidifier-off-at"), "Turn off at", 80.0, "%", min = 40.0, max = 95.0, step = 1.0, default = 83.0, commandable = true), entity)
+  }
+
+  @Test
   fun `the answer to a command is the entity as it ended up`() {
     reply(200, """{"id":"dehumidifier-power","kind":"switch","name":"Power","value":true,"commandable":true}""")
     val entity = runBlocking { client.sendCommand(EntityId("dehumidifier-power"), CommandValue.Flag(true)) }.value()
@@ -425,6 +491,10 @@ class BoardClientTest {
             {"id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%"},
             {"id": "dehumidifier-power", "kind": "switch", "name": "Power", "value": false, "commandable": true},
             {"id": "dehumidifier-mode", "kind": "select", "name": "Mode", "value": "automatic",
-             "options": ["automatic", "manual"], "commandable": true}]}]}]}"""
+             "options": ["automatic", "manual"], "commandable": true},
+            {"id": "dehumidifier-on-at", "kind": "number", "name": "Turn on at", "value": 85, "unit": "%",
+             "min": 40, "max": 95, "step": 1, "default": 85, "commandable": true},
+            {"id": "dehumidifier-off-at", "kind": "number", "name": "Turn off at", "value": 83, "unit": "%",
+             "min": 40, "max": 95, "step": 1, "default": 83, "commandable": true}]}]}]}"""
   }
 }

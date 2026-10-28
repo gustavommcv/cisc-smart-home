@@ -54,7 +54,7 @@ sealed interface Entity {
   val id: EntityId
   val name: String
 
-  /** Whether the app may send a command to it. Only switches and selects can say yes. */
+  /** Whether the app may send a command to it. Only switches, selects and numbers can say yes. */
   val commandable: Boolean
 
   data class Sensor(override val id: EntityId, override val name: String, val value: SensorValue, val unit: String? = null) : Entity {
@@ -72,6 +72,19 @@ sealed interface Entity {
     override val name: String,
     val selected: String?,
     val options: List<String>,
+    override val commandable: Boolean,
+  ) : Entity
+
+  /** A number the user can change, within [min] and [max] and by [step], that goes back to [default] when nobody changed it. A null value means "no valid reading". */
+  data class Number(
+    override val id: EntityId,
+    override val name: String,
+    val value: Double?,
+    val unit: String?,
+    val min: Double,
+    val max: Double,
+    val step: Double,
+    val default: Double?,
     override val commandable: Boolean,
   ) : Entity
 }

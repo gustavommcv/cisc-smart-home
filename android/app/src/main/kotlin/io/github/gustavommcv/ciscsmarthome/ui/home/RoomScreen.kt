@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -23,6 +25,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.gustavommcv.ciscsmarthome.R
@@ -47,6 +53,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
+import io.github.gustavommcv.ciscsmarthome.domain.HumidityLimits
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
@@ -68,6 +75,7 @@ internal fun RoomScreen(
   notice: CommandNotice?,
   onBack: () -> Unit,
   onCommand: (EntityId, CommandValue) -> Unit,
+  onCommandsInOrder: (List<Pair<EntityId, CommandValue>>) -> Unit,
   onNoticeShown: () -> Unit,
   onRenameRoom: (String?) -> Unit,
   onChooseIcon: (RoomIcon?) -> Unit,
@@ -98,7 +106,7 @@ internal fun RoomScreen(
         item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = Spacing.S)) }
         item { SectionTitle(R.string.section_devices) }
         if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
-        items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, names, connection, pending, onCommand, onRename = { renamingDevice = device.id.value }) }
+        items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, names, connection, pending, onCommand, onCommandsInOrder, onRename = { renamingDevice = device.id.value }) }
         item { LockedCard(R.string.device_add) }
         // Shown, so it is clear it is to come; a room cannot be taken out of the board's house from the phone.
         item { LockedCard(R.string.room_delete) }
@@ -168,9 +176,18 @@ private fun EditButton(@StringRes description: Int, name: String, onClick: () ->
 
 /** A device in a card: its icon, its name and how it is, and inside the card what it reads and what it lets the user command. */
 @Composable
-private fun DeviceCard(device: Device, names: Names, connection: ConnectionState, pending: Set<EntityId>, onCommand: (EntityId, CommandValue) -> Unit, onRename: () -> Unit) {
+private fun DeviceCard(
+  device: Device,
+  names: Names,
+  connection: ConnectionState,
+  pending: Set<EntityId>,
+  onCommand: (EntityId, CommandValue) -> Unit,
+  onCommandsInOrder: (List<Pair<EntityId, CommandValue>>) -> Unit,
+  onRename: () -> Unit,
+) {
   val emergency = device.isInEmergency()
   val subtle = if (emergency) LocalContentColor.current else MaterialTheme.colorScheme.onSurfaceVariant
+  val limits = HumidityLimits.of(device.entities)
   CiscCard(tone = if (emergency) Tone.Alert else null) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
       IconBadge(device.id.iconRes(), if (emergency) Tone.Alert else Tone.Primary, solid = emergency)
@@ -187,11 +204,61 @@ private fun DeviceCard(device: Device, names: Names, connection: ConnectionState
       when {
         entity is Entity.Switch && entity.commandable -> SwitchRow(entity, enabled) { onCommand(entity.id, entity.toggleCommand()) }
         entity is Entity.Select && entity.commandable -> SelectRow(entity, enabled) { option -> onCommand(entity.id, CommandValue.Choice(option)) }
+        entity is Entity.Number && entity.commandable -> {
+          // The steps the board will accept: for the two limits of the dehumidifier they depend on each other.
+          val (lower, raise) =
+            when (entity.id) {
+              EntityIds.DehumidifierOnAt -> limits?.lowerOn() to limits?.raiseOn()
+              EntityIds.DehumidifierOffAt -> limits?.lowerOff() to limits?.raiseOff()
+              else -> entity.value?.let { (it - entity.step).takeIf { to -> to >= entity.min } to (it + entity.step).takeIf { to -> to <= entity.max } } ?: (null to null)
+            }
+          NumberRow(entity, enabled, lower, raise) { value -> onCommand(entity.id, CommandValue.Number(value)) }
+        }
         else -> ReadRow(entity)
       }
     }
+    if (limits != null) {
+      val limitIds = setOf(EntityIds.DehumidifierOnAt, EntityIds.DehumidifierOffAt)
+      LimitsFooter(
+        showRestore = !limits.isDefault,
+        enabled = connection == ConnectionState.Connected && pending.none { it in limitIds },
+        onRestore = { onCommandsInOrder(limits.restore().map { (id, value) -> id to CommandValue.Number(value) }) },
+      )
+    }
   }
 }
+
+/** The line that explains the two limits, and, when they are not what the board has by default, the button that takes them back. */
+@Composable
+private fun LimitsFooter(showRestore: Boolean, enabled: Boolean, onRestore: () -> Unit) {
+  Column(modifier = Modifier.padding(bottom = Spacing.S), verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
+    Text(stringResource(R.string.hint_dehumidifier_limits), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (showRestore) TextButton(onClick = onRestore, enabled = enabled) { Text(stringResource(R.string.limits_restore)) }
+  }
+}
+
+/** A number the user can change: its name, and its value between a "less" and a "more" that move it by one step. A step that would not be accepted is not offered. */
+@Composable
+private fun NumberRow(entity: Entity.Number, enabled: Boolean, lowerTo: Double?, raiseTo: Double?, onChange: (Double) -> Unit) {
+  val label = entityLabel(entity)
+  Row(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.Xs), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
+      StepButton("−", stringResource(R.string.number_decrease, label), enabled = enabled && lowerTo != null) { lowerTo?.let(onChange) }
+      Text(entityValue(entity), style = MaterialTheme.typography.titleMedium, modifier = Modifier.widthIn(min = NumberWidth), textAlign = TextAlign.Center)
+      StepButton("+", stringResource(R.string.number_increase, label), enabled = enabled && raiseTo != null) { raiseTo?.let(onChange) }
+    }
+  }
+}
+
+@Composable
+private fun StepButton(sign: String, description: String, enabled: Boolean, onClick: () -> Unit) {
+  FilledTonalIconButton(onClick = onClick, enabled = enabled, modifier = Modifier.semantics { contentDescription = description }) {
+    Text(sign, style = MaterialTheme.typography.titleLarge)
+  }
+}
+
+private val NumberWidth = 64.dp
 
 /** The line under the name of a device: how it is, in its own words. */
 @Composable

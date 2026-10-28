@@ -17,7 +17,7 @@ fun HomeScreen(viewModel: HomeViewModel, modifier: Modifier = Modifier) {
   val state by viewModel.state.collectAsStateWithLifecycle()
   // From a room, the system's back goes to the list; from the list it closes the app, as it should.
   BackHandler(enabled = state.openRoom != null) { viewModel.back() }
-  HomeContent(state, onOpenRoom = viewModel::openRoom, onBack = { viewModel.back() }, onCommand = viewModel::send, onNoticeShown = viewModel::dismissNotice, onRenameRoom = viewModel::renameRoom, onChooseRoomIcon = viewModel::chooseRoomIcon, onRenameDevice = viewModel::renameDevice, modifier = modifier)
+  HomeContent(state, onOpenRoom = viewModel::openRoom, onBack = { viewModel.back() }, onCommand = viewModel::send, onCommandsInOrder = viewModel::sendInOrder, onNoticeShown = viewModel::dismissNotice, onRenameRoom = viewModel::renameRoom, onChooseRoomIcon = viewModel::chooseRoomIcon, onRenameDevice = viewModel::renameDevice, modifier = modifier)
 }
 
 @Composable
@@ -26,6 +26,7 @@ internal fun HomeContent(
   onOpenRoom: (AreaId) -> Unit,
   onBack: () -> Unit,
   onCommand: (EntityId, CommandValue) -> Unit,
+  onCommandsInOrder: (List<Pair<EntityId, CommandValue>>) -> Unit,
   onNoticeShown: () -> Unit,
   onRenameRoom: (AreaId, String?) -> Unit,
   onChooseRoomIcon: (AreaId, RoomIcon?) -> Unit,
@@ -36,7 +37,7 @@ internal fun HomeContent(
   val home = state.home
   when {
     room != null ->
-      RoomScreen(room, state.connection, state.names, state.icons, state.pending, state.notice, onBack, onCommand, onNoticeShown, { onRenameRoom(room.id, it) }, { onChooseRoomIcon(room.id, it) }, onRenameDevice, modifier)
+      RoomScreen(room, state.connection, state.names, state.icons, state.pending, state.notice, onBack, onCommand, onCommandsInOrder, onNoticeShown, { onRenameRoom(room.id, it) }, { onChooseRoomIcon(room.id, it) }, onRenameDevice, modifier)
     home == null -> NoHomeScreen(state.connection, modifier)
     else -> RoomsScreen(home, state.connection, state.names, state.icons, onOpenRoom, modifier)
   }

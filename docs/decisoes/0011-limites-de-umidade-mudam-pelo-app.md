@@ -14,6 +14,10 @@ O desumidificador do monitor do armário liga a partir de uma umidade e desliga 
 - **O padrão mudou de 85/84 para 85/83.** O DHT11 lê porcentagens inteiras, e com 1 ponto de diferença o relé seguiria cada oscilação entre duas leituras (85 liga, 84 desliga). Com 2 pontos, a leitura tem de cair de verdade.
 - **Mudar um limite não mexe no modo nem no relé:** o novo valor é o que a próxima leitura (em até 2 s) usa.
 
+## No app
+
+O monitor do armário mostra os dois limites, cada um com "−" e "+" de um passo, e só oferece o passo que a placa vai aceitar (a regra do intervalo está também no domínio do app, só para não oferecer o que seria recusado; **quem decide continua sendo a placa**). "Restaurar padrão" aparece quando os limites não são os de fábrica e manda o `default` de cada um **na ordem em que a placa os aceita**: se o limite de ligar de fábrica está longe o bastante do de desligar de agora, ele vai primeiro, senão vai o de desligar. Um app que não conhece um `number` simplesmente o ignora.
+
 ## Alternativas consideradas
 
 | Alternativa | Por que não |

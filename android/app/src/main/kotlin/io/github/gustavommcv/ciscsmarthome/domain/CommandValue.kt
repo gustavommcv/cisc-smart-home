@@ -7,4 +7,7 @@ sealed interface CommandValue {
 
   /** For a select: one of its options. */
   data class Choice(val option: String) : CommandValue
+
+  /** For a number: the value it is to have. */
+  data class Number(val value: Double) : CommandValue
 }

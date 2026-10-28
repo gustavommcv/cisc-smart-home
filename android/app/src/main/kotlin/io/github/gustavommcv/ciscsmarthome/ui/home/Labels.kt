@@ -23,6 +23,8 @@ internal fun EntityId.labelRes(): Int? =
     EntityIds.Humidity -> R.string.label_humidity
     EntityIds.DehumidifierPower -> R.string.label_dehumidifier_power
     EntityIds.DehumidifierMode -> R.string.label_dehumidifier_mode
+    EntityIds.DehumidifierOnAt -> R.string.label_dehumidifier_on_at
+    EntityIds.DehumidifierOffAt -> R.string.label_dehumidifier_off_at
     else -> null
   }
 

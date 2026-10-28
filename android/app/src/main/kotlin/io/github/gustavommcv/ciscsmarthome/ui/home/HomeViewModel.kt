@@ -81,17 +81,40 @@ class HomeViewModel(private val repository: HomeRepository, private val nameBook
     pending.update { it + entityId }
     viewModelScope.launch {
       try {
-        notice.value =
-          when (val result = repository.send(entityId, value)) {
-            is CommandResult.Applied -> null
-            CommandResult.Refused -> CommandNotice.Refused
-            is CommandResult.Failed -> CommandNotice.Failed(result.problem)
-          }
+        notice.value = repository.send(entityId, value).toNotice()
       } finally {
         pending.update { it - entityId }
       }
     }
   }
+
+  /**
+   * Asks the board for several changes, one after the other, each only when the one before was answered (the order matters to the board, as in going back to the default
+   * limits). Every entity involved waits for its answer, so none is commanded meanwhile; the first the board does not do stops the rest, and says why.
+   */
+  fun sendInOrder(commands: List<Pair<EntityId, CommandValue>>) {
+    val ids = commands.map { it.first }.toSet()
+    if (ids.isEmpty() || ids.any { it in pending.value }) return
+    pending.update { it + ids }
+    viewModelScope.launch {
+      try {
+        for ((entityId, value) in commands) {
+          val result = repository.send(entityId, value)
+          notice.value = result.toNotice()
+          if (result !is CommandResult.Applied) break
+        }
+      } finally {
+        pending.update { it - ids }
+      }
+    }
+  }
+
+  private fun CommandResult.toNotice(): CommandNotice? =
+    when (this) {
+      is CommandResult.Applied -> null
+      CommandResult.Refused -> CommandNotice.Refused
+      is CommandResult.Failed -> CommandNotice.Failed(problem)
+    }
 
   /** Names a room, or, with null, goes back to the default name. */
   fun renameRoom(areaId: AreaId, name: String?) {

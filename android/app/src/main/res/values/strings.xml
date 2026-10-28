@@ -129,6 +129,12 @@
     <string name="label_humidity">Umidade</string>
     <string name="label_dehumidifier_power">Desumidificador</string>
     <string name="label_dehumidifier_mode">Modo</string>
+    <string name="label_dehumidifier_on_at">Liga a partir de</string>
+    <string name="label_dehumidifier_off_at">Desliga até</string>
+    <string name="number_decrease">Diminuir: %1$s</string>
+    <string name="number_increase">Aumentar: %1$s</string>
+    <string name="limits_restore">Restaurar padrão</string>
+    <string name="hint_dehumidifier_limits">No modo automático, o desumidificador liga quando a umidade chega ao primeiro valor e desliga quando cai ao segundo. Os dois ficam guardados na placa.</string>
     <string name="gas_starting">Aquecendo o sensor</string>
     <string name="gas_normal">Normal</string>
     <string name="gas_emergency">VAZAMENTO</string>

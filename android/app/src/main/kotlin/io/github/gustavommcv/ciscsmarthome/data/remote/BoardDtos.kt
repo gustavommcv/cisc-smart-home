@@ -23,6 +23,11 @@ internal data class EntityDto(
   val value: JsonElement? = null,
   val unit: String? = null,
   val options: List<String>? = null,
+  // What a number says about itself.
+  val min: Double? = null,
+  val max: Double? = null,
+  val step: Double? = null,
+  val default: Double? = null,
   val commandable: Boolean = false,
 )
 

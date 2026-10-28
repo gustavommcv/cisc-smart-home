@@ -37,6 +37,7 @@ internal fun entityValue(entity: Entity): String {
     is Entity.BinarySensor -> entity.value?.let { stringResource(if (it) R.string.value_yes else R.string.value_no) } ?: unavailable
     is Entity.Switch -> entity.on?.let { stringResource(if (it) R.string.value_on else R.string.value_off) } ?: unavailable
     is Entity.Select -> entity.selected?.let { option -> optionRes(option)?.let { stringResource(it) } ?: option } ?: unavailable
+    is Entity.Number -> entity.value?.let { formatNumber(it) + (entity.unit?.let { unit -> " $unit" } ?: "") } ?: unavailable
   }
 }
 
