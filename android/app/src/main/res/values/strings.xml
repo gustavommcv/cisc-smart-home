@@ -10,6 +10,35 @@
     <string name="tab_settings">Ajustes</string>
     <string name="history_charts">Gráficos das leituras</string>
     <string name="settings_theme">Tema</string>
+
+    <string name="section_rooms">Cômodos</string>
+    <string name="section_devices">Dispositivos</string>
+    <plurals name="devices_count">
+        <item quantity="one">%d dispositivo</item>
+        <item quantity="other">%d dispositivos</item>
+        <item quantity="many">%d dispositivos</item>
+    </plurals>
+    <string name="room_no_devices">Nenhum dispositivo</string>
+    <string name="room_subtitle">%1$s · %2$s</string>
+    <string name="status_fine">tudo certo</string>
+    <string name="status_emergency">vazamento de gás</string>
+    <string name="status_warming">aquecendo o sensor</string>
+    <plurals name="status_unavailable">
+        <item quantity="one">%d sem leitura</item>
+        <item quantity="other">%d sem leitura</item>
+        <item quantity="many">%d sem leitura</item>
+    </plurals>
+    <string name="summary_fine_title">Tudo certo</string>
+    <string name="summary_fine_text">Nenhum vazamento detectado</string>
+    <string name="summary_emergency_title">Vazamento de gás</string>
+    <string name="summary_warming_title">Aquecendo o sensor de gás</string>
+    <string name="summary_warming_text">Ainda não dá para dizer se há vazamento</string>
+    <string name="summary_unavailable_title">Faltam leituras</string>
+    <plurals name="summary_unavailable_text">
+        <item quantity="one">%d leitura sem resposta da placa</item>
+        <item quantity="other">%d leituras sem resposta da placa</item>
+        <item quantity="many">%d leituras sem resposta da placa</item>
+    </plurals>
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Escuro</string>
     <string name="theme_system">Automático</string>
