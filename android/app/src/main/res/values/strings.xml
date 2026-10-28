@@ -144,6 +144,17 @@
     <string name="notice_stop_monitoring">Parar de monitorar</string>
     <string name="channel_monitoring">Monitoramento da casa</string>
     <string name="channel_gas_alert">Alerta de vazamento de gás</string>
+    <string name="channel_gas_notice">Vazamento de gás (só notificação)</string>
+    <string name="leak_mode_title">Aviso no celular</string>
+    <string name="leak_mode_alarm">Alarme</string>
+    <string name="leak_mode_notice">Notificação</string>
+    <string name="leak_mode_off">Desligado</string>
+    <string name="leak_mode_alarm_hint">Toca um alarme forte, que repete até você abrir o aviso.</string>
+    <string name="leak_mode_notice_hint">Só uma notificação comum, sem o alarme.</string>
+    <string name="leak_mode_off_hint">O celular não avisa. A placa continua apitando e fechando a válvula.</string>
+    <string name="leak_off_title">Desligar o aviso no celular?</string>
+    <string name="leak_off_text">O celular não vai avisar de um vazamento de gás neste cômodo. A placa continua apitando e fechando a válvula, mas quem estiver longe dela não vai saber.</string>
+    <string name="leak_off_confirm">Desligar</string>
     <string name="channel_connection_lost">Perda de conexão com a placa</string>
     <string name="alert_lost_title">A casa não está sendo vigiada</string>
     <string name="alert_gas_title">Vazamento de gás!</string>

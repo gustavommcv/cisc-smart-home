@@ -5,6 +5,7 @@ import android.content.Context
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.nameRes
 
@@ -19,7 +20,8 @@ internal class AndroidNotifier(private val context: Context, private val nameBoo
   override fun clearBoardLost() = manager.cancel(Notices.CONNECTION_LOST_ID)
 
   // One notification per leak: the boot and the count name it, so a new leak warns again instead of replacing the last.
-  override fun showGasLeak(alert: GasAlert, home: Home?) = manager.notify(alert.bootId.value, alert.count.toInt(), Notices.gasLeak(context, areaName(alert, home)))
+  override fun showGasLeak(alert: GasAlert, home: Home?, mode: LeakAlertMode) =
+    manager.notify(alert.bootId.value, alert.count.toInt(), Notices.gasLeak(context, areaName(alert, home), mode))
 
   override fun clearGasLeak(alert: GasAlert) = manager.cancel(alert.bootId.value, alert.count.toInt())
 

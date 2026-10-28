@@ -12,6 +12,9 @@ import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertModes
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
@@ -42,13 +45,14 @@ data class HomeState(
   val notice: CommandNotice? = null,
   val names: Names = Names(),
   val icons: AreaIcons = AreaIcons(),
+  val leakModes: LeakAlertModes = LeakAlertModes(),
 ) {
   /** The room that is open, or null on the list. */
   val openRoom: Area?
     get() = (screen as? Screen.Room)?.let { room -> home?.areas?.firstOrNull { it.id == room.areaId } }
 }
 
-class HomeViewModel(private val repository: HomeRepository, private val nameBook: NameBook) : ViewModel() {
+class HomeViewModel(private val repository: HomeRepository, private val nameBook: NameBook, private val leakAlerts: LeakAlertSettings) : ViewModel() {
   private val screen = MutableStateFlow<Screen>(Screen.Rooms)
   private val pending = MutableStateFlow<Set<EntityId>>(emptySet())
   private val notice = MutableStateFlow<CommandNotice?>(null)
@@ -56,13 +60,12 @@ class HomeViewModel(private val repository: HomeRepository, private val nameBook
   val state: StateFlow<HomeState> =
     combine(
         combine(repository.home, repository.connection, screen) { home, connection, screen -> Triple(home, connection, screen) },
-        combine(pending, notice, nameBook.names, nameBook.icons) { pending, notice, names, icons -> Pair(Triple(pending, notice, names), icons) },
-      ) { (home, connection, screen), (own, icons) ->
-        val (pending, notice, names) = own
-        HomeState(home, connection, visible(screen, home), pending, notice, names, icons)
+        combine(pending, notice, nameBook.names, nameBook.icons, leakAlerts.modes) { pending, notice, names, icons, modes -> Customs(pending, notice, names, icons, modes) },
+      ) { (home, connection, screen), customs ->
+        HomeState(home, connection, visible(screen, home), customs.pending, customs.notice, customs.names, customs.icons, customs.leakModes)
       }
       // Stops following the repository a few seconds after the screen is gone, so a rotation does not restart anything.
-      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value, names = nameBook.names.value, icons = nameBook.icons.value))
+      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HomeState(repository.home.value, repository.connection.value, names = nameBook.names.value, icons = nameBook.icons.value, leakModes = leakAlerts.modes.value))
 
   fun openRoom(areaId: AreaId) {
     screen.value = Screen.Room(areaId)
@@ -121,6 +124,11 @@ class HomeViewModel(private val repository: HomeRepository, private val nameBook
     nameBook.renameArea(areaId, name)
   }
 
+  /** Chooses how the phone warns of a leak in the room. */
+  fun chooseLeakAlertMode(areaId: AreaId, mode: LeakAlertMode) {
+    leakAlerts.choose(areaId, mode)
+  }
+
   fun chooseRoomIcon(areaId: AreaId, icon: RoomIcon?) {
     nameBook.chooseAreaIcon(areaId, icon)
   }
@@ -142,3 +150,6 @@ class HomeViewModel(private val repository: HomeRepository, private val nameBook
     const val STOP_TIMEOUT_MS = 5_000L
   }
 }
+
+/** What the user can change and the state in the middle of a command, kept together to be combined with the house. */
+private data class Customs(val pending: Set<EntityId>, val notice: CommandNotice?, val names: Names, val icons: AreaIcons, val leakModes: LeakAlertModes)

@@ -3,10 +3,12 @@ package io.github.gustavommcv.ciscsmarthome.service
 import android.app.Application
 import io.github.gustavommcv.ciscsmarthome.AppDependencies
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.domain.LinkSettings
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
+import io.github.gustavommcv.ciscsmarthome.testing.FakeLeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.testing.FakeLinkSettings
 import io.github.gustavommcv.ciscsmarthome.testing.FakeNameBook
 import io.github.gustavommcv.ciscsmarthome.testing.FakeThemeSettings
@@ -20,6 +22,10 @@ class TestApplication : Application(), AppDependencies {
   override val themeSettings: ThemeSettings = FakeThemeSettings()
 
   override val linkSettings: LinkSettings = FakeLinkSettings()
+
+  val leakModes = FakeLeakAlertSettings()
+
+  override val leakAlertSettings: LeakAlertSettings get() = leakModes
 
   val names = FakeNameBook()
 

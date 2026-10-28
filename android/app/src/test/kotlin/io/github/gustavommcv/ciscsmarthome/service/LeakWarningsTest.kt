@@ -4,6 +4,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
+import io.github.gustavommcv.ciscsmarthome.testing.FakeLeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -11,7 +13,8 @@ import org.junit.Test
 /** Warning of each leak, and taking the warning down when the board says the leak is over. */
 class LeakWarningsTest {
   private val notifier = FakeNotifier()
-  private val warnings = LeakWarnings(notifier)
+  private val settings = FakeLeakAlertSettings()
+  private val warnings = LeakWarnings(notifier, settings)
 
   private fun leak(count: Long, boot: BootId = A) = GasAlert(boot, KITCHEN, count)
 
@@ -22,6 +25,51 @@ class LeakWarningsTest {
     val home = house("emergency", alerts = 1)
     warnings.warn(leak(1), home)
     assertEquals(listOf(leak(1) to home), notifier.gasLeaks)
+  }
+
+  @Test
+  fun `a leak is warned of with the alarm unless the user chose another way`() {
+    warnings.warn(leak(1), null)
+    assertEquals(listOf(LeakAlertMode.Alarm), notifier.gasLeakModes)
+  }
+
+  @Test
+  fun `a leak is warned of in the way the user chose for that room`() {
+    settings.choose(KITCHEN, LeakAlertMode.Notice)
+    warnings.warn(leak(1), null)
+    assertEquals(listOf(LeakAlertMode.Notice), notifier.gasLeakModes)
+  }
+
+  @Test
+  fun `a room the user turned the warning off for is not warned of`() {
+    settings.choose(KITCHEN, LeakAlertMode.Off)
+    warnings.warn(leak(1), null)
+    assertEquals(emptyList<Pair<GasAlert, Home?>>(), notifier.gasLeaks)
+  }
+
+  @Test
+  fun `what is not warned of is not taken down either`() {
+    settings.choose(KITCHEN, LeakAlertMode.Off)
+    warnings.warn(leak(1), null)
+    warnings.silenceEnded(house("normal", alerts = 1))
+    assertEquals(emptyList<GasAlert>(), notifier.gasLeaksCleared)
+  }
+
+  @Test
+  fun `the way chosen for one room is not the way of another`() {
+    settings.choose(KITCHEN, LeakAlertMode.Off)
+    warnings.warn(GasAlert(A, AreaId("bedroom"), 1), null)
+    assertEquals(listOf(LeakAlertMode.Alarm), notifier.gasLeakModes)
+  }
+
+  @Test
+  fun `the way is the one of the moment of the leak, so a change made a minute before counts`() {
+    warnings.warn(leak(1), null)
+    settings.choose(KITCHEN, LeakAlertMode.Off)
+    warnings.warn(leak(2), null)
+    settings.choose(KITCHEN, LeakAlertMode.Notice)
+    warnings.warn(leak(3), null)
+    assertEquals(listOf(LeakAlertMode.Alarm, LeakAlertMode.Notice), notifier.gasLeakModes)
   }
 
   @Test

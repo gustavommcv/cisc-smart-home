@@ -3,6 +3,7 @@ package io.github.gustavommcv.ciscsmarthome.service
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.GasAlert
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
 
 /** What the service would have shown the user, written down in the order it happened. */
 internal class FakeNotifier : Notifier {
@@ -11,6 +12,7 @@ internal class FakeNotifier : Notifier {
   var boardLostCleared = 0
     private set
   val gasLeaks = mutableListOf<Pair<GasAlert, Home?>>()
+  val gasLeakModes = mutableListOf<LeakAlertMode>()
   val gasLeaksCleared = mutableListOf<GasAlert>()
 
   override fun showConnection(connection: ConnectionState) {
@@ -25,8 +27,9 @@ internal class FakeNotifier : Notifier {
     boardLostCleared++
   }
 
-  override fun showGasLeak(alert: GasAlert, home: Home?) {
+  override fun showGasLeak(alert: GasAlert, home: Home?, mode: LeakAlertMode) {
     gasLeaks += alert to home
+    gasLeakModes += mode
   }
 
   override fun clearGasLeak(alert: GasAlert) {

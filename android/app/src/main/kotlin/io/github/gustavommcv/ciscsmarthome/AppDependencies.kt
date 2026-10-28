@@ -1,6 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome
 
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.domain.LinkSettings
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
@@ -17,6 +18,9 @@ interface AppDependencies {
 
   /** How the user chose to reach the board, which the settings tab shows and changes, and the link follows. */
   val linkSettings: LinkSettings
+
+  /** How the user chose to be warned of a gas leak, room by room, which the room screen changes and the service reads when a leak comes. */
+  val leakAlertSettings: LeakAlertSettings
 
   /** The names the user gave to rooms and devices, which the screen shows and the warning of a leak says. */
   val nameBook: NameBook

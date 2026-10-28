@@ -2,9 +2,11 @@ package io.github.gustavommcv.ciscsmarthome
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesLeakAlertSettings
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesNameBook
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesThemeSettings
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
+import io.github.gustavommcv.ciscsmarthome.domain.LeakAlertMode
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeMode
 import io.github.gustavommcv.ciscsmarthome.service.HomeService
 import org.junit.Assert.assertEquals
@@ -28,6 +30,18 @@ class CiscApplicationTest {
   fun `starting the monitoring starts the service`() {
     app.startMonitoring()
     assertEquals(HomeService::class.java.name, shadowOf(app).nextStartedService.component?.className)
+  }
+
+  @Test
+  fun `the ways of warning are one object for the whole app, so a choice in a room reaches the service`() {
+    assertSame(app.leakAlertSettings, app.leakAlertSettings)
+  }
+
+  @Test
+  fun `the ways are kept in the file leak-alert-settings, so an update of the app keeps what the user chose`() {
+    app.leakAlertSettings.choose(AreaId("kitchen"), LeakAlertMode.Off)
+    val file = app.getSharedPreferences("leak-alert-settings", Context.MODE_PRIVATE)
+    assertEquals(LeakAlertMode.Off, PreferencesLeakAlertSettings(file).modes.value.of(AreaId("kitchen")))
   }
 
   @Test
