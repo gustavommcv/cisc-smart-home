@@ -31,7 +31,7 @@ import io.github.gustavommcv.ciscsmarthome.ui.theme.CiscTheme
 /** The only activity: everything the user sees is a Compose screen inside it. */
 class MainActivity : ComponentActivity() {
   private val homeViewModel: HomeViewModel by viewModels {
-    viewModelFactory { initializer { HomeViewModel((application as AppDependencies).homeRepository) } }
+    viewModelFactory { initializer { HomeViewModel((application as AppDependencies).homeRepository, (application as AppDependencies).nameBook) } }
   }
 
   private val historyViewModel: HistoryViewModel by viewModels {

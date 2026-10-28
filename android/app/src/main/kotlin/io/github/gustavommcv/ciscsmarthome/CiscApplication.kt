@@ -14,6 +14,8 @@ class CiscApplication : Application(), AppDependencies {
 
   override val themeSettings get() = container.themeSettings
 
+  override val nameBook get() = container.nameBook
+
   override fun startMonitoring() {
     ContextCompat.startForegroundService(this, Intent(this, HomeService::class.java))
   }

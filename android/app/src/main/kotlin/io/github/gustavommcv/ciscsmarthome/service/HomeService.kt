@@ -41,7 +41,7 @@ class HomeService : Service() {
       ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
     )
     if (syncing == null) {
-      val notifier = AndroidNotifier(this)
+      val notifier = AndroidNotifier(this, (application as AppDependencies).nameBook)
       val connectionWatch = ConnectionWatch(notifier)
       val leakWarnings = LeakWarnings(notifier)
       syncing =

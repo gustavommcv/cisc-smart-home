@@ -24,7 +24,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -37,12 +41,15 @@ import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.CommandValue
 import io.github.gustavommcv.ciscsmarthome.domain.ConnectionState
 import io.github.gustavommcv.ciscsmarthome.domain.Device
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityIds
+import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.LockedCard
+import io.github.gustavommcv.ciscsmarthome.ui.components.RenameDialog
 import io.github.gustavommcv.ciscsmarthome.ui.components.SectionTitle
 import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
 import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
@@ -52,13 +59,19 @@ import io.github.gustavommcv.ciscsmarthome.ui.theme.Spacing
 internal fun RoomScreen(
   area: Area,
   connection: ConnectionState,
+  names: Names,
   pending: Set<EntityId>,
   notice: CommandNotice?,
   onBack: () -> Unit,
   onCommand: (EntityId, CommandValue) -> Unit,
   onNoticeShown: () -> Unit,
+  onRenameRoom: (String?) -> Unit,
+  onRenameDevice: (DeviceId, String?) -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  // Which dialog is open: the room's, or the device with this id. Kept across a rotation, so a name half typed is not lost with the screen.
+  var renamingRoom by rememberSaveable { mutableStateOf(false) }
+  var renamingDevice by rememberSaveable { mutableStateOf<String?>(null) }
   val snackbar = remember { SnackbarHostState() }
   val message = notice?.let { stringResource(it.messageRes()) }
   // A command that was not done is said once, and gone: it is not a state of the room.
@@ -73,31 +86,60 @@ internal fun RoomScreen(
     Column(modifier = Modifier.padding(insets)) {
       Row(modifier = Modifier.padding(horizontal = Spacing.S, vertical = Spacing.S), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.back)) }
-        Text(roomName(area), style = MaterialTheme.typography.headlineSmall)
+        Text(roomName(area, names), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+        RenameButton(roomName(area, names), onClick = { renamingRoom = true })
       }
       LazyColumn(contentPadding = PaddingValues(start = Spacing.Xl, end = Spacing.Xl, bottom = Spacing.Xl), verticalArrangement = Arrangement.spacedBy(Spacing.M)) {
         item { ConnectionBanner(connection, showingLastReading = true, modifier = Modifier.padding(bottom = Spacing.S)) }
         item { SectionTitle(R.string.section_devices) }
         if (area.devices.isEmpty()) item { Text(stringResource(R.string.room_empty), style = MaterialTheme.typography.bodyMedium) }
-        items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, connection, pending, onCommand) }
+        items(area.devices, key = { it.id.value }) { device -> DeviceCard(device, names, connection, pending, onCommand, onRename = { renamingDevice = device.id.value }) }
         item { LockedCard(R.string.device_add) }
       }
     }
   }
+
+  if (renamingRoom) {
+    RenameDialog(
+      title = R.string.rename_room_title,
+      current = roomName(area, names),
+      hasCustomName = area.id in names.areas,
+      onSave = { onRenameRoom(it); renamingRoom = false },
+      onUseDefault = { onRenameRoom(null); renamingRoom = false },
+      onDismiss = { renamingRoom = false },
+    )
+  }
+  area.devices.firstOrNull { it.id.value == renamingDevice }?.let { device ->
+    RenameDialog(
+      title = R.string.rename_device_title,
+      current = deviceName(device, names),
+      hasCustomName = device.id in names.devices,
+      onSave = { onRenameDevice(device.id, it); renamingDevice = null },
+      onUseDefault = { onRenameDevice(device.id, null); renamingDevice = null },
+      onDismiss = { renamingDevice = null },
+    )
+  }
+}
+
+/** The pencil that renames what it sits beside; a screen reader says which name it renames. */
+@Composable
+private fun RenameButton(name: String, onClick: () -> Unit) {
+  IconButton(onClick = onClick) { Icon(painterResource(R.drawable.ic_edit), contentDescription = stringResource(R.string.rename_description, name)) }
 }
 
 /** A device in a card: its icon, its name and how it is, and inside the card what it reads and what it lets the user command. */
 @Composable
-private fun DeviceCard(device: Device, connection: ConnectionState, pending: Set<EntityId>, onCommand: (EntityId, CommandValue) -> Unit) {
+private fun DeviceCard(device: Device, names: Names, connection: ConnectionState, pending: Set<EntityId>, onCommand: (EntityId, CommandValue) -> Unit, onRename: () -> Unit) {
   val emergency = device.isInEmergency()
   val subtle = if (emergency) LocalContentColor.current else MaterialTheme.colorScheme.onSurfaceVariant
   CiscCard(tone = if (emergency) Tone.Alert else null) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.M)) {
       IconBadge(device.id.iconRes(), if (emergency) Tone.Alert else Tone.Primary, solid = emergency)
-      Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
-        Text(deviceName(device), style = MaterialTheme.typography.titleMedium)
+      Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
+        Text(deviceName(device, names), style = MaterialTheme.typography.titleMedium)
         headlineText(device)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = subtle) }
       }
+      RenameButton(deviceName(device, names), onClick = onRename)
     }
     device.rows().forEachIndexed { index, entity ->
       // The first line sets the rows apart from the header; the rows carry the room above and below themselves, so each sits halfway between two lines.

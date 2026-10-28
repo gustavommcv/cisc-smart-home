@@ -12,6 +12,7 @@ Cada decisão importante do projeto está registrada em um arquivo curto, com o 
 | [0006](0006-alertas-por-notificacao-local.md) | Alertas por notificação local, de um serviço em primeiro plano | aceita |
 | [0007](0007-abas-e-escolha-do-tema.md) | Navegação por abas e tema escolhido pelo usuário | aceita |
 | [0008](0008-grafico-desenhado-a-mao.md) | O gráfico do histórico é desenhado à mão, sem biblioteca | aceita |
+| [0009](0009-nomes-dados-pelo-usuario.md) | Os nomes de cômodos e dispositivos são do usuário, ficam no celular e o alarme os diz | aceita |
 
 Uma decisão aceita não se apaga: se mudar, ganha um novo arquivo que a substitui, e a antiga fica marcada como substituída.
 

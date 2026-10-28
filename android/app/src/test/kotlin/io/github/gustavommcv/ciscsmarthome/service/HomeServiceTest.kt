@@ -175,6 +175,44 @@ class HomeServiceTest {
   }
 
   @Test
+  fun `a room the user named is announced by the name the user gave it, before ours`() {
+    app.names.renameArea(AreaId("kitchen"), "Cozinha da vó")
+    start()
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(text(R.string.alert_gas_text, "Cozinha da vó"), leakNotifications().single().body())
+  }
+
+  @Test
+  fun `a room the user named, that the app has no words for, is announced by the user's name, not the board's`() {
+    repository.home.value = Home(BootId("aaaa1111"), 1_000, listOf(Area(AreaId("garage"), "Garage", emptyList())))
+    app.names.renameArea(AreaId("garage"), "Oficina")
+    start()
+    repository.announce(leak(count = 1, area = "garage"))
+    idle()
+    assertEquals(text(R.string.alert_gas_text, "Oficina"), leakNotifications().single().body())
+  }
+
+  @Test
+  fun `a room named after the service started is announced by the new name`() {
+    start()
+    app.names.renameArea(AreaId("kitchen"), "Copa")
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(text(R.string.alert_gas_text, "Copa"), leakNotifications().single().body())
+  }
+
+  @Test
+  fun `a room that goes back to the default name is announced by ours again`() {
+    app.names.renameArea(AreaId("kitchen"), "Copa")
+    app.names.renameArea(AreaId("kitchen"), null)
+    start()
+    repository.announce(leak(count = 1, area = "kitchen"))
+    idle()
+    assertEquals(text(R.string.alert_gas_text, text(R.string.area_kitchen)), leakNotifications().single().body())
+  }
+
+  @Test
   fun `an area nobody knows is announced by its id`() {
     start()
     repository.announce(leak(count = 1, area = "attic"))

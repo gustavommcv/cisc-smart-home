@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.room.Room
 import io.github.gustavommcv.ciscsmarthome.data.local.HistoryDatabase
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesAlertMemory
+import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesNameBook
 import io.github.gustavommcv.ciscsmarthome.data.local.PreferencesThemeSettings
 import io.github.gustavommcv.ciscsmarthome.data.local.RoomHistoryStore
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardClient
 import io.github.gustavommcv.ciscsmarthome.data.remote.BoardEventStream
 import io.github.gustavommcv.ciscsmarthome.data.repository.HomeRepositoryImpl
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.ThemeSettings
 import java.time.Clock
 import java.util.concurrent.TimeUnit
@@ -33,6 +35,8 @@ class AppContainer(context: Context) {
 
   val themeSettings: ThemeSettings = PreferencesThemeSettings(context.applicationContext.getSharedPreferences(THEME_FILE, Context.MODE_PRIVATE))
 
+  val nameBook: NameBook = PreferencesNameBook(context.applicationContext.getSharedPreferences(NAMES_FILE, Context.MODE_PRIVATE))
+
   val homeRepository: HomeRepository =
     HomeRepositoryImpl(
       BoardClient(boardUrl, http),
@@ -50,5 +54,6 @@ class AppContainer(context: Context) {
     private const val DATABASE_NAME = "history.db"
     private const val ALERT_MEMORY_FILE = "alert-memory"
     private const val THEME_FILE = "theme-settings"
+    private const val NAMES_FILE = "user-names"
   }
 }

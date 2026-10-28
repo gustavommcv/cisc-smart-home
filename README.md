@@ -10,7 +10,7 @@ Projeto acadêmico da disciplina de Sistemas Eletroeletrônicos (Atividade 03), 
 
 ![As telas do aplicativo Android: o início, um cômodo, o histórico e um vazamento de gás](docs/imagens/telas.png)
 
-> **Estado atual:** o firmware e o aplicativo estão funcionando juntos, com a maquete. O app mostra como a casa está, comanda o desumidificador, mostra o histórico num gráfico, avisa de um vazamento de gás por notificação e deixa escolher o tema (claro, escuro ou automático). Faltam a entrada automática do celular na rede da placa, os nomes editáveis pelo usuário e o material da apresentação. Veja o [plano](#fases).
+> **Estado atual:** o firmware e o aplicativo estão funcionando juntos, com a maquete. O app mostra como a casa está, comanda o desumidificador, mostra o histórico num gráfico, avisa de um vazamento de gás por notificação e deixa escolher o tema (claro, escuro ou automático). O usuário pode dar nome aos cômodos e aos dispositivos. Faltam a entrada automática do celular na rede da placa e o material da apresentação. Veja o [plano](#fases).
 
 ## O que ele faz
 
@@ -120,7 +120,7 @@ Cada fase é um pull request pequeno, com testes escritos antes do código.
 | 1 | README e decisões de arquitetura | concluída |
 | 2 | Firmware: domínio com testes (gás, umidade, modo automático e manual, histórico) | concluída |
 | 3 | Firmware: aplicação, hardware, API e rede. Em quatro partes: **3a** contrato da API e camada de aplicação, **3b** hardware, **3c** núcleo da API (JSON, comandos, histórico e eventos), **3d** rede própria e servidor | concluída |
-| 4 | App Android. Em quatro partes: **4a** esqueleto e CI, **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas (início, cômodo e controles, histórico com gráfico, ajustes e tema), **4d** conexão ao ESP32 e alertas | 4a, 4b e 4c concluídas; na 4d, o serviço em primeiro plano e o aviso de vazamento (4d1) estão prontos, e falta a ligação automática à rede da placa (4d2) |
+| 4 | App Android. Em quatro partes: **4a** esqueleto e CI, **4b** modelo e dados (comunicação com o ESP32 e histórico), **4c** telas (início, cômodo e controles, histórico com gráfico, ajustes e tema, nomes dados pelo usuário), **4d** conexão ao ESP32 e alertas | 4a, 4b e 4c concluídas; na 4d, o serviço em primeiro plano e o aviso de vazamento (4d1) estão prontos, e falta a ligação automática à rede da placa (4d2) |
 | 5 | Esquemático, tabela de custos e material da apresentação | |
 
 ## Licença
