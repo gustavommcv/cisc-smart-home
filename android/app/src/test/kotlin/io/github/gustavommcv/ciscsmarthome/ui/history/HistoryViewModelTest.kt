@@ -1,6 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.ui.history
 
 import io.github.gustavommcv.ciscsmarthome.domain.Area
+import io.github.gustavommcv.ciscsmarthome.domain.AreaIcons
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.Device
@@ -8,9 +9,12 @@ import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
+import io.github.gustavommcv.ciscsmarthome.testing.FakeNameBook
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -29,6 +33,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -44,10 +50,13 @@ private class VirtualClock(private val scheduler: TestCoroutineScheduler, privat
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModelTest {
   private val repository = FakeHomeRepository()
+  private val nameBook = FakeNameBook()
   private val start = Instant.parse("2026-10-27T12:00:00Z")
   private val gasLevel = EntityId("gas-level")
   private val temperature = EntityId("temperature")
   private val humidity = EntityId("humidity")
+  private val gasMonitor = DeviceId("gas-monitor")
+  private val closetMonitor = DeviceId("closet-monitor")
 
   @After
   fun tearDown() {
@@ -56,86 +65,230 @@ class HistoryViewModelTest {
 
   private fun sensor(id: EntityId, unit: String) = Entity.Sensor(id, "Name of ${id.value}", SensorValue.Number(1.0), unit)
 
-  private fun house(vararg sensors: Entity) = Home(BootId("aaaa1111"), 1_000, listOf(Area(AreaId("room"), "Room", listOf(Device(DeviceId("device"), "Device", sensors.toList())))))
+  private fun device(id: DeviceId, vararg sensors: Entity) = Device(id, "Device ${id.value}", sensors.toList())
 
-  private val maquette = house(sensor(gasLevel, "adc"), sensor(temperature, "°C"), sensor(humidity, "%"))
+  private val maquette =
+    Home(
+      BootId("aaaa1111"),
+      1_000,
+      listOf(
+        Area(AreaId("kitchen"), "Kitchen", listOf(device(gasMonitor, sensor(gasLevel, "adc")))),
+        Area(AreaId("bedroom"), "Bedroom", listOf(device(closetMonitor, sensor(temperature, "°C"), sensor(humidity, "%")))),
+      ),
+    )
 
   private fun reading(minutesBeforeStart: Long, value: Double?) = Reading(start.minus(Duration.ofMinutes(minutesBeforeStart)), value)
 
   /** A view model that someone is watching, on the time of the test. */
   private fun TestScope.watched(): Pair<HistoryViewModel, StateFlow<HistoryState>> {
     Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-    val viewModel = HistoryViewModel(repository, VirtualClock(testScheduler, start))
+    val viewModel = HistoryViewModel(repository, nameBook, VirtualClock(testScheduler, start))
     backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect {} }
     return viewModel to viewModel.state
   }
 
-  private fun ready(state: HistoryState) = state.chart as ChartState.Ready
+  private fun panels(state: HistoryState) = (state.charts as ChartsState.Ready).panels
+
+  // ---- the list ---------------------------------------------------------------------------
 
   @Test
-  fun `before anyone watches, the chart is loading`() = runTest {
-    Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
-    assertEquals(ChartState.Loading, HistoryViewModel(repository, VirtualClock(testScheduler, start)).state.value.chart)
-  }
-
-  @Test
-  fun `it opens on the first sensor and on six hours`() = runTest {
+  fun `it opens on the list of devices, no device open, and on six hours`() = runTest {
     repository.home.value = maquette
     val (_, state) = watched()
-    assertEquals(gasLevel, state.value.selected)
+    assertNull(state.value.open)
     assertEquals(ChartPeriod.SixHours, state.value.period)
+    assertEquals(listOf("gas-monitor", "closet-monitor"), state.value.devices.map { it.id.value })
   }
 
   @Test
-  fun `it offers the sensors of the house that have a unit`() = runTest {
-    repository.home.value = house(sensor(gasLevel, "adc"), sensor(EntityId("wind"), "km/h"))
-    val (_, state) = watched()
-    assertEquals(listOf("gas-level", "wind"), state.value.sensors.map { it.id.value })
-  }
-
-  @Test
-  fun `without a house, it offers the sensors of the maquette, so the history can be read away from the board`() = runTest {
-    val (_, state) = watched()
-    assertEquals(listOf("gas-level", "temperature", "humidity"), state.value.sensors.map { it.id.value })
-    assertEquals(gasLevel, state.value.selected)
-  }
-
-  @Test
-  fun `the chart is made of what the history has for the sensor`() = runTest {
+  fun `before anyone watches, the list is already there and no chart is asked for`() = runTest {
+    Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
     repository.home.value = maquette
-    repository.setReadings(gasLevel, listOf(reading(30, 40.0), reading(10, 60.0)))
-    val (_, state) = watched()
-    val chart = ready(state.value)
-    assertEquals(40.0, chart.chart.min, 0.0)
-    assertEquals(60.0, chart.chart.max, 0.0)
-    assertEquals("adc", chart.unit)
+    val state = HistoryViewModel(repository, nameBook, VirtualClock(testScheduler, start)).state.value
+    assertEquals(listOf("gas-monitor", "closet-monitor"), state.devices.map { it.id.value })
+    assertNull(state.open)
+    assertEquals(ChartsState.Loading, state.charts)
+    assertTrue(repository.seriesRequests.isEmpty())
   }
 
   @Test
-  fun `a reading that arrives moves the chart`() = runTest {
+  fun `before anyone watches, the names and the icons are already there, so a screen does not flash the default ones`() = runTest {
+    Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+    nameBook.renameDevice(closetMonitor, "Armário do quarto")
+    nameBook.chooseAreaIcon(AreaId("bedroom"), RoomIcon.Garage)
+    val state = HistoryViewModel(repository, nameBook, VirtualClock(testScheduler, start)).state.value
+    assertEquals("Armário do quarto", state.names.devices.getValue(closetMonitor))
+    assertEquals(RoomIcon.Garage, state.icons.of(AreaId("bedroom")))
+  }
+
+  @Test
+  fun `without a house, it lists the devices of the maquette, so the history can be read away from the board`() = runTest {
+    val (_, state) = watched()
+    assertEquals(listOf("gas-monitor", "closet-monitor"), state.value.devices.map { it.id.value })
+  }
+
+  @Test
+  fun `a list asks the history for nothing`() = runTest {
+    repository.home.value = maquette
+    watched()
+    advanceTimeBy(HistoryViewModel.REFRESH.toMillis() * 3)
+    assertTrue(repository.seriesRequests.isEmpty())
+  }
+
+  @Test
+  fun `the names and the icons the user gave come with the state`() = runTest {
+    nameBook.renameDevice(closetMonitor, "Armário do quarto")
+    nameBook.chooseAreaIcon(AreaId("bedroom"), RoomIcon.Garage)
+    repository.home.value = maquette
+    val (_, state) = watched()
+    assertEquals("Armário do quarto", state.value.names.devices.getValue(closetMonitor))
+    assertEquals(RoomIcon.Garage, state.value.icons.of(AreaId("bedroom")))
+    nameBook.renameDevice(closetMonitor, null)
+    assertEquals(Names(), state.value.names)
+  }
+
+  @Test
+  fun `the icons are the ones of the name book, and a room with none has the default one`() = runTest {
+    repository.home.value = maquette
+    val (_, state) = watched()
+    assertEquals(AreaIcons(), state.value.icons)
+  }
+
+  // ---- a device ---------------------------------------------------------------------------
+
+  @Test
+  fun `opening a device shows a chart for each of its charts`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    assertEquals(closetMonitor, state.value.open?.id)
+    assertEquals(listOf("compare:temperature+humidity", "single:temperature", "single:humidity"), panels(state.value).map { it.spec.id })
+  }
+
+  @Test
+  fun `a device is read once for each sensor it has, whatever the number of charts that draw it`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    viewModel.openDevice(closetMonitor)
+    assertEquals(setOf(temperature, humidity), repository.seriesRequests.map { it.first }.toSet())
+    assertEquals(2, repository.seriesRequests.size)
+  }
+
+  @Test
+  fun `the charts are made of what the history has for the sensors`() = runTest {
+    repository.home.value = maquette
+    repository.setReadings(temperature, listOf(reading(30, 20.0), reading(10, 22.0)))
+    repository.setReadings(humidity, listOf(reading(30, 60.0), reading(10, 70.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    val compare = panels(state.value).first()
+    assertEquals(listOf(20.0 to 22.0, 60.0 to 70.0), compare.lanes.map { it.chart!!.min to it.chart!!.max })
+    val humidityOnly = panels(state.value).last()
+    assertEquals(60.0, humidityOnly.lanes.single().chart!!.min, 0.0)
+  }
+
+  @Test
+  fun `a reading that arrives moves the charts`() = runTest {
     repository.home.value = maquette
     repository.setReadings(gasLevel, listOf(reading(30, 40.0)))
-    val (_, state) = watched()
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
     repository.setReadings(gasLevel, listOf(reading(30, 40.0), reading(1, 90.0)))
-    assertEquals(90.0, ready(state.value).chart.max, 0.0)
+    assertEquals(90.0, panels(state.value).single().lanes.single().chart!!.max, 0.0)
   }
 
   @Test
-  fun `choosing a sensor shows what the history has for it`() = runTest {
+  fun `a chart with nothing in the window is empty`() = runTest {
     repository.home.value = maquette
-    repository.setReadings(gasLevel, listOf(reading(10, 45.0)))
+    repository.setReadings(gasLevel, listOf(reading(60 * 10, 40.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    assertTrue(panels(state.value).single().isEmpty)
+  }
+
+  @Test
+  fun `a device that has the history of only one of its sensors draws that one`() = runTest {
+    repository.home.value = maquette
     repository.setReadings(temperature, listOf(reading(10, 21.0)))
     val (viewModel, state) = watched()
-    viewModel.selectSensor(temperature)
-    assertEquals(temperature, state.value.selected)
-    assertEquals(21.0, ready(state.value).chart.max, 0.0)
-    assertEquals("°C", ready(state.value).unit)
+    viewModel.openDevice(closetMonitor)
+    val (compare, onlyTemperature, onlyHumidity) = panels(state.value)
+    assertFalse(compare.isEmpty)
+    assertNull(compare.lanes[1].chart)
+    assertFalse(onlyTemperature.isEmpty)
+    assertTrue(onlyHumidity.isEmpty)
   }
+
+  @Test
+  fun `opening a device the house does not have opens nothing`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(DeviceId("elsewhere"))
+    assertNull(state.value.open)
+  }
+
+  @Test
+  fun `a device the house does not have is not opened later, when the house gets it`() = runTest {
+    repository.home.value = maquette.copy(areas = maquette.areas.take(1))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    repository.home.value = maquette
+    assertNull(state.value.open)
+  }
+
+  @Test
+  fun `back closes the device and says it did`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    assertTrue(viewModel.back())
+    assertNull(state.value.open)
+    assertEquals(ChartsState.Loading, state.value.charts)
+  }
+
+  @Test
+  fun `back from the list is not for the history to answer`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    assertFalse(viewModel.back())
+  }
+
+  @Test
+  fun `a device that left the house is no longer the one that is open`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    repository.home.value = maquette.copy(areas = maquette.areas.take(1))
+    assertNull(state.value.open)
+  }
+
+  @Test
+  fun `a device stays open when the house changes and still has it`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    repository.home.value = maquette.copy(uptimeMs = 2_000)
+    assertEquals(closetMonitor, state.value.open?.id)
+  }
+
+  @Test
+  fun `a house heard again with the same devices does not ask the history again`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    viewModel.openDevice(closetMonitor)
+    val asked = repository.seriesRequests.size
+    repository.home.value = maquette.copy(uptimeMs = 2_000)
+    repository.home.value = maquette.copy(uptimeMs = 3_000)
+    assertEquals(asked, repository.seriesRequests.size)
+  }
+
+  // ---- the period ---------------------------------------------------------------------------
 
   @Test
   fun `choosing a period asks the history for that window`() = runTest {
     repository.home.value = maquette
     val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
     viewModel.choosePeriod(ChartPeriod.TwentyFourHours)
     assertEquals(ChartPeriod.TwentyFourHours, state.value.period)
     assertEquals(gasLevel to start.minus(Duration.ofHours(24)), repository.seriesRequests.last())
@@ -146,59 +299,30 @@ class HistoryViewModelTest {
     repository.home.value = maquette
     repository.setReadings(gasLevel, listOf(reading(60 * 10, 10.0), reading(10, 50.0)))
     val (viewModel, state) = watched()
-    assertEquals(50.0, ready(state.value).chart.min, 0.0)
+    viewModel.openDevice(gasMonitor)
+    assertEquals(50.0, panels(state.value).single().lanes.single().chart!!.min, 0.0)
     viewModel.choosePeriod(ChartPeriod.TwentyFourHours)
-    assertEquals(10.0, ready(state.value).chart.min, 0.0)
+    assertEquals(10.0, panels(state.value).single().lanes.single().chart!!.min, 0.0)
   }
 
   @Test
-  fun `the window moves on with time, so the chart does not stay where it was drawn`() = runTest {
+  fun `the period stays when another device is opened`() = runTest {
     repository.home.value = maquette
-    watched()
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    viewModel.choosePeriod(ChartPeriod.OneHour)
+    viewModel.back()
+    viewModel.openDevice(closetMonitor)
+    assertEquals(ChartPeriod.OneHour, state.value.period)
+  }
+
+  @Test
+  fun `the window moves on with time, so the charts do not stay where they were drawn`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    viewModel.openDevice(gasMonitor)
     val first = repository.seriesRequests.last().second
     advanceTimeBy(HistoryViewModel.REFRESH.toMillis() + 1)
     assertTrue("the window did not move: $first", repository.seriesRequests.last().second.isAfter(first))
-  }
-
-  @Test
-  fun `a history with nothing in the window is an empty chart`() = runTest {
-    repository.home.value = maquette
-    repository.setReadings(gasLevel, listOf(reading(60 * 10, 40.0)))
-    val (_, state) = watched()
-    assertEquals(ChartState.Empty, state.value.chart)
-  }
-
-  @Test
-  fun `readings with no value are an empty chart`() = runTest {
-    repository.home.value = maquette
-    repository.setReadings(gasLevel, listOf(reading(10, null), reading(5, null)))
-    val (_, state) = watched()
-    assertEquals(ChartState.Empty, state.value.chart)
-  }
-
-  @Test
-  fun `a sensor that left the house is no longer the one that is chosen`() = runTest {
-    repository.home.value = maquette
-    val (viewModel, state) = watched()
-    viewModel.selectSensor(temperature)
-    repository.home.value = house(sensor(gasLevel, "adc"), sensor(humidity, "%"))
-    assertEquals(gasLevel, state.value.selected)
-  }
-
-  @Test
-  fun `a sensor stays chosen when the house changes and still has it`() = runTest {
-    repository.home.value = maquette
-    val (viewModel, state) = watched()
-    viewModel.selectSensor(humidity)
-    repository.home.value = house(sensor(gasLevel, "adc"), sensor(temperature, "°C"), sensor(humidity, "%"), sensor(EntityId("wind"), "km/h"))
-    assertEquals(humidity, state.value.selected)
-  }
-
-  @Test
-  fun `a house with no sensor to chart has no chart to show`() = runTest {
-    repository.home.value = house(Entity.BinarySensor(EntityId("valve-open"), "Valve", true))
-    val (_, state) = watched()
-    assertEquals(null, state.value.selected)
-    assertEquals(ChartState.Empty, state.value.chart)
   }
 }

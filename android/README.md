@@ -2,7 +2,7 @@
 
 O aplicativo do CISC Smart Home: mostra a casa, comanda o desumidificador e avisa do vazamento de gás, conversando com o ESP32 pelo contrato de [`docs/api.md`](../docs/api.md). É escrito em Kotlin, com a interface em Jetpack Compose.
 
-> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras num gráfico**, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). O usuário também pode **dar nome aos cômodos e aos dispositivos**, e o alarme diz o nome que ele deu. O app **entra sozinho no Wi-Fi da placa**, sem mudar o Wi-Fi do celular, por uma conexão que se pode trocar (a nuvem e a VPN ficam para depois; veja as [fases](../README.md#fases)).
+> **Estado atual:** o app fala com a placa e mostra **como a casa está** (um resumo, os cômodos e, em cada um, os dispositivos), **comanda o desumidificador**, mostra **o histórico das leituras de cada dispositivo em gráficos**, com um que põe a temperatura e a umidade uma sobre a outra, **avisa de um vazamento de gás por notificação**, também com a tela apagada, e deixa o usuário **escolher o tema** (claro, escuro ou automático). O usuário também pode **dar nome aos cômodos e aos dispositivos**, e o alarme diz o nome que ele deu. O app **entra sozinho no Wi-Fi da placa**, sem mudar o Wi-Fi do celular, por uma conexão que se pode trocar (a nuvem e a VPN ficam para depois; veja as [fases](../README.md#fases)).
 
 ## Como é o app
 
@@ -10,15 +10,15 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 
 | Início | Cômodo | Histórico |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador, a escolha entre automático e manual e os limites de umidade (liga a partir de 85 % e desliga até 83 %, cada um com menos e mais), um lápis para editar o cômodo e o dispositivo, e os cartões bloqueados Adicionar dispositivo e Excluir cômodo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico: um gráfico de linha do nível de gás nas últimas 6 horas, com a escolha do sensor e do período"> |
+| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador, a escolha entre automático e manual e os limites de umidade (liga a partir de 85 % e desliga até 83 %, cada um com menos e mais), um lápis para editar o cômodo e o dispositivo, e os cartões bloqueados Adicionar dispositivo e Excluir cômodo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico do monitor do armário: o gráfico que compara a temperatura e a umidade, uma faixa sobre a outra, cada uma na sua escala e na sua cor, e depois um gráfico só da temperatura; no alto, a escolha do período (1 h, 6 h ou 24 h)"> |
 
 | Vazamento de gás (tema escuro) | Ajustes | Editar o cômodo |
 |:---:|:---:|:---:|
 | <img src="../docs/imagens/inicio-vazamento.png" width="250" alt="A tela de início com um vazamento: o resumo e o cartão da cozinha ficam vermelhos"> | <img src="../docs/imagens/ajustes.png" width="250" alt="Os ajustes: a escolha do tema (claro, escuro ou automático) e a conexão, com o Wi-Fi da placa (Conectado à placa, e o botão Esquecer a senha), a rede do celular e os cartões Nuvem e VPN ou endereço próprio, em breve"> | <img src="../docs/imagens/editar-comodo.png" width="250" alt="A janela para editar o cômodo, com o nome atual selecionado, o contador de letras, os treze ícones para escolher (o do quarto de criança marcado) e os botões Cancelar e Salvar"> |
 
-| Cozinha: o monitor de gás | Desligar o aviso |
-|:---:|:---:|
-| <img src="../docs/imagens/comodo-cozinha.png" width="250" alt="A cozinha: o cartão do monitor de gás, com o nível de gás, os vazamentos, a válvula, o interruptor do buzzer da placa e o aviso no celular, com três escolhas: Alarme (marcada), Notificação e Desligado"> | <img src="../docs/imagens/desligar-aviso.png" width="250" alt="A pergunta ao desligar o aviso: O celular não vai avisar de um vazamento de gás neste cômodo. A placa continua apitando e fechando a válvula, com os botões Cancelar e Desligar"> |
+| Cozinha: o monitor de gás | Desligar o aviso | Histórico: os dispositivos |
+|:---:|:---:|:---:|
+| <img src="../docs/imagens/comodo-cozinha.png" width="250" alt="A cozinha: o cartão do monitor de gás, com o nível de gás, os vazamentos, a válvula, o interruptor do buzzer da placa e o aviso no celular, com três escolhas: Alarme (marcada), Notificação e Desligado"> | <img src="../docs/imagens/desligar-aviso.png" width="250" alt="A pergunta ao desligar o aviso: O celular não vai avisar de um vazamento de gás neste cômodo. A placa continua apitando e fechando a válvula, com os botões Cancelar e Desligar"> | <img src="../docs/imagens/historico-lista.png" width="250" alt="A aba Histórico: a lista dos dispositivos que têm leituras, o monitor de gás (Cozinha, 1 gráfico) e o monitor do armário (Quarto, 3 gráficos), cada um num cartão que se toca para abrir seus gráficos"> |
 
 As imagens mostram só o app: a barra de status do celular foi cortada. Para refazê-las, com o celular em modo de depuração e ligado à maquete, use `adb exec-out screencap -p > tela.png` e corte os primeiros 110 pixels de cima.
 
@@ -229,7 +229,7 @@ O visual tem um lugar só, e as telas pedem a ele em vez de soletrar cores e nú
 
 | Peça | Onde | O que faz |
 |---|---|---|
-| **Cores** | `ui/theme/Color.kt` | Duas paletas completas do Material 3, **clara e escura**. Os papéis que o app não usa (secundário, terciário) repetem a família do verde-azulado, para que nenhum roxo padrão do Material apareça |
+| **Cores** | `ui/theme/Color.kt` | Duas paletas completas do Material 3, **clara e escura**. O papel secundário, que o app não usa, repete a família do verde-azulado, para que nenhum roxo padrão do Material apareça; o terciário é um **âmbar**, a cor da segunda faixa do gráfico que compara dois sensores (o `ColorsTest` exige contraste de 3 para 1, ao menos, contra o cartão) |
 | **Espaços** | `ui/theme/Spacing.kt` | Cinco degraus (`Xs`, `S`, `M`, `L`, `Xl` = 4, 8, 12, 16 e 24 dp). A tela pede um degrau, não um número, então mudar o ritmo é mexer num lugar |
 | **Formas** | `ui/theme/Shape.kt` | Cantos suaves; o cartão (`large`) tem 18 dp. O que é redondo (selo de ícone, etiqueta) é círculo |
 | **Tom** | `ui/components/Tone.kt` | Quão alto algo fala: `Primary` (o que está bem), `Alert` (o que pede um olhar) e `Neutral` (o resto). Cada tom diz qual cor é o fundo, qual é o texto sobre ele, a cor forte e o que se desenha sobre a cor forte |
@@ -271,13 +271,13 @@ Um **lápis** no cabeçalho do cômodo e no cartão de cada dispositivo abre uma
 
 ### A barra de baixo e os ajustes
 
-O app tem **três abas**, numa barra de baixo (`BottomBar`): **Início** (a lista de cômodos e cada cômodo), **Histórico** e **Ajustes**. O `CiscApp` guarda qual está aberta e a troca; cada aba tem o seu `ViewModel` e o seu estado, então sair de uma e voltar a encontra como estava (um cômodo aberto continua aberto). O voltar do sistema leva do Histórico e dos Ajustes ao Início, e do Início fecha o cômodo e, depois, o app. A navegação é à mão, sem biblioteca; a [decisão 0007](../docs/decisoes/0007-abas-e-escolha-do-tema.md) diz por quê.
+O app tem **três abas**, numa barra de baixo (`BottomBar`): **Início** (a lista de cômodos e cada cômodo), **Histórico** e **Ajustes**. O `CiscApp` guarda qual está aberta e a troca; cada aba tem o seu `ViewModel` e o seu estado, então sair de uma e voltar a encontra como estava (um cômodo aberto continua aberto). O voltar do sistema leva dos Ajustes ao Início; no Histórico fecha o dispositivo aberto e, depois, leva ao Início; e do Início fecha o cômodo e, depois, o app. A navegação é à mão, sem biblioteca; a [decisão 0007](../docs/decisoes/0007-abas-e-escolha-do-tema.md) diz por quê.
 
 | Peça | Onde | O que faz |
 |---|---|---|
 | `Tab` | `ui/navigation/Tab.kt` | As três abas, a ordem, a palavra e o ícone de cada uma, e para onde o voltar vai (`back()`) |
 | `BottomBar` | `ui/navigation/BottomBar.kt` | A barra: a aba aberta fica numa pílula tingida e com a palavra forte; as outras, na cor discreta |
-| `HistoryScreen` e `HistoryViewModel` | `ui/history/` | O gráfico das leituras de um sensor, no período escolhido. Veja [O histórico e o gráfico](#o-histórico-e-o-gráfico) |
+| `HistoryScreen` e `HistoryViewModel` | `ui/history/` | A lista dos dispositivos e, no que se abre, os gráficos das leituras dos seus sensores, no período escolhido. Veja [O histórico e o gráfico](#o-histórico-e-o-gráfico) |
 | `SettingsScreen` e `SettingsViewModel` | `ui/settings/` | A escolha do tema, em três linhas inteiras que recebem o toque (Claro, Escuro, Automático, este com "Segue o tema do celular"), e a conexão com a placa (veja [A conexão com a placa](#a-conexão-com-a-placa)) |
 
 **O tema** é um `ThemeMode` (`Claro`, `Escuro`, `Automático`) do domínio, com a regra de quando o app fica escuro (`isDark`): o claro nunca, o escuro sempre, o automático como o celular estiver. **O padrão é o automático.** A escolha é guardada pelo `PreferencesThemeSettings`, num arquivo de preferências com uma palavra (o nome do valor), lida ao abrir e válida na mesma hora em que muda; uma palavra desconhecida vale como nenhuma escolha. A tela chega a ela por `AppDependencies.themeSettings`, o mesmo caminho do repositório. O arquivo se chama `theme-settings` e a chave `theme`: são o que o usuário já tem no celular, e um teste os guarda.
@@ -300,25 +300,27 @@ O `LauncherIconTest` guarda o que importa: que o ícone e o redondo são o mesmo
 
 ### O histórico e o gráfico
 
-A aba **Histórico** mostra uma linha com o que a placa leu de **um sensor**, num **período** (1 h, 6 h ou 24 h). O app guarda as leituras no celular (veja "O histórico local"), então o gráfico se lê também **sem a placa por perto**: sem a casa carregada, a aba oferece os três sensores da maquete (gás, temperatura e umidade).
+A aba **Histórico** começa pela **lista dos dispositivos** que têm leituras (o monitor de gás e o monitor do armário, cada um com o cômodo onde está e quantos gráficos tem). Ao tocar num deles abre-se **o histórico dele**: um gráfico para cada sensor que lê com uma unidade e, quando o dispositivo lê **temperatura e umidade**, um primeiro gráfico que as põe **uma sobre a outra, em duas faixas do mesmo cartão**, cada uma na sua escala (as duas juntas numa escala só achatariam uma delas) e na sua cor (a do app e um âmbar), com o nome ao lado de uma bolinha da cor para que ninguém dependa só da cor. O período (1 h, 6 h ou 24 h) vale para todos os gráficos do dispositivo e continua o mesmo ao abrir outro. O app guarda as leituras no celular (veja "O histórico local"), então o histórico se lê também **sem a placa por perto**: sem a casa carregada, a aba lista os dois dispositivos da maquete.
 
 | Peça | Onde | O que faz |
 |---|---|---|
+| `historyDevices` | `ui/history/HistoryDevices.kt` | Quais dispositivos a lista tem (os que têm um sensor que lê com uma unidade; uma contagem ou um estado, como os vazamentos, não se desenha) e quais gráficos cada um tem (`ChartSpec`: um sensor, ou os dois que se comparam, a temperatura sempre em cima) |
+| `panelOf` | `ui/history/ChartPanel.kt` | Monta o gráfico de um cartão: uma faixa por sensor (`Lane`), cada uma com `chartOf` e portanto com a escala do seu sensor, todas na mesma janela de tempo; uma faixa sem leitura fica vazia e a outra é desenhada |
 | `chartOf` | `ui/history/Chart.kt` | A regra do gráfico: põe cada leitura na janela, quebra a linha onde o app não ouviu a placa, reduz o que não cabe na tela sem perder os picos e diz o menor e o maior valor |
-| `chartSensors` | `ui/history/ChartSensors.kt` | Quais sensores o gráfico oferece: os que leem com uma unidade (uma contagem, como a dos vazamentos, não tem), os da maquete primeiro |
 | `ChartPeriod` | `ui/history/ChartPeriod.kt` | Os três períodos, e o de 6 horas como o que abre |
-| `HistoryViewModel` | `ui/history/HistoryViewModel.kt` | Junta a escolha do usuário com a série que o repositório devolve, e move a janela com o tempo |
-| `LineChart` | `ui/history/LineChart.kt` | Desenha: uma linha na cor do app sobre três linhas de grade; um trecho de uma leitura só é um ponto |
-| `HistoryScreen` | `ui/history/HistoryScreen.kt` | A tela: os sensores e os períodos em fichas, o gráfico num cartão, o menor e o maior valor embaixo, e uma frase que explica os vazios |
+| `HistoryViewModel` | `ui/history/HistoryViewModel.kt` | Guarda qual dispositivo está aberto e o período, lê da série do repositório **uma vez para cada sensor** do dispositivo (a temperatura entra no gráfico dela e no da comparação, e é lida uma vez) e move a janela com o tempo |
+| `LineChart` | `ui/history/LineChart.kt` | Desenha uma faixa: uma linha, na cor que receber, sobre três linhas de grade; um trecho de uma leitura só é um ponto |
+| `HistoryScreen` | `ui/history/HistoryScreen.kt` | A lista, e os cartões do dispositivo aberto: o título, uma faixa por sensor com o menor e o maior valor embaixo, e "há 6 h" e "agora" nas pontas. Uma frase embaixo explica os vazios |
 
-**Quatro regras decidem o que se vê**, todas em funções puras e testadas sem celular. A [decisão 0008](../docs/decisoes/0008-grafico-desenhado-a-mao.md) conta por que o gráfico é desenhado à mão, sem biblioteca:
+**Cinco regras decidem o que se vê**, todas em funções puras e testadas sem celular. A [decisão 0008](../docs/decisoes/0008-grafico-desenhado-a-mao.md) conta por que o gráfico é desenhado à mão, sem biblioteca:
 
 - **Os vazios ficam vazios.** Um silêncio de mais de **2 minutos** entre duas leituras quebra a linha, e o tempo sem leitura continua em branco: ligar os dois lados com uma reta diria que nada aconteceu ali. Uma leitura sem valor (`null`) também conta como tempo sem leitura.
 - **A redução guarda os picos.** A placa lê a cada 10 s: um dia são 8 640 pontos. Um trecho com mais leituras do que a tela mostra é cortado em 150 partes e, de cada parte, ficam **a menor e a maior** leitura, na ordem do tempo. A média nunca é usada, porque achataria o pico de um vazamento, que dura segundos.
 - **A janela anda com o tempo.** O `HistoryViewModel` a pede de novo a cada 30 segundos e a faz terminar na hora em que o gráfico é montado, então a leitura que acabou de chegar entra.
-- **Um sensor que sai da casa deixa de estar escolhido.** O primeiro toma o lugar dele.
+- **Cada faixa tem a escala do seu sensor e todas têm a mesma janela.** Uma leitura do mesmo minuto fica no mesmo lugar nas duas faixas, então se vê como uma acompanha a outra.
+- **Um dispositivo que sai da casa deixa de estar aberto.** A lista toma o lugar dele. E a casa que a placa repete a cada leitura não faz o app pedir o histórico de novo: só uma mudança nos dispositivos, nos nomes ou nos ícones faz.
 
-O gráfico não tem toque nem zoom num ponto: mostra o menor e o maior valor, a janela (de "há 6 h" a "agora") e uma descrição para o leitor de tela. Os testes (`ChartTest`, `ChartSensorsTest`, `HistoryViewModelTest` e outros) quebram se um pico sumir, se um vazio for ligado ou se a janela não andar; a aparência do desenho foi conferida no celular.
+O gráfico não tem toque nem zoom num ponto: mostra o menor e o maior valor, a janela (de "há 6 h" a "agora") e uma descrição para o leitor de tela. Os nomes na lista são os que o usuário deu (ou os nossos, em português), como no resto do app. Os testes (`ChartTest`, `ChartPanelTest`, `HistoryDevicesTest`, `HistoryViewModelTest` e outros) quebram se um pico sumir, se um vazio for ligado, se a janela não andar ou se as faixas não dividirem o mesmo tempo; a aparência do desenho foi conferida no celular.
 
 ### O serviço e o aviso de vazamento
 
