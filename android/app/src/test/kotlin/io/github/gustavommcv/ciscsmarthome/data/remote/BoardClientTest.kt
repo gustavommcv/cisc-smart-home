@@ -91,7 +91,7 @@ class BoardClientTest {
     reply(200, CONTRACT_HOME)
     val home = runBlocking { client.getHome() }.value()
     val ids = { area: Int -> home.areas[area].devices.single().entities.map { it.id.value } }
-    assertEquals(listOf("gas-level", "gas-state", "gas-alerts", "valve-open"), ids(0))
+    assertEquals(listOf("gas-level", "gas-state", "gas-alerts", "valve-open", "buzzer-enabled"), ids(0))
     assertEquals(listOf("temperature", "humidity", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at"), ids(1))
   }
 
@@ -131,6 +131,10 @@ class BoardClientTest {
     assertEquals(
       Entity.Number(EntityId("dehumidifier-off-at"), "Turn off at", 83.0, "%", min = 40.0, max = 95.0, step = 1.0, default = 83.0, commandable = true),
       home.findEntity(EntityId("dehumidifier-off-at")),
+    )
+    assertEquals(
+      Entity.Switch(EntityId("buzzer-enabled"), "Buzzer", on = true, commandable = true),
+      home.findEntity(EntityId("buzzer-enabled")),
     )
   }
 
@@ -484,7 +488,8 @@ class BoardClientTest {
             {"id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc"},
             {"id": "gas-state", "kind": "sensor", "name": "Gas state", "value": "normal"},
             {"id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0},
-            {"id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true}]}]},
+            {"id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true},
+            {"id": "buzzer-enabled", "kind": "switch", "name": "Buzzer", "value": true, "commandable": true}]}]},
         {"id": "bedroom", "name": "Bedroom", "devices": [
           {"id": "closet-monitor", "name": "Closet monitor", "entities": [
             {"id": "temperature", "kind": "sensor", "name": "Temperature", "value": 21.4, "unit": "°C"},

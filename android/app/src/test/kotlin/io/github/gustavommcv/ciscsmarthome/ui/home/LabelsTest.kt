@@ -10,7 +10,7 @@ import org.junit.Test
 
 class LabelsTest {
   private val known =
-    listOf("gas-level", "gas-state", "gas-alerts", "valve-open", "temperature", "humidity", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at")
+    listOf("gas-level", "gas-state", "gas-alerts", "valve-open", "temperature", "humidity", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at", "buzzer-enabled")
 
   @Test
   fun `every entity of the maquete has a label in Portuguese`() {

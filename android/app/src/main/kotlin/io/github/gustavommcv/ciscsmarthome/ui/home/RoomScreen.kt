@@ -221,6 +221,7 @@ private fun DeviceCard(
       HorizontalDivider(modifier = Modifier.padding(top = if (index == 0) Spacing.M else 0.dp), thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outlineVariant)
       val enabled = entity.controlEnabled(connection, pending)
       when {
+        entity is Entity.Switch && entity.commandable && entity.id == EntityIds.BuzzerEnabled -> BuzzerRow(entity, enabled) { onCommand(entity.id, entity.toggleCommand()) }
         entity is Entity.Switch && entity.commandable -> SwitchRow(entity, enabled) { onCommand(entity.id, entity.toggleCommand()) }
         entity is Entity.Select && entity.commandable -> SelectRow(entity, enabled) { option -> onCommand(entity.id, CommandValue.Choice(option)) }
         entity is Entity.Number && entity.commandable -> {
@@ -248,6 +249,34 @@ private fun DeviceCard(
         onRestore = { onCommandsInOrder(limits.restore().map { (id, value) -> id to CommandValue.Number(value) }) },
       )
     }
+  }
+}
+
+/** The switch of the buzzer of the board, with what it does and does not do under it. Silencing it asks first. */
+@Composable
+private fun BuzzerRow(entity: Entity.Switch, enabled: Boolean, onToggle: () -> Unit) {
+  var confirming by rememberSaveable { mutableStateOf(false) }
+  Column(verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
+    SwitchRow(entity, enabled) { if (entity.asksBeforeToggling()) confirming = true else onToggle() }
+    Text(stringResource(R.string.hint_buzzer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = Spacing.S))
+  }
+  if (confirming) {
+    AlertDialog(
+      onDismissRequest = { confirming = false },
+      title = { Text(stringResource(R.string.buzzer_off_title)) },
+      text = { Text(stringResource(R.string.buzzer_off_text)) },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirming = false
+            onToggle()
+          },
+        ) {
+          Text(stringResource(R.string.buzzer_off_confirm))
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.rename_cancel)) } },
+    )
   }
 }
 

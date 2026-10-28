@@ -9,6 +9,7 @@ object EntityIds {
   val GasState = EntityId("gas-state")
   val GasAlerts = EntityId("gas-alerts")
   val ValveOpen = EntityId("valve-open")
+  val BuzzerEnabled = EntityId("buzzer-enabled")
   val Temperature = EntityId("temperature")
   val Humidity = EntityId("humidity")
   val DehumidifierPower = EntityId("dehumidifier-power")
