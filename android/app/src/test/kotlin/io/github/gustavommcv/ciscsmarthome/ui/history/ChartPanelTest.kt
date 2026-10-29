@@ -8,6 +8,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
 import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateKind
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import java.time.Duration
 import java.time.Instant
 import org.junit.Assert.assertEquals
@@ -173,5 +175,54 @@ class ChartPanelTest {
     val lane = panelOf(ChartSpec.Single(co), mapOf(co.id to listOf(reading(30, 12.0))), since, until).lanes.single()
     assertEquals(listOf(ResolvedLimit(LimitKind.Alarm, 90.0)), lane.limits)
     assertEquals(ChartRange(0.0, 400.0), lane.chart!!.range)
+  }
+
+  // ---- the states drawn with a band -----------------------------------------------------------
+
+  private fun stateAt(minutesBefore: Long, state: String) = StateReading(until.minus(Duration.ofMinutes(minutesBefore)), state)
+
+  @Test
+  fun `the band of the gas has a leak where the board said the gas was in an emergency`() {
+    val states = mapOf(EntityId("gas-state") to listOf(stateAt(60, "normal"), stateAt(31, "emergency"), stateAt(30, "emergency"), stateAt(29, "normal")))
+    val lane = panelOf(ChartSpec.Single(gas), mapOf(gas.id to listOf(reading(30, 40.0))), since, until, states = states).lanes.single()
+    val band = lane.states.single()
+    assertEquals(StateKind.GasEmergency, band.kind)
+    assertEquals(1, band.spans.size)
+    assertTrue(band.spans.single().from < band.spans.single().to)
+  }
+
+  @Test
+  fun `the band of the humidity says when the dehumidifier ran`() {
+    val states = mapOf(EntityId("dehumidifier-power") to listOf(stateAt(60, "false"), stateAt(50, "true"), stateAt(40, "false")))
+    val lane = panelOf(ChartSpec.Single(humidity), mapOf(humidity.id to listOf(reading(30, 60.0))), since, until, states = states).lanes.single()
+    assertEquals(listOf(StateKind.DehumidifierRunning), lane.states.map { it.kind })
+  }
+
+  @Test
+  fun `a band with no state that counts has no states, so the screen says nothing about them`() {
+    val states = mapOf(EntityId("gas-state") to listOf(stateAt(60, "normal"), stateAt(50, "normal")))
+    val lane = panelOf(ChartSpec.Single(gas), mapOf(gas.id to listOf(reading(30, 40.0))), since, until, states = states).lanes.single()
+    assertEquals(emptyList<StateBand>(), lane.states)
+  }
+
+  @Test
+  fun `a sensor with no states to draw gets none, whatever the board said`() {
+    val states = mapOf(EntityId("gas-state") to listOf(stateAt(30, "emergency")), EntityId("dehumidifier-power") to listOf(stateAt(30, "true")))
+    val lane = panelOf(ChartSpec.Single(temperature), mapOf(temperature.id to listOf(reading(30, 20.0))), since, until, states = states).lanes.single()
+    assertEquals(emptyList<StateBand>(), lane.states)
+  }
+
+  @Test
+  fun `the states of another entity are not the ones of this sensor`() {
+    val states = mapOf(EntityId("dehumidifier-power") to listOf(stateAt(30, "true")))
+    val lane = panelOf(ChartSpec.Single(gas), mapOf(gas.id to listOf(reading(30, 40.0))), since, until, states = states).lanes.single()
+    assertEquals(emptyList<StateBand>(), lane.states)
+  }
+
+  @Test
+  fun `the states are cut by the same gap as the line`() {
+    val states = mapOf(EntityId("gas-state") to listOf(stateAt(60, "emergency"), stateAt(20, "emergency")))
+    val lane = panelOf(ChartSpec.Single(gas), mapOf(gas.id to listOf(reading(30, 40.0))), since, until, maxGap = Duration.ofMinutes(5), states = states).lanes.single()
+    assertEquals(2, lane.states.single().spans.size)
   }
 }

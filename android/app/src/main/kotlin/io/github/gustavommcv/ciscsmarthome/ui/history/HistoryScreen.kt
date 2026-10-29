@@ -38,6 +38,7 @@ import io.github.gustavommcv.ciscsmarthome.R
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
+import io.github.gustavommcv.ciscsmarthome.domain.StateKind
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
@@ -223,7 +224,12 @@ private fun LaneBody(lane: Lane, color: Color, window: ChartWindow, zone: ZoneId
         fillBelow = DeviceCatalog.chartOf(lane.sensor.id).fillBelow,
         unit = unit,
         limitWords = !showName,
+        marks = lane.states.filter { it.kind == StateKind.GasEmergency }.flatMap { it.spans },
       )
+      lane.states.forEach { band ->
+        if (band.kind == StateKind.DehumidifierRunning) StateStrip(band.spans, color, Modifier.padding(top = Spacing.Xs))
+        StateCaption(band.kind.caption(), if (band.kind == StateKind.GasEmergency) MaterialTheme.colorScheme.error else color)
+      }
       MinMaxRow(resources.minText(chart.min, unit), resources.maxText(chart.max, unit))
     }
     else ->

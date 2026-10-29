@@ -9,6 +9,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.awaitCancellation
@@ -60,6 +61,23 @@ class FakeHomeRepository : HomeRepository {
   /** What the history has kept of the hours of an entity; setting it again is what a new reading does. */
   fun setHours(entityId: EntityId, values: List<HourlyReading>) {
     hoursOf(entityId).value = values
+  }
+
+  private val states = mutableMapOf<EntityId, MutableStateFlow<List<StateReading>>>()
+
+  private fun statesOf(entityId: EntityId) = states.getOrPut(entityId) { MutableStateFlow(emptyList()) }
+
+  /** What the history has kept of the states of an entity; setting it again is what a new sample does. */
+  fun setStates(entityId: EntityId, values: List<StateReading>) {
+    statesOf(entityId).value = values
+  }
+
+  /** The states that were asked for, in order, with the instant each one started from. */
+  val statesRequests = mutableListOf<Pair<EntityId, Instant>>()
+
+  override fun states(entityId: EntityId, since: Instant): Flow<List<StateReading>> {
+    statesRequests += entityId to since
+    return statesOf(entityId).map { all -> all.filter { it.at >= since } }
   }
 
   /** The hours that were asked for, in order: the entity, and the window from where to where. */

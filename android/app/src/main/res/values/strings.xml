@@ -35,6 +35,8 @@
     </plurals>
     <string name="history_caption_hours">Cada hora mostra o menor e o maior valor que a placa leu. Os vazios são o tempo em que o app não ouviu a placa.</string>
     <string name="history_limit_alarm">limite de alarme</string>
+    <string name="history_state_gas_emergency">Vazamento de gás</string>
+    <string name="history_state_dehumidifier_running">Desumidificador ligado</string>
     <string name="history_limit_dehumidifier_on">liga em %1$s</string>
     <string name="history_limit_dehumidifier_off">desliga em %1$s</string>
     <string name="history_caption_days">Cada barra é o maior valor que a placa leu naquele dia. Os dias sem barra são o tempo em que o app não ouviu a placa. Em vermelho, os dias que passaram do limite de alarme.</string>

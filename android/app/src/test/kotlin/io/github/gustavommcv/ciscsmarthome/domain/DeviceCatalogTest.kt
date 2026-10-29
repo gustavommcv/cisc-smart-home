@@ -148,4 +148,21 @@ class DeviceCatalogTest {
     assertEquals(SensorKind.Gas, DeviceCatalog.kindOf(EntityIds.GasLevel, null))
     assertEquals(SensorKind.Generic, DeviceCatalog.kindOf(EntityId("wind"), null))
   }
+
+  @Test
+  fun `the gas is in an emergency when the board says so, and the humidity is drawn with when the dehumidifier ran`() {
+    assertEquals(listOf(StateSpec(EntityIds.GasState, "emergency", StateKind.GasEmergency)), DeviceCatalog.presetOf(SensorKind.Gas).states)
+    assertEquals(listOf(StateSpec(EntityIds.DehumidifierPower, "true", StateKind.DehumidifierRunning)), DeviceCatalog.presetOf(SensorKind.Humidity).states)
+  }
+
+  @Test
+  fun `a temperature and a sensor nobody knows have no states to draw`() {
+    assertEquals(emptyList<StateSpec>(), DeviceCatalog.presetOf(SensorKind.Temperature).states)
+    assertEquals(emptyList<StateSpec>(), DeviceCatalog.presetOf(SensorKind.Generic).states)
+  }
+
+  @Test
+  fun `a sensor the board calls a humidity is drawn with the states of one, whatever its id`() {
+    assertEquals(DeviceCatalog.presetOf(SensorKind.Humidity).states, DeviceCatalog.profileOf(EntityId("garage-humidity"), SensorKind.Humidity, emptyList()).states)
+  }
 }

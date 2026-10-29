@@ -21,6 +21,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.LeakAnnouncer
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -68,6 +69,8 @@ class HomeRepositoryImpl(
   override val alerts: Flow<GasAlert> = leaks.alerts
 
   override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> = store.series(entityId, since)
+
+  override fun states(entityId: EntityId, since: Instant): Flow<List<StateReading>> = store.states(entityId, since)
 
   override fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>> = store.hourly(entityId, since, until)
 

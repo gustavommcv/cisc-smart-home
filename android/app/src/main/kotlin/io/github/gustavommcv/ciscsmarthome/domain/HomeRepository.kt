@@ -17,6 +17,9 @@ interface HomeRepository {
   /** The readings of [entityId] taken at [since] or later, oldest first, sent again when they change. */
   fun series(entityId: EntityId, since: Instant): Flow<List<Reading>>
 
+  /** The states of [entityId] at [since] or later (the gas state, the dehumidifier on or off), oldest first, sent again when they change. */
+  fun states(entityId: EntityId, since: Instant): Flow<List<StateReading>>
+
   /** The least and the greatest reading of each hour of [entityId] that starts at [since] or later and before [until], oldest first, sent again when they change. */
   fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>>
 

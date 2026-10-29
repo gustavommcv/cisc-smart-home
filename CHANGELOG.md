@@ -6,6 +6,7 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ### Aplicativo (com o firmware novo)
 
+- O histórico mostra **quando o desumidificador ficou ligado** (uma faixa sob o gráfico de umidade) e **onde houve vazamento de gás** (faixas vermelhas sobre o gráfico do gás), nos gráficos de 1 h, 6 h e 24 h. Vem dos estados que a placa passa a dizer em cada amostra; o que o celular ouviu antes não tem estado, e o mês e o ano não os mostram. Precisa do firmware novo.
 - O app **acredita no que a placa diz** de cada sensor (a classe e as linhas de limite do gráfico): o limite do alarme do gás vem da placa, e um dispositivo novo com sensores de gás, temperatura ou umidade é desenhado como os outros desses tipos, sem o app saber dele. Com um firmware antigo, que não diz nada, tudo continua como antes.
 
 ### Firmware
