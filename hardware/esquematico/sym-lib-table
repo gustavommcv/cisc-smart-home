@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "maquete") (type "KiCad") (uri "${KIPRJMOD}/maquete.kicad_sym") (options "") (descr "Simbolos da maquete CISC"))
+)

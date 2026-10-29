@@ -1,0 +1,81 @@
+name: Release
+
+# A tag vX.Y.Z publishes a release with the APK. Run by hand (no tag), it only builds the APK and keeps it as an
+# artifact, to try the workflow without releasing anything. See docs/lancamento.md.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Test, build and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the version of the app and check it against the tag
+        id: version
+        run: |
+          version=$(sed -n 's/^ *versionName = "\(.*\)".*/\1/p' android/app/build.gradle.kts)
+          test -n "$version" || { echo "::error::versionName not found in android/app/build.gradle.kts"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+              echo "::error::the tag is $GITHUB_REF_NAME but versionName is $version: they must be v<versionName>"
+              exit 1
+            fi
+            awk -v tag="v$version" 'index($0, "## " tag " ") == 1 {found = 1; next} /^## / {found = 0} found' CHANGELOG.md > notes.md
+            if [ ! -s notes.md ]; then
+              echo "::error::CHANGELOG.md has no section '## v$version — date' for this tag"
+              exit 1
+            fi
+          fi
+
+      # Gradle itself runs on JDK 21 (see android/gradle/gradle-daemon-jvm.properties); the code is compiled with JDK 17,
+      # which the runner already has. The same steps as the Android workflow.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run the unit tests, the lint and build the debug APK
+        working-directory: android
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+
+      - name: Name the APK after the version and write its checksum
+        run: |
+          apk="cisc-casa-${{ steps.version.outputs.version }}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          cat "$apk.sha256"
+
+      - name: Keep the APK as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cisc-casa-${{ steps.version.outputs.version }}
+          path: |
+            cisc-casa-*.apk
+            cisc-casa-*.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          gh release create "$GITHUB_REF_NAME" "cisc-casa-$version.apk" "cisc-casa-$version.apk.sha256" \
+            --verify-tag --title "CISC Casa $version" --notes-file notes.md

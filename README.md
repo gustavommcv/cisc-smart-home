@@ -12,6 +12,11 @@ Projeto acadêmico da disciplina de Sistemas Eletroeletrônicos (Atividade 03), 
 
 > **Estado atual:** o firmware e o aplicativo estão funcionando juntos, com a maquete. O app mostra como a casa está, comanda o desumidificador, mostra o histórico de cada dispositivo em gráficos (um deles põe a temperatura e a umidade uma sobre a outra), avisa de um vazamento de gás por notificação e deixa escolher o tema (claro, escuro ou automático). O usuário pode dar nome aos cômodos e aos dispositivos. O app entra sozinho no Wi-Fi da placa, por uma conexão que se pode trocar (a nuvem e a VPN ficam para depois). Falta o material da apresentação. Veja o [plano](#fases).
 
+## Baixar e rodar
+
+- **Só o aplicativo:** baixe o APK da [última versão](https://github.com/gustavommcv/cisc-smart-home/releases/latest) e instale no celular Android (10 ou mais novo).
+- **A maquete completa:** monte pelo [esquemático](hardware/README.md), grave o firmware com o PlatformIO e conecte o aplicativo. O passo a passo, com os problemas mais comuns, está em **[Como baixar e rodar](docs/como-rodar.md)**.
+
 ## O que ele faz
 
 A maquete tem dois cômodos, cada um com um sistema real.
@@ -58,18 +63,20 @@ As decisões por trás disso estão em [`docs/decisoes`](docs/decisoes) e a vis�
 
 ## Estrutura do repositório
 
-Esta é a estrutura **planejada**. As pastas aparecem conforme as fases avançam.
+Esta é a estrutura do projeto.
 
 ```text
 cisc-smart-home/
 ├── firmware/    ESP32 em C++ (PlatformIO), com o domínio testável no computador (já existe)
 ├── android/     aplicativo em Kotlin + Jetpack Compose (já existe)
-├── hardware/    esquemático (KiCad) e lista de materiais
+├── hardware/    esquemático (KiCad) e lista de materiais (já existe)
 └── docs/        arquitetura, decisões (ADRs) e o contrato da API
 ```
 
 ## Documentação
 
+- [Como baixar e rodar](docs/como-rodar.md): do zero até a maquete funcionando e o aplicativo mostrando a casa
+- [Hardware](hardware/README.md): o esquemático (KiCad) e a lista de materiais
 - [Arquitetura](docs/arquitetura.md): camadas do firmware e do app, modelo de dados, conexão, alertas e testes
 - [API](docs/api.md): o contrato entre o app e o ESP32
 - [Roteiro de teste da maquete](docs/roteiro-maquete.md): o que conferir na placa depois de gravar o firmware
