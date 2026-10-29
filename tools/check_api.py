@@ -117,9 +117,18 @@ def main():
     found = entities(home)
     check("home has the version, the boot id and both rooms",
           home.get("apiVersion") == 1 and bool(boot_id) and [a["id"] for a in home["areas"]] == ["kitchen", "bedroom"])
-    check("home has the eight entities of the maquete", len(found) == 8, f"found {sorted(found)}")
-    check("only the dehumidifier is commandable",
-          {i for i, e in found.items() if e.get("commandable")} == {"dehumidifier-power", "dehumidifier-mode"})
+    check("home has the eleven entities of the maquete", len(found) == 11, f"found {sorted(found)}")
+    check("only the buzzer and the dehumidifier are commandable",
+          {i for i, e in found.items() if e.get("commandable")}
+          == {"buzzer-enabled", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at"})
+    check("the three sensors with a chart say their class",
+          {i: e.get("class") for i, e in found.items() if "class" in e}
+          == {"gas-level": "gas", "temperature": "temperature", "humidity": "humidity"})
+    check("the gas alarm is a value and the humidity limits point to entities that exist",
+          found["gas-level"].get("limits", [{}])[0].get("kind") == "alarm"
+          and isinstance(found["gas-level"]["limits"][0].get("value"), int)
+          and [(l.get("kind"), l.get("entity")) for l in found["humidity"].get("limits", [])]
+          == [("turns-on", "dehumidifier-on-at"), ("turns-off", "dehumidifier-off-at")])
     print(f"      (home answered in {elapsed * 1000:.0f} ms, boot id {boot_id})")
 
     status, payload, _ = call(host, "GET", "/api/v1/history")
