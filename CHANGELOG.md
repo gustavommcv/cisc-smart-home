@@ -24,7 +24,7 @@ A primeira versão: o firmware do ESP32 e o aplicativo Android funcionando junto
 
 ### Como instalar
 
-- **Aplicativo:** baixe `cisc-casa-0.1.0.apk` (em *Assets*, no fim desta página) e instale no celular. Passo a passo e verificação do arquivo: [Como baixar e rodar](https://github.com/gustavommcv/cisc-smart-home/blob/v0.1.0/docs/como-rodar.md#2-instalar-o-aplicativo).
+- **Aplicativo:** baixe `cisc-casa-0.1.0.apk` (em *Assets*, no fim desta página) e instale no celular. Passo a passo e verificação do arquivo: [Como baixar e rodar](https://github.com/gustavommcv/cisc-smart-home/blob/v0.1.0/docs/como-rodar.md#2-instalar-o-aplicativo-no-celular).
 - **Firmware:** não vem pronto, porque a senha do Wi-Fi da maquete é sua. Grave com o PlatformIO, como no [guia](https://github.com/gustavommcv/cisc-smart-home/blob/v0.1.0/docs/como-rodar.md#4-gravar-o-firmware-no-esp32).
 - **Montagem:** [esquemático e lista de materiais](https://github.com/gustavommcv/cisc-smart-home/blob/v0.1.0/hardware/README.md).
 
