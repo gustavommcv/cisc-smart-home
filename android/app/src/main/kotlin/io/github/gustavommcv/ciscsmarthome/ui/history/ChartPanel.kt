@@ -1,6 +1,5 @@
 package io.github.gustavommcv.ciscsmarthome.ui.history
 
-import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
@@ -45,7 +44,7 @@ internal fun panelOf(
   ChartPanel(
     spec,
     spec.sensors.map { sensor ->
-      val profile = DeviceCatalog.chartOf(sensor.id)
+      val profile = sensor.profile
       val limits =
         profile.limits.mapNotNull { limit ->
           when (limit) {

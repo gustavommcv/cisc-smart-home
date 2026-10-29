@@ -88,4 +88,64 @@ class DeviceCatalogTest {
   fun `the entities the limits are read from are listed, so the screen knows which values to follow`() {
     assertEquals(setOf(EntityIds.DehumidifierOnAt, EntityIds.DehumidifierOffAt), DeviceCatalog.limitEntities)
   }
+
+  // ---- what the board says, and what the catalog says when the board says nothing -------------------
+
+  @Test
+  fun `what the board says of a sensor is what it is charted by, though the catalog does not know the sensor`() {
+    val profile = DeviceCatalog.profileOf(EntityId("garage-temperature"), SensorKind.Temperature, emptyList())
+    assertEquals(ChartScale(minSpan = 10.0), profile.scale)
+  }
+
+  @Test
+  fun `the class the board gives wins over the catalog of the id`() {
+    val profile = DeviceCatalog.profileOf(EntityIds.GasLevel, SensorKind.Humidity, emptyList())
+    assertEquals(ChartScale(atLeast = 40.0..100.0), profile.scale)
+    assertFalse(profile.fillBelow)
+    assertEquals("the limits of the gas are not the ones of a humidity", emptyList<LimitSpec>(), profile.limits)
+  }
+
+  @Test
+  fun `the limits the board gives win over the ones of the catalog`() {
+    val declared = listOf<LimitSpec>(LimitSpec.Fixed(LimitKind.Alarm, 200.0))
+    assertEquals(declared, DeviceCatalog.profileOf(EntityIds.GasLevel, SensorKind.Gas, declared).limits)
+  }
+
+  @Test
+  fun `a board that says nothing is drawn by the catalog of the id, as before`() {
+    assertEquals(DeviceCatalog.chartOf(EntityIds.GasLevel), DeviceCatalog.profileOf(EntityIds.GasLevel, null, emptyList()))
+    assertEquals(DeviceCatalog.chartOf(EntityIds.Humidity), DeviceCatalog.profileOf(EntityIds.Humidity, null, emptyList()))
+  }
+
+  @Test
+  fun `a board that gives the class and no limits has the limits of the catalog for a sensor the catalog knows`() {
+    assertEquals(listOf<LimitSpec>(LimitSpec.Fixed(LimitKind.Alarm, 160.0)), DeviceCatalog.profileOf(EntityIds.GasLevel, SensorKind.Gas, emptyList()).limits)
+  }
+
+  @Test
+  fun `a sensor nobody knows that says nothing is a plain line`() {
+    assertEquals(ChartProfile(), DeviceCatalog.profileOf(EntityId("wind"), null, emptyList()))
+  }
+
+  @Test
+  fun `a sensor nobody knows that says it is gas is drawn as the gas, with the limits it gave`() {
+    val declared = listOf<LimitSpec>(LimitSpec.Fixed(LimitKind.Alarm, 90.0))
+    val profile = DeviceCatalog.profileOf(EntityId("co-level"), SensorKind.Gas, declared)
+    assertEquals(0.0..400.0, profile.scale.atLeast)
+    assertTrue(profile.fillBelow)
+    assertEquals(LongPeriods.DailyPeaks, profile.longPeriods)
+    assertEquals(declared, profile.limits)
+  }
+
+  @Test
+  fun `a generic class is a plain line`() {
+    assertEquals(ChartProfile(), DeviceCatalog.profileOf(EntityId("wind"), SensorKind.Generic, emptyList()))
+  }
+
+  @Test
+  fun `the kind of a sensor is the one the board gave, or the one of the catalog`() {
+    assertEquals(SensorKind.Temperature, DeviceCatalog.kindOf(EntityId("garage-temperature"), SensorKind.Temperature))
+    assertEquals(SensorKind.Gas, DeviceCatalog.kindOf(EntityIds.GasLevel, null))
+    assertEquals(SensorKind.Generic, DeviceCatalog.kindOf(EntityId("wind"), null))
+  }
 }

@@ -10,6 +10,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
+import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
@@ -181,17 +182,14 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
     if (window.period.isCalendar) repository.hourly(sensor, window.since, window.until).map { Source(it.points(), it) }
     else repository.series(sensor, window.since).map { Source(it, null) }
 
-  // The values the house has now of the entities the limits over the charts are read from: a limit the user changes is drawn at its new value.
-  private fun limitValuesOf(home: Home?): Map<EntityId, Double> =
-    home
-      ?.areas
-      ?.flatMap { it.devices }
-      ?.flatMap { it.entities }
-      ?.filterIsInstance<Entity.Number>()
-      ?.filter { it.id in DeviceCatalog.limitEntities }
-      ?.mapNotNull { number -> number.value?.let { number.id to it } }
-      ?.toMap()
-      .orEmpty()
+  // The values the house has now of the entities the limits over the charts are read from (the ones the board points to, and the ones the catalog knows):
+  // a limit the user changes is drawn at its new value.
+  private fun limitValuesOf(home: Home?): Map<EntityId, Double> {
+    val entities = home?.areas?.flatMap { it.devices }?.flatMap { it.entities }.orEmpty()
+    val pointedTo = entities.filterIsInstance<Entity.Sensor>().flatMap { it.limits }.filterIsInstance<LimitSpec.OfEntity>().map { it.entity }.toSet()
+    val followed = pointedTo + DeviceCatalog.limitEntities
+    return entities.filterIsInstance<Entity.Number>().filter { it.id in followed }.mapNotNull { number -> number.value?.let { number.id to it } }.toMap()
+  }
 
   private fun ticks(): Flow<Instant> = flow {
     while (true) {

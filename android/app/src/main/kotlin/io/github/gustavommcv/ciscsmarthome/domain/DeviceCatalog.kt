@@ -94,12 +94,7 @@ object DeviceCatalog {
               EntityIds.GasLevel,
               SensorKind.Gas,
               "adc",
-              ChartProfile(
-                scale = ChartScale(atLeast = 0.0..400.0),
-                limits = listOf(LimitSpec.Fixed(LimitKind.Alarm, GAS_ALARM_ADC)),
-                fillBelow = true,
-                longPeriods = LongPeriods.DailyPeaks,
-              ),
+              presetOf(SensorKind.Gas).copy(limits = listOf(LimitSpec.Fixed(LimitKind.Alarm, GAS_ALARM_ADC))),
             ),
           ),
       ),
@@ -110,13 +105,12 @@ object DeviceCatalog {
         headline = HeadlineSpec(EntityIds.DehumidifierPower, withLabel = true),
         sensors =
           listOf(
-            SensorProfile(EntityIds.Temperature, SensorKind.Temperature, "°C", ChartProfile(scale = ChartScale(minSpan = 10.0))),
+            SensorProfile(EntityIds.Temperature, SensorKind.Temperature, "°C", presetOf(SensorKind.Temperature)),
             SensorProfile(
               EntityIds.Humidity,
               SensorKind.Humidity,
               "%",
-              ChartProfile(
-                scale = ChartScale(atLeast = 40.0..100.0),
+              presetOf(SensorKind.Humidity).copy(
                 limits = listOf(LimitSpec.OfEntity(LimitKind.DehumidifierOn, EntityIds.DehumidifierOnAt), LimitSpec.OfEntity(LimitKind.DehumidifierOff, EntityIds.DehumidifierOffAt)),
               ),
             ),
@@ -128,10 +122,30 @@ object DeviceCatalog {
 
   private fun sensor(id: EntityId): SensorProfile? = devices.firstNotNullOfOrNull { device -> device.sensors.firstOrNull { it.id == id } }
 
-  /** How the chart of a sensor looks: the one of the catalog, or a plain line for a sensor nobody knows. */
+  /** How a chart of a [kind] of sensor looks, before its limits: this is what makes any device with a sensor of that kind be drawn alike. */
+  fun presetOf(kind: SensorKind): ChartProfile =
+    when (kind) {
+      SensorKind.Gas -> ChartProfile(scale = ChartScale(atLeast = 0.0..400.0), fillBelow = true, longPeriods = LongPeriods.DailyPeaks)
+      SensorKind.Humidity -> ChartProfile(scale = ChartScale(atLeast = 40.0..100.0))
+      SensorKind.Temperature -> ChartProfile(scale = ChartScale(minSpan = 10.0))
+      SensorKind.Generic -> ChartProfile()
+    }
+
+  /** How the chart of a sensor looks by what the app knows of its id: the one of the catalog, or a plain line for a sensor nobody knows. */
   fun chartOf(id: EntityId): ChartProfile = sensor(id)?.chart ?: ChartProfile()
 
-  fun kindOf(id: EntityId): SensorKind = sensor(id)?.kind ?: SensorKind.Generic
+  /** What a sensor is: the class the board gave it, else what the catalog knows of its id, else generic. */
+  fun kindOf(id: EntityId, declared: SensorKind? = null): SensorKind = declared ?: sensor(id)?.kind ?: SensorKind.Generic
+
+  /**
+   * How the chart of a sensor looks. The board says what the sensor is ([declaredKind]) and the lines to draw ([declaredLimits]) and is believed; what it
+   * does not say is what the catalog knows of the id (an older board says nothing, and is drawn as before), and a sensor nobody knows is a plain line.
+   */
+  fun profileOf(id: EntityId, declaredKind: SensorKind?, declaredLimits: List<LimitSpec>): ChartProfile {
+    val kind = kindOf(id, declaredKind)
+    val known = sensor(id)?.takeIf { it.kind == kind }
+    return presetOf(kind).copy(limits = declaredLimits.ifEmpty { known?.chart?.limits.orEmpty() })
+  }
 
   /** The entities whose values are the limits drawn over some chart: they are the numbers the screen has to follow. */
   val limitEntities: Set<EntityId> = devices.flatMap { it.sensors }.flatMap { it.chart.limits }.filterIsInstance<LimitSpec.OfEntity>().map { it.entity }.toSet()

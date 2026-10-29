@@ -4,6 +4,10 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ## Não lançado
 
+### Aplicativo (com o firmware novo)
+
+- O app **acredita no que a placa diz** de cada sensor (a classe e as linhas de limite do gráfico): o limite do alarme do gás vem da placa, e um dispositivo novo com sensores de gás, temperatura ou umidade é desenhado como os outros desses tipos, sem o app saber dele. Com um firmware antigo, que não diz nada, tudo continua como antes.
+
 ### Firmware
 
 - O JSON da casa passa a dizer, nos sensores, a **classe** (`gas`, `temperature`, `humidity`) e as **linhas de limite** do gráfico (o limite do alarme do gás, que sai da configuração da placa, e os limites do desumidificador, que são as entidades que o usuário muda). É um acréscimo: o app antigo ignora e a placa antiga continua funcionando com o app novo. **Quem quiser isso precisa gravar o firmware de novo.**
