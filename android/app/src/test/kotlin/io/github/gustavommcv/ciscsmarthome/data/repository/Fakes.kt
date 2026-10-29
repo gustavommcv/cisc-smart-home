@@ -20,6 +20,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,28 +32,40 @@ private fun unreachable(): BoardResult.Failure = BoardResult.Failure(BoardError.
 /** The REST side of the board, answering what each test says. */
 internal class FakeBoardApi : BoardApi {
   var home: () -> BoardResult<Home> = { unreachable() }
-  var history: (after: Long?, limit: Int?) -> BoardResult<HistoryPage> = { _, _ -> unreachable() }
+  // It may suspend, to be a board that answers slowly.
+  var history: suspend (after: Long?, limit: Int?) -> BoardResult<HistoryPage> = { _, _ -> unreachable() }
   var command: (EntityId, CommandValue) -> BoardResult<Entity> = { _, _ -> unreachable() }
 
   val historyRequests = mutableListOf<Pair<Long?, Int?>>()
+
+  /** How many answers of the history are being waited for now, and the most there ever were at once. */
+  var historyInFlight = 0
+    private set
+  var maxHistoryInFlight = 0
+    private set
+
+  /** A test that lets time pass asks for the history many times, and says how many it takes before the fake gives up. */
+  var maxHistoryRequests = 50
   val commands = mutableListOf<Pair<EntityId, CommandValue>>()
 
   override suspend fun getHome(): BoardResult<Home> = home()
 
   override suspend fun getHistory(after: Long?, limit: Int?): BoardResult<HistoryPage> {
     // A loop that never ends would spin the test forever, and fill the memory, instead of failing it.
-    check(historyRequests.size < MAX_HISTORY_REQUESTS) { "the history was asked for $MAX_HISTORY_REQUESTS times, and it is meant to end" }
+    check(historyRequests.size < maxHistoryRequests) { "the history was asked for $maxHistoryRequests times, and it is meant to end" }
     historyRequests += after to limit
-    return history(after, limit)
+    historyInFlight += 1
+    maxHistoryInFlight = maxOf(maxHistoryInFlight, historyInFlight)
+    try {
+      return history(after, limit)
+    } finally {
+      historyInFlight -= 1
+    }
   }
 
   override suspend fun sendCommand(entityId: EntityId, value: CommandValue): BoardResult<Entity> {
     commands += entityId to value
     return command(entityId, value)
-  }
-
-  private companion object {
-    const val MAX_HISTORY_REQUESTS = 50
   }
 }
 
@@ -76,8 +89,16 @@ internal class FakeHistoryStore : HistoryStore {
   /** The moments the readings before were let go of, in order. */
   val forgotten = mutableListOf<Instant>()
 
+  /** What the next save, or the next letting go, fails with (once): a disk that is full, a database that is busy. */
+  var failNextSave: Throwable? = null
+  var failNextForget: Throwable? = null
+
+  /** When set, the letting go waits for it: a database that takes its time. */
+  var forgetGate: CompletableDeferred<Unit>? = null
+
   override suspend fun save(samples: List<StoredSample>) {
     calls += "save"
+    failNextSave?.let { failure -> failNextSave = null; throw failure }
     samples.forEach { kept.putIfAbsent(it.bootId to it.uptimeMs, it) }
     changes.value += 1
   }
@@ -87,6 +108,8 @@ internal class FakeHistoryStore : HistoryStore {
 
   override suspend fun forgetReadingsBefore(before: Instant) {
     calls += "forget"
+    failNextForget?.let { failure -> failNextForget = null; throw failure }
+    forgetGate?.await()
     forgotten += before
   }
 
