@@ -2,26 +2,27 @@
 
 Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://github.com/gustavommcv/cisc-smart-home/releases) com o APK do aplicativo. O texto de cada versão abaixo é o que vai para essa página. Como lançar uma versão: [docs/lancamento.md](docs/lancamento.md).
 
-## Não lançado
+## v0.2.0 — 2026-10-29
 
-### Ferramentas
+Os gráficos do histórico passam a ser feitos para cada tipo de sensor e a mostrar quando o desumidificador ficou ligado e onde houve vazamento. Para isso a placa passa a dizer mais: **grave o firmware de novo** para usar tudo.
 
-- `tools/seed_history.py` preenche o histórico do celular com até um ano de dados inventados (temperatura, umidade e gás), para mostrar os gráficos de mês e de ano numa apresentação, e tira tudo de novo com `--remove-before`. Não toca nas horas reais. Veja o [roteiro da maquete](docs/roteiro-maquete.md).
+### Novo
 
-### Aplicativo (com o firmware novo)
-
-- O histórico mostra **quando o desumidificador ficou ligado** (uma faixa sob o gráfico de umidade) e **onde houve vazamento de gás** (faixas vermelhas sobre o gráfico do gás), nos gráficos de 1 h, 6 h e 24 h. Vem dos estados que a placa passa a dizer em cada amostra; o que o celular ouviu antes não tem estado, e o mês e o ano não os mostram. Precisa do firmware novo.
-- O app **acredita no que a placa diz** de cada sensor (a classe e as linhas de limite do gráfico): o limite do alarme do gás vem da placa, e um dispositivo novo com sensores de gás, temperatura ou umidade é desenhado como os outros desses tipos, sem o app saber dele. Com um firmware antigo, que não diz nada, tudo continua como antes.
-
-### Firmware
-
-- O **padrão do desumidificador** passa a ser o ideal para um armário: **liga a 65 % e desliga a 55 %** (era 85 % e 83 %). Uma placa que já guardou os limites continua com os dela; no app, o botão de voltar ao padrão a leva a 65/55, e dá para mudar a qualquer hora pela configuração do dispositivo.
-- Cada amostra do **histórico** da placa passa a dizer também o **estado do gás** e se o **desumidificador estava ligado** (`states` em `GET /api/v1/history`). É a base para o app desenhar quando o desumidificador ficou ligado e onde houve vazamento; o app de hoje ignora o campo. A placa precisa ser regravada.
-- O JSON da casa passa a dizer, nos sensores, a **classe** (`gas`, `temperature`, `humidity`) e as **linhas de limite** do gráfico (o limite do alarme do gás, que sai da configuração da placa, e os limites do desumidificador, que são as entidades que o usuário muda). É um acréscimo: o app antigo ignora e a placa antiga continua funcionando com o app novo. **Quem quiser isso precisa gravar o firmware de novo.**
+- **Cada gráfico do histórico se desenha pelo que o sensor é.** O gás tem a escala fixa de 0 a 400, a linha do limite de alarme e, em vermelho, o que passa dele; no mês e no ano, uma barra por dia com o maior valor. A umidade mostra a faixa em que o desumidificador liga e desliga (os limites que você escolheu). A temperatura nunca fica numa escala menor que 10 °C. Os sensores de dispositivos novos continuam funcionando, como uma linha.
+- **O histórico mostra quando o desumidificador ficou ligado** (uma faixa sob o gráfico de umidade) e **onde houve vazamento de gás** (faixas vermelhas sobre o gráfico do gás), nos gráficos de 1 h, 6 h e 24 h. Vem dos estados que a placa passa a dizer em cada amostra do histórico (`states` em `GET /api/v1/history`); o que o celular ouviu antes não tem estado, e o mês e o ano não os mostram.
+- **A placa diz a classe e as linhas de limite de cada sensor** (`gas`, `temperature`, `humidity`; o alarme do gás, que sai da configuração da placa, e os limites do desumidificador), e o app **acredita no que ela diz**: um dispositivo novo com sensores de gás, temperatura ou umidade é desenhado como os outros desses tipos, sem o app saber dele. É um acréscimo: o app novo funciona com a placa antiga, e o app antigo ignora o que não conhece.
+- **`tools/seed_history.py`** preenche o histórico do celular com até um ano de dados inventados, para mostrar os gráficos de mês e de ano numa apresentação, e tira tudo de novo com `--remove-before`. Não toca nas horas reais. Veja o [roteiro da maquete](docs/roteiro-maquete.md).
 
 ### Mudou
 
-- **Cada gráfico do histórico se desenha pelo que o sensor é.** O gás tem a escala fixa de 0 a 400, a linha do limite de alarme e, em vermelho, o que passa dele; no mês e no ano, uma barra por dia com o maior valor. A umidade mostra a faixa em que o desumidificador liga e desliga (os limites que você escolheu). A temperatura nunca fica numa escala menor que 10 °C. Os sensores de dispositivos novos continuam funcionando, como uma linha.
+- **O padrão do desumidificador** passa a ser o ideal para um armário: **liga a 65 % e desliga a 55 %** (era 85 % e 83 %). Uma placa que já guardou os limites continua com os dela; no app, o botão de voltar ao padrão a leva a 65/55, e dá para mudar a qualquer hora pela configuração do dispositivo.
+- O verificador `tools/check_api.py` segue a placa como ela é hoje (11 entidades, as comandáveis) e confere a classe, os limites e os estados.
+
+### Como instalar ou atualizar
+
+- **Aplicativo:** baixe `cisc-casa-0.2.0.apk` (em *Assets*, no fim desta página). Passo a passo e verificação do arquivo: [Como baixar e rodar](https://github.com/gustavommcv/cisc-smart-home/blob/v0.2.0/docs/como-rodar.md#2-instalar-o-aplicativo-no-celular).
+- **Atualizando de outra versão:** o APK de cada versão é assinado com uma chave de depuração criada na hora da compilação, então o Android pode recusar instalar por cima de outro APK (erro de assinatura). Se acontecer, **desinstale o app antes**: o histórico guardado no celular é apagado junto, porque ele só existe no celular. Quando o Android aceita instalar por cima, o banco do histórico se atualiza sozinho para a versão nova e **nada se perde**.
+- **Firmware:** continua não vindo pronto, porque a senha do Wi-Fi da maquete é sua. Desta vez ele **mudou**: **grave a placa de novo** a partir do código, como no [guia](https://github.com/gustavommcv/cisc-smart-home/blob/v0.2.0/docs/como-rodar.md), para a placa dizer os estados do histórico, a classe dos sensores e usar o novo padrão do desumidificador. Sem regravar, o app novo funciona, só sem as faixas de estado.
 
 ## v0.1.1 — 2026-10-28
 
