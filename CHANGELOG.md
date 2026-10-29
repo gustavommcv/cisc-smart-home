@@ -4,6 +4,10 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ## Não lançado
 
+### Ferramentas
+
+- `tools/seed_history.py` preenche o histórico do celular com até um ano de dados inventados (temperatura, umidade e gás), para mostrar os gráficos de mês e de ano numa apresentação, e tira tudo de novo com `--remove-before`. Não toca nas horas reais. Veja o [roteiro da maquete](docs/roteiro-maquete.md).
+
 ### Aplicativo (com o firmware novo)
 
 - O app **acredita no que a placa diz** de cada sensor (a classe e as linhas de limite do gráfico): o limite do alarme do gás vem da placa, e um dispositivo novo com sensores de gás, temperatura ou umidade é desenhado como os outros desses tipos, sem o app saber dele. Com um firmware antigo, que não diz nada, tudo continua como antes.
