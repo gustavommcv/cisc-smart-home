@@ -4,6 +4,10 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ## Não lançado
 
+### Firmware
+
+- O JSON da casa passa a dizer, nos sensores, a **classe** (`gas`, `temperature`, `humidity`) e as **linhas de limite** do gráfico (o limite do alarme do gás, que sai da configuração da placa, e os limites do desumidificador, que são as entidades que o usuário muda). É um acréscimo: o app antigo ignora e a placa antiga continua funcionando com o app novo. **Quem quiser isso precisa gravar o firmware de novo.**
+
 ### Mudou
 
 - **Cada gráfico do histórico se desenha pelo que o sensor é.** O gás tem a escala fixa de 0 a 400, a linha do limite de alarme e, em vermelho, o que passa dele; no mês e no ano, uma barra por dia com o maior valor. A umidade mostra a faixa em que o desumidificador liga e desliga (os limites que você escolheu). A temperatura nunca fica numa escala menor que 10 °C. Os sensores de dispositivos novos continuam funcionando, como uma linha.

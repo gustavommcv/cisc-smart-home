@@ -30,6 +30,8 @@ struct HouseSnapshot {
   float dehumidifierOffAt;
 
   bool buzzerEnabled;  // false while the user has silenced the buzzer; the LED, the valve and the alert do not depend on it
+
+  int gasAlarmAt;  // the gas reading above which there is a leak, on the 0-1023 scale: the app draws it as a line, so it is told, not copied
 };
 
 }  // namespace cisc

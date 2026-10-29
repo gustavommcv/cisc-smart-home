@@ -38,7 +38,8 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
           "id": "gas-monitor",
           "name": "Gas monitor",
           "entities": [
-            { "id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc" },
+            { "id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc",
+              "class": "gas", "limits": [ { "kind": "alarm", "value": 160 } ] },
             { "id": "gas-state", "kind": "sensor", "name": "Gas state", "value": "normal" },
             { "id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0 },
             { "id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true },
@@ -55,8 +56,10 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
           "id": "closet-monitor",
           "name": "Closet monitor",
           "entities": [
-            { "id": "temperature", "kind": "sensor", "name": "Temperature", "value": 21.4, "unit": "°C" },
-            { "id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%" },
+            { "id": "temperature", "kind": "sensor", "name": "Temperature", "value": 21.4, "unit": "°C", "class": "temperature" },
+            { "id": "humidity", "kind": "sensor", "name": "Humidity", "value": 74.1, "unit": "%", "class": "humidity",
+              "limits": [ { "kind": "turns-on", "entity": "dehumidifier-on-at" },
+                          { "kind": "turns-off", "entity": "dehumidifier-off-at" } ] },
             { "id": "dehumidifier-power", "kind": "switch", "name": "Power", "value": false, "commandable": true },
             { "id": "dehumidifier-mode", "kind": "select", "name": "Mode", "value": "automatic",
               "options": ["automatic", "manual"], "commandable": true },
@@ -87,6 +90,10 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 | `options` | As opções de um `select` |
 | `min`, `max`, `step`, `default` | Num `number`: o menor e o maior valor, de quanto em quanto ele anda, e o valor que a placa tem quando ninguém o mudou. O app desenha o controle com eles e usa o `default` para voltar ao padrão |
 | `commandable` | `true` se aceita comandos. Quando ausente, vale `false` |
+| `class` | **Só em `sensor`, opcional.** O que o sensor mede, para o app escolher como desenhar o gráfico dele: `gas`, `temperature` ou `humidity`. Um app que não conhece a classe a ignora e desenha uma linha comum. Por ela, um dispositivo novo com um sensor de temperatura é desenhado como os outros de temperatura, sem o app saber desse dispositivo |
+| `limits` | **Só em `sensor`, opcional.** As linhas que o app desenha sobre o gráfico. Cada uma tem um `kind` (`alarm`: acima dela há perigo; `turns-on` e `turns-off`: o que um aparelho liga e desliga) e **ou** um `value` (um número) **ou** uma `entity` (o `id` de um `number` da casa, cujo valor é o da linha: assim a linha acompanha o que o usuário muda). Uma linha de um `kind` que o app não conhece é ignorada |
+
+`class` e `limits` são **acréscimos** ao contrato 1: a `apiVersion` continua `1`, e um app que não os conhece (ou uma placa que não os manda) funciona como antes. O app, quando a placa não diz nada, desenha os sensores da maquete pelo `id`.
 
 ### Tipos de entidade
 
@@ -102,13 +109,13 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 
 | Cômodo | Dispositivo | Entidade | Tipo | Valores |
 |---|---|---|---|---|
-| `kitchen` | `gas-monitor` | `gas-level` | `sensor` | 0 a 1023, unidade `adc` |
+| `kitchen` | `gas-monitor` | `gas-level` | `sensor` | 0 a 1023, unidade `adc`. Classe `gas` e uma linha `alarm` com o limite do alarme (160): é a placa que diz, o app não o copia |
 | | | `gas-state` | `sensor` | `starting`, `normal` ou `emergency` |
 | | | `gas-alerts` | `sensor` | quantos vazamentos desde que o ESP32 ligou |
 | | | `valve-open` | `binary_sensor` | `true` quando aberta. **Somente leitura**: só o botão físico a reabre |
 | | | `buzzer-enabled` | `switch` | `true` quando o buzzer da placa pode soar num vazamento; `false` quando foi silenciado |
-| `bedroom` | `closet-monitor` | `temperature` | `sensor` | graus Celsius, ou `null` |
-| | | `humidity` | `sensor` | porcentagem, ou `null` |
+| `bedroom` | `closet-monitor` | `temperature` | `sensor` | graus Celsius, ou `null`. Classe `temperature` |
+| | | `humidity` | `sensor` | porcentagem, ou `null`. Classe `humidity` e duas linhas, `turns-on` e `turns-off`, que são os valores de `dehumidifier-on-at` e `dehumidifier-off-at` |
 | | | `dehumidifier-power` | `switch` | ligado ou desligado |
 | | | `dehumidifier-mode` | `select` | `automatic` ou `manual` |
 | | | `dehumidifier-on-at` | `number` | a umidade a partir da qual o desumidificador liga no modo automático: 40 a 95 %, de 1 em 1, padrão 85 |
