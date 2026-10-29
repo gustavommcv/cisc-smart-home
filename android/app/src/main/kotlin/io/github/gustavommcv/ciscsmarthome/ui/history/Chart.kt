@@ -1,5 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.ui.history
 
+import io.github.gustavommcv.ciscsmarthome.domain.ChartRange
+import io.github.gustavommcv.ciscsmarthome.domain.ChartScale
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Duration
 import java.time.Instant
@@ -7,8 +9,11 @@ import java.time.Instant
 /** A point of the chart in the box it is drawn in: [x] from 0 (the start of the window) to 1 (its end), [y] from 0 (the least) to 1 (the greatest), up. */
 internal data class ChartPoint(val x: Float, val y: Float)
 
-/** What the screen draws: its lines (a line breaks where the app heard nothing), and the least and the greatest value that was read. */
-internal data class Chart(val lines: List<List<ChartPoint>>, val min: Double, val max: Double)
+/**
+ * What the screen draws: its lines (a line breaks where the app heard nothing), the least and the greatest value that was read, and the [range] the
+ * chart shows, from the bottom to the top (the points are placed in it). Without a scale the range is what was read.
+ */
+internal data class Chart(val lines: List<List<ChartPoint>>, val min: Double, val max: Double, val range: ChartRange = ChartRange(min, max))
 
 internal object ChartRules {
   /**
@@ -34,7 +39,14 @@ private data class Sample(val at: Instant, val value: Double)
  * time without a reading. A stretch with more readings than the screen can show is reduced keeping, for each part of it, the least and the
  * greatest, so a peak (a leak lasts seconds) is never smoothed away.
  */
-internal fun chartOf(readings: List<Reading>, since: Instant, until: Instant, maxGap: Duration = ChartRules.MaxGap): Chart? {
+internal fun chartOf(
+  readings: List<Reading>,
+  since: Instant,
+  until: Instant,
+  maxGap: Duration = ChartRules.MaxGap,
+  scale: ChartScale? = null,
+  limits: List<Double> = emptyList(),
+): Chart? {
   val samples =
     readings
       .mapNotNull { reading -> reading.value?.takeIf { !reading.at.isBefore(since) && !reading.at.isAfter(until) }?.let { Sample(reading.at, it) } }
@@ -43,8 +55,9 @@ internal fun chartOf(readings: List<Reading>, since: Instant, until: Instant, ma
   val min = samples.minOf { it.value }
   val max = samples.maxOf { it.value }
   val window = Duration.between(since, until).toMillis().coerceAtLeast(1)
-  val lines = stretches(samples, maxGap).map { stretch -> reduced(stretch, since, window).map { point(it, since, window, min, max) } }
-  return Chart(lines, min, max)
+  val range = (scale ?: ChartScale()).rangeOf(min, max, limits)
+  val lines = stretches(samples, maxGap).map { stretch -> reduced(stretch, since, window).map { point(it, since, window, range) } }
+  return Chart(lines, min, max, range)
 }
 
 /** The samples in runs with no silence longer than [maxGap] inside. */
@@ -65,9 +78,8 @@ private fun reduced(stretch: List<Sample>, since: Instant, windowMillis: Long): 
     .flatMap { bucket -> listOf(bucket.minBy { it.value }, bucket.maxBy { it.value }).distinct().sortedBy { it.at } }
 }
 
-private fun point(sample: Sample, since: Instant, windowMillis: Long, min: Double, max: Double): ChartPoint {
+private fun point(sample: Sample, since: Instant, windowMillis: Long, range: ChartRange): ChartPoint {
   val x = Duration.between(since, sample.at).toMillis().toFloat() / windowMillis
-  // A series that never changes has no scale to draw: it goes through the middle.
-  val y = if (max == min) 0.5f else ((sample.value - min) / (max - min)).toFloat()
-  return ChartPoint(x, y)
+  // A range of one value has no scale to draw: the value goes through the middle.
+  return ChartPoint(x, range.fractionOf(sample.value))
 }

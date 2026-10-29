@@ -17,6 +17,7 @@ Cada decisão importante do projeto está registrada em um arquivo curto, com o 
 | [0011](0011-limites-de-umidade-mudam-pelo-app.md) | Os limites de umidade do desumidificador mudam pelo app e ficam guardados na placa | aceita |
 | [0012](0012-buzzer-pode-ser-silenciado-pelo-app.md) | O buzzer da placa pode ser silenciado pelo app, e o silêncio não fica guardado | aceita |
 | [0013](0013-historico-longo-guarda-o-minimo-e-o-maximo-de-cada-hora.md) | O histórico longo guarda o menor e o maior valor de cada hora, e as leituras só por uma semana | aceita |
+| [0014](0014-catalogo-de-dispositivos-e-perfis-de-grafico.md) | O que o app sabe de cada dispositivo fica num catálogo, e o gráfico é escolhido pelo tipo do sensor | aceita |
 
 Uma decisão aceita não se apaga: se mudar, ganha um novo arquivo que a substitui, e a antiga fica marcada como substituída.
 

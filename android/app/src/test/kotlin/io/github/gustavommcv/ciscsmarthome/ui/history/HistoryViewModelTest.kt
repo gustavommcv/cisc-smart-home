@@ -10,6 +10,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
@@ -360,11 +361,11 @@ class HistoryViewModelTest {
   @Test
   fun `the chart of a month is made of the least and the greatest of its hours`() = runTest {
     repository.home.value = maquette
-    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 90.0), hour(6, 10, 44.0, 60.0)))
+    repository.setHours(temperature, listOf(hour(5, 10, 40.0, 90.0), hour(6, 10, 44.0, 60.0)))
     val (viewModel, state) = watched()
-    viewModel.openDevice(gasMonitor)
+    viewModel.openDevice(closetMonitor)
     viewModel.choosePeriod(ChartPeriod.Month)
-    val chart = panels(state.value).single().lanes.single().chart!!
+    val chart = panels(state.value)[1].lanes.single().chart!!
     assertEquals(40.0, chart.min, 0.0)
     assertEquals(90.0, chart.max, 0.0)
     assertEquals(ChartPeriod.Month, state.value.window.period)
@@ -373,21 +374,21 @@ class HistoryViewModelTest {
   @Test
   fun `hours that follow each other are one line, and a missing hour breaks it`() = runTest {
     repository.home.value = maquette
-    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 50.0), hour(5, 11, 41.0, 51.0), hour(5, 13, 42.0, 52.0)))
+    repository.setHours(temperature, listOf(hour(5, 10, 40.0, 50.0), hour(5, 11, 41.0, 51.0), hour(5, 13, 42.0, 52.0)))
     val (viewModel, state) = watched()
-    viewModel.openDevice(gasMonitor)
+    viewModel.openDevice(closetMonitor)
     viewModel.choosePeriod(ChartPeriod.Month)
-    assertEquals(listOf(4, 2), panels(state.value).single().lanes.single().chart!!.lines.map { it.size })
+    assertEquals(listOf(4, 2), panels(state.value)[1].lanes.single().chart!!.lines.map { it.size })
   }
 
   @Test
   fun `the hours of another month are not in the chart`() = runTest {
     repository.home.value = maquette
-    repository.setHours(gasLevel, listOf(HourlyReading(Instant.parse("2026-09-30T23:00:00Z"), 1.0, 2.0), HourlyReading(Instant.parse("2026-11-01T00:00:00Z"), 8.0, 9.0), hour(5, 10, 40.0, 90.0)))
+    repository.setHours(temperature, listOf(HourlyReading(Instant.parse("2026-09-30T23:00:00Z"), 1.0, 2.0), HourlyReading(Instant.parse("2026-11-01T00:00:00Z"), 8.0, 9.0), hour(5, 10, 40.0, 90.0)))
     val (viewModel, state) = watched()
-    viewModel.openDevice(gasMonitor)
+    viewModel.openDevice(closetMonitor)
     viewModel.choosePeriod(ChartPeriod.Month)
-    assertEquals(40.0 to 90.0, panels(state.value).single().lanes.single().chart!!.let { it.min to it.max })
+    assertEquals(40.0 to 90.0, panels(state.value)[1].lanes.single().chart!!.let { it.min to it.max })
   }
 
   @Test
@@ -572,11 +573,88 @@ class HistoryViewModelTest {
   @Test
   fun `a month that is being read is read again when an hour changes`() = runTest {
     repository.home.value = maquette
-    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 50.0)))
+    repository.setHours(temperature, listOf(hour(5, 10, 40.0, 50.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    viewModel.choosePeriod(ChartPeriod.Month)
+    repository.setHours(temperature, listOf(hour(5, 10, 40.0, 99.0)))
+    assertEquals(99.0, panels(state.value)[1].lanes.single().chart!!.max, 0.0)
+  }
+
+  // ---- what the catalog says of the sensors --------------------------------------------------------
+
+  private fun limit(id: String, value: Double?) = Entity.Number(EntityId(id), id, value, "%", 40.0, 95.0, 1.0, 85.0, commandable = true)
+
+  private fun maquetteWithLimits(on: Double? = 85.0, off: Double? = 83.0) =
+    maquette.copy(
+      areas =
+        maquette.areas.map { area ->
+          area.copy(devices = area.devices.map { device -> if (device.id == closetMonitor) device.copy(entities = device.entities + limit("dehumidifier-on-at", on) + limit("dehumidifier-off-at", off)) else device })
+        },
+    )
+
+  @Test
+  fun `the limits drawn over the humidity are the ones the house has now`() = runTest {
+    repository.home.value = maquetteWithLimits()
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    val humidityLane = panels(state.value).last().lanes.single()
+    assertEquals(listOf(ResolvedLimit(LimitKind.DehumidifierOn, 85.0), ResolvedLimit(LimitKind.DehumidifierOff, 83.0)), humidityLane.limits)
+  }
+
+  @Test
+  fun `a limit the user changes is drawn at its new value`() = runTest {
+    repository.home.value = maquetteWithLimits()
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    repository.home.value = maquetteWithLimits(on = 80.0, off = 78.0)
+    assertEquals(listOf(ResolvedLimit(LimitKind.DehumidifierOn, 80.0), ResolvedLimit(LimitKind.DehumidifierOff, 78.0)), panels(state.value).last().lanes.single().limits)
+  }
+
+  @Test
+  fun `a limit with no value is not drawn`() = runTest {
+    repository.home.value = maquetteWithLimits(on = null, off = 83.0)
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    assertEquals(listOf(ResolvedLimit(LimitKind.DehumidifierOff, 83.0)), panels(state.value).last().lanes.single().limits)
+  }
+
+  @Test
+  fun `a house heard again with the same limits does not ask the history again`() = runTest {
+    repository.home.value = maquetteWithLimits()
+    val (viewModel, _) = watched()
+    viewModel.openDevice(closetMonitor)
+    val asked = repository.seriesRequests.size
+    repository.home.value = maquetteWithLimits().copy(uptimeMs = 5_000)
+    assertEquals(asked, repository.seriesRequests.size)
+  }
+
+  @Test
+  fun `a month of the gas is bars of the days, and a month of the temperature is a line`() = runTest {
+    repository.home.value = maquette
+    repository.setHours(gasLevel, listOf(hour(5, 10, 44.0, 218.0)))
+    repository.setHours(temperature, listOf(hour(5, 10, 19.0, 21.0)))
     val (viewModel, state) = watched()
     viewModel.openDevice(gasMonitor)
     viewModel.choosePeriod(ChartPeriod.Month)
-    repository.setHours(gasLevel, listOf(hour(5, 10, 40.0, 99.0)))
-    assertEquals(99.0, panels(state.value).single().lanes.single().chart!!.max, 0.0)
+    val gasLane = panels(state.value).single().lanes.single()
+    assertEquals(listOf(218.0), gasLane.bars!!.bars.map { it.value })
+    assertNull(gasLane.chart)
+    viewModel.back()
+    viewModel.openDevice(closetMonitor)
+    val temperatureLane = panels(state.value)[1].lanes.single()
+    assertNull(temperatureLane.bars)
+    assertEquals(19.0, temperatureLane.chart!!.min, 0.0)
+  }
+
+  @Test
+  fun `the last hours of the gas are a line, even though a month of it is bars`() = runTest {
+    repository.home.value = maquette
+    repository.setReadings(gasLevel, listOf(reading(30, 44.0)))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    val lane = panels(state.value).single().lanes.single()
+    assertNull(lane.bars)
+    assertEquals(0.11f, Math.round(lane.chart!!.lines.single().single().y * 100) / 100f, 0.0001f)
   }
 }

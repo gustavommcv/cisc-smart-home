@@ -2,6 +2,12 @@
 
 Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://github.com/gustavommcv/cisc-smart-home/releases) com o APK do aplicativo. O texto de cada versão abaixo é o que vai para essa página. Como lançar uma versão: [docs/lancamento.md](docs/lancamento.md).
 
+## Não lançado
+
+### Mudou
+
+- **Cada gráfico do histórico se desenha pelo que o sensor é.** O gás tem a escala fixa de 0 a 400, a linha do limite de alarme e, em vermelho, o que passa dele; no mês e no ano, uma barra por dia com o maior valor. A umidade mostra a faixa em que o desumidificador liga e desliga (os limites que você escolheu). A temperatura nunca fica numa escala menor que 10 °C. Os sensores de dispositivos novos continuam funcionando, como uma linha.
+
 ## v0.1.1 — 2026-10-28
 
 Uma correção importante do histórico. Quem usa a v0.1.0 deve atualizar.

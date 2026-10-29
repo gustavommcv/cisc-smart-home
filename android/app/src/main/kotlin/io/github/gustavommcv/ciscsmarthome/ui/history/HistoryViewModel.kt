@@ -3,9 +3,13 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.gustavommcv.ciscsmarthome.domain.AreaIcons
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
+import io.github.gustavommcv.ciscsmarthome.domain.Entity
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
+import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeRepository
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
@@ -67,22 +71,23 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
     val period: ChartPeriod,
     val page: Int,
     val firstHour: Instant?,
+    val limitValues: Map<EntityId, Double>,
     val names: Names,
     val icons: AreaIcons,
   )
 
-  private data class Customs(val devices: List<HistoryDevice>, val names: Names, val icons: AreaIcons)
+  private data class Customs(val devices: List<HistoryDevice>, val names: Names, val icons: AreaIcons, val limitValues: Map<EntityId, Double>)
 
   @OptIn(ExperimentalCoroutinesApi::class)
   val state: StateFlow<HistoryState> =
     combine(
-        combine(repository.home, nameBook.names, nameBook.icons) { home, names, icons -> Customs(historyDevices(home), names, icons) },
+        combine(repository.home, nameBook.names, nameBook.icons) { home, names, icons -> Customs(historyDevices(home), names, icons, limitValuesOf(home)) },
         openId,
         chosenPeriod,
         page,
         repository.firstHour(),
       ) { customs, open, period, page, firstHour ->
-        Choice(customs.devices, open, period, page, firstHour, customs.names, customs.icons)
+        Choice(customs.devices, open, period, page, firstHour, customs.limitValues, customs.names, customs.icons)
       }
       // The house is heard again at each reading, and the charts are asked for again only when what they are made of changed.
       .distinctUntilChanged()
@@ -156,19 +161,37 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
     return ticks()
       .flatMapLatest { now ->
         val asked = windowOf(choice.period, choice.page, now, zone)
-        combine(sensors.map { sensor -> pointsOf(sensor.id, asked).map { sensor.id to it } }) { it.toMap() }
+        combine(sensors.map { sensor -> sourceOf(sensor.id, asked).map { sensor.id to it } }) { it.toMap() }
       }
-      .map { readings ->
+      .map { sources ->
         // The window ends when the charts are made, so a reading that came after the last tick is in them.
         val window = windowOf(choice.period, choice.page, clock.instant(), zone)
         val gap = if (window.period.isCalendar) ChartRules.HourlyMaxGap else ChartRules.MaxGap
-        stateWith(window, ChartsState.Ready(open.charts.map { panelOf(it, readings, window.since, window.until, gap) }))
+        val readings = sources.mapValues { it.value.readings }
+        // The hours are given only for a month or a year, which is when a sensor is drawn by the day.
+        val hours = if (window.period.isCalendar) sources.mapValues { it.value.hours.orEmpty() } else emptyMap()
+        stateWith(window, ChartsState.Ready(open.charts.map { panelOf(it, readings, window.since, window.until, gap, choice.limitValues, hours, zone) }))
       }
   }
 
-  // The last hours are made of the readings, and a month or a year of the least and the greatest of each hour.
-  private fun pointsOf(sensor: EntityId, window: ChartWindow): Flow<List<Reading>> =
-    if (window.period.isCalendar) repository.hourly(sensor, window.since, window.until).map { it.points() } else repository.series(sensor, window.since)
+  // What a sensor has for the window: the readings of the last hours, or the hours of a month or a year (also as the points of a line).
+  private class Source(val readings: List<Reading>, val hours: List<HourlyReading>?)
+
+  private fun sourceOf(sensor: EntityId, window: ChartWindow): Flow<Source> =
+    if (window.period.isCalendar) repository.hourly(sensor, window.since, window.until).map { Source(it.points(), it) }
+    else repository.series(sensor, window.since).map { Source(it, null) }
+
+  // The values the house has now of the entities the limits over the charts are read from: a limit the user changes is drawn at its new value.
+  private fun limitValuesOf(home: Home?): Map<EntityId, Double> =
+    home
+      ?.areas
+      ?.flatMap { it.devices }
+      ?.flatMap { it.entities }
+      ?.filterIsInstance<Entity.Number>()
+      ?.filter { it.id in DeviceCatalog.limitEntities }
+      ?.mapNotNull { number -> number.value?.let { number.id to it } }
+      ?.toMap()
+      .orEmpty()
 
   private fun ticks(): Flow<Instant> = flow {
     while (true) {

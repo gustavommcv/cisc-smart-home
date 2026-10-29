@@ -2,6 +2,7 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 
 import android.content.res.Resources
 import io.github.gustavommcv.ciscsmarthome.R
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
 import io.github.gustavommcv.ciscsmarthome.ui.home.formatNumber
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -64,3 +65,11 @@ internal fun Resources.deviceSubtitle(room: String, charts: Int): String = getQu
 
 /** The title of the chart that compares two sensors: both names, the first one the one above. */
 internal fun Resources.compareTitle(upper: String, lower: String): String = getString(R.string.history_compare_title, upper, lower.replaceFirstChar { it.lowercase() })
+
+/** The words of a line drawn over a chart: the limit of the alarm, or what the dehumidifier turns on or off at, with its value and its unit. */
+internal fun Resources.limitText(limit: ResolvedLimit, unit: String? = null): String =
+  when (limit.kind) {
+    LimitKind.Alarm -> getString(R.string.history_limit_alarm)
+    LimitKind.DehumidifierOn -> getString(R.string.history_limit_dehumidifier_on, valueText(limit.value, unit ?: "%"))
+    LimitKind.DehumidifierOff -> getString(R.string.history_limit_dehumidifier_off, valueText(limit.value, unit ?: "%"))
+  }
