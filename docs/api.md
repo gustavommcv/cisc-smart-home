@@ -169,7 +169,7 @@ Sem `limit`, a resposta traz **no máximo 100 amostras**, para caber na memória
 
 - As amostras vêm **da mais antiga para a mais nova**.
 - A chave de cada valor é o `id` da entidade. `null` quer dizer que não houve leitura válida.
-- O ESP32 guarda um número fixo de amostras na memória. Ao reiniciar, **perde tudo**. O app guarda a sua própria cópia.
+- O ESP32 guarda um número fixo de amostras na memória (uma hora). Ao reiniciar, **perde tudo**. O app guarda a sua própria cópia e, para ela não ter buracos, busca o que é novo **com frequência**, não só ao conectar (veja "Como o app se conecta").
 - Para saber se já tem uma amostra, o app usa o par (`bootId`, `uptimeMs`).
 
 ## Eventos em tempo real: `GET /api/v1/events`
@@ -202,8 +202,9 @@ data: {"type":"gas-leak","areaId":"kitchen","entityId":"gas-state","count":1,"up
 
 1. `GET /api/v1/home`, para ter o estado completo.
 2. Abre `GET /api/v1/events`.
-3. `GET /api/v1/history?after=...` para buscar só o que falta.
-4. Se o `bootId` mudou desde a última vez, o ESP32 reiniciou: o app descarta o que sabia sobre o tempo e começa o histórico dessa partida do zero.
+3. `GET /api/v1/history?after=...` para buscar só o que falta, com `after` igual ao último `uptimeMs` que ele já tem **daquela partida**.
+4. **Enquanto a conexão durar, repete o passo 3 de 15 em 15 segundos** (contados do fim da consulta anterior). O ESP32 só guarda uma hora (360 amostras), então o app não pode esperar a próxima conexão: o que ele não buscou a tempo é sobrescrito.
+5. Se o `bootId` mudou desde a última vez, o ESP32 reiniciou: o app descarta o que sabia sobre o tempo e começa o histórico dessa partida do zero.
 
 ## Tempo
 

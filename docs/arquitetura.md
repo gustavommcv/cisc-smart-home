@@ -95,7 +95,7 @@ Limites e tempos ficam em constantes nomeadas e em um só lugar, porque dependem
 
 ### Histórico
 
-O ESP32 guarda as últimas leituras em um buffer circular na memória, com tamanho fixo. O app copia essas leituras para o seu banco local e desenha o gráfico a partir dele. Assim, o histórico já guardado no celular sobrevive a reinícios do ESP32.
+O ESP32 guarda as últimas leituras em um buffer circular na memória, com tamanho fixo (uma hora). O app copia essas leituras para o seu banco local e desenha o gráfico a partir dele. Assim, o histórico já guardado no celular sobrevive a reinícios do ESP32. Para a cópia não ter buracos, o app busca o que é novo **ao conectar e de 15 em 15 segundos enquanto está conectado**, muito antes de a placa sobrescrever o mais antigo.
 
 O ESP32 não tem hora certa sem internet, e nem precisa ter. Cada amostra registra o tempo desde a partida (`uptimeMs`), e **o app** calcula a diferença para o relógio do celular a cada resposta. Um identificador de partida (`bootId`) permite ao app perceber que o ESP32 reiniciou. Os detalhes estão em [Tempo](api.md#tempo).
 

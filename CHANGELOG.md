@@ -2,6 +2,12 @@
 
 Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://github.com/gustavommcv/cisc-smart-home/releases) com o APK do aplicativo. O texto de cada versão abaixo é o que vai para essa página. Como lançar uma versão: [docs/lancamento.md](docs/lancamento.md).
 
+## Não lançado
+
+### Corrigido
+
+- **O histórico do celular parava de avançar numa conexão estável.** O app só buscava o histórico da placa ao conectar: com a conexão ligada, a tela mostrava a casa em dia, mas o banco e os gráficos não recebiam amostras novas, e depois de cerca de uma hora a placa sobrescrevia as que o app não tinha buscado. Agora o app busca o que é novo de 15 em 15 segundos enquanto está conectado, sem atrasar os alertas, e a limpeza das leituras velhas também roda durante a conexão (antes só ao reconectar). Quem usa a v0.1.0 deve atualizar.
+
 ## v0.1.0 — 2026-10-28
 
 A primeira versão: o firmware do ESP32 e o aplicativo Android funcionando juntos, com a maquete de gás e umidade.

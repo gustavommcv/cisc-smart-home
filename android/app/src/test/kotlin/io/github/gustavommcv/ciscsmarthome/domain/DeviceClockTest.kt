@@ -1,7 +1,11 @@
 package io.github.gustavommcv.ciscsmarthome.domain
 
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -55,5 +59,33 @@ class DeviceClockTest {
     clock.observe(boot, uptimeMs = 4_294_000_000, receivedAt = at(5_000_000))
     clock.observe(boot, uptimeMs = 3_000, receivedAt = at(5_000_700))  // the counter went back to zero
     assertEquals(at(5_000_700), clock.toInstant(boot, 3_000))
+  }
+
+  @Test
+  fun `it can be written and read from several threads at once without losing a boot`() {
+    val clock = DeviceClock()
+    val receivedAt = Instant.parse("2026-10-27T12:00:00Z")
+    val threads = 4
+    val perThread = 5_000
+    val pool = Executors.newFixedThreadPool(threads)
+    val go = CountDownLatch(1)
+    try {
+      val work =
+        (0 until threads).map { t ->
+          pool.submit {
+            go.await()
+            repeat(perThread) { i ->
+              val boot = BootId("t$t-$i")
+              clock.observe(boot, 1_000, receivedAt)
+              assertNotNull(clock.toInstant(boot, 2_000))
+            }
+          }
+        }
+      go.countDown()
+      work.forEach { it.get(60, TimeUnit.SECONDS) }
+    } finally {
+      pool.shutdownNow()
+    }
+    (0 until threads).forEach { t -> repeat(perThread) { i -> assertEquals(receivedAt.plusSeconds(1), clock.toInstant(BootId("t$t-$i"), 2_000)) } }
   }
 }

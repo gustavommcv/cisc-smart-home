@@ -103,6 +103,27 @@ O script escuta o fluxo de eventos por uns 18 s para ver que ele não fica mudo.
 - A leitura do gás (`gas=`) deve continuar em **44 a uns 60** com o Wi-Fi ligado e clientes conectados. O rádio pode somar ruído ao sensor analógico; se `gas` pular para perto de 160, me avise.
 - O LCD e o alarme continuam respondendo normalmente.
 
+## O histórico no celular (sem reconectar)
+
+Confere que o gráfico **avança sozinho** enquanto o app está conectado. A placa guarda só uma hora de leituras, e o app busca o que é novo de 15 em 15 segundos (veja [Como o app se conecta](api.md#como-o-app-se-conecta)).
+
+1. Abra o app e espere a faixa **Conectado à placa**. **Não feche o app nem reconecte** durante o teste.
+2. Vá em **Histórico**, abra o **Monitor de gás** e escolha **1 h**. Deixe a tela ligada.
+3. Espere uns 2 minutos. A ponta direita da linha **anda**, com pontos novos de uns 15 em 15 segundos. (Antes da correção, ela parava onde estava quando o app conectou.)
+4. Com o app ainda aberto, aproxime o isqueiro (sem acender) do MQ-2 por alguns segundos e afaste. Em até 30 segundos o **pico** aparece no gráfico, sem reconectar.
+5. Abra o **Monitor do armário** e confira que a temperatura e a umidade também avançam.
+6. Aperte o botão **EN** da placa (reinicia) com o app aberto. O app mostra que perdeu a conexão e volta a **Conectado à placa**; o histórico antigo continua, e a linha recomeça de onde a placa voltou.
+
+Se quiser ver pelo computador, com o celular em depuração USB, a leitura mais recente do banco do app (o resultado deve avançar uns 10 s a cada 15 s):
+
+```bash
+adb exec-out run-as io.github.gustavommcv.ciscsmarthome cat databases/history.db > /tmp/h.db
+adb exec-out run-as io.github.gustavommcv.ciscsmarthome cat databases/history.db-wal > /tmp/h.db-wal
+python3 -c "import sqlite3,time;c=sqlite3.connect('/tmp/h.db');t=c.execute(\"select max(atMs) from reading where entityId='gas-level'\").fetchone()[0];print(time.strftime('%H:%M:%S',time.localtime(t/1000)))"
+```
+
+Repita o comando depois de um minuto, sem tocar no app.
+
 ## Anotar
 
 Se algum passo falhar, anote o número do passo e copie 3 ou 4 linhas do monitor perto do problema. Com isso dá para saber se a causa é o fio, o sensor ou o código.
