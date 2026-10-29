@@ -2,11 +2,20 @@
 
 Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://github.com/gustavommcv/cisc-smart-home/releases) com o APK do aplicativo. O texto de cada versão abaixo é o que vai para essa página. Como lançar uma versão: [docs/lancamento.md](docs/lancamento.md).
 
-## Não lançado
+## v0.1.1 — 2026-10-28
+
+Uma correção importante do histórico. Quem usa a v0.1.0 deve atualizar.
 
 ### Corrigido
 
-- **O histórico do celular parava de avançar numa conexão estável.** O app só buscava o histórico da placa ao conectar: com a conexão ligada, a tela mostrava a casa em dia, mas o banco e os gráficos não recebiam amostras novas, e depois de cerca de uma hora a placa sobrescrevia as que o app não tinha buscado. Agora o app busca o que é novo de 15 em 15 segundos enquanto está conectado, sem atrasar os alertas, e a limpeza das leituras velhas também roda durante a conexão (antes só ao reconectar). Quem usa a v0.1.0 deve atualizar.
+- **O histórico do celular parava de avançar numa conexão estável.** O app só buscava o histórico da placa ao conectar: com a conexão ligada, a tela mostrava a casa em dia, mas o banco e os gráficos não recebiam amostras novas, e depois de cerca de uma hora a placa sobrescrevia as que o app não tinha buscado. Agora o app busca o que é novo de 15 em 15 segundos enquanto está conectado, sem atrasar os alertas, e a limpeza das leituras velhas também roda durante a conexão (antes só ao reconectar).
+- Se a placa reinicia sem a conexão cair, o app segue a partida nova na rodada seguinte. Uma falha ao buscar o histórico, ao gravar ou ao limpar só faz a rodada seguinte tentar de novo, sem derrubar o monitoramento.
+
+### Como instalar ou atualizar
+
+- **Aplicativo:** baixe `cisc-casa-0.1.1.apk` (em *Assets*, no fim desta página). Passo a passo e verificação do arquivo: [Como baixar e rodar](https://github.com/gustavommcv/cisc-smart-home/blob/v0.1.1/docs/como-rodar.md#2-instalar-o-aplicativo-no-celular).
+- **Atualizando de outra versão:** o APK de cada versão é assinado com uma chave de depuração criada na hora da compilação, então o Android pode recusar instalar por cima de outro APK (erro de assinatura). Se acontecer, **desinstale o app antes**: o histórico guardado no celular é apagado junto, porque ele só existe no celular.
+- **Firmware:** continua não vindo pronto, porque a senha do Wi-Fi da maquete é sua. O firmware **não mudou** nesta versão, então quem já gravou a placa não precisa gravar de novo.
 
 ## v0.1.0 — 2026-10-28
 

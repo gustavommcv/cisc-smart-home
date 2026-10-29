@@ -32,4 +32,4 @@ Uma versão publicada por engano se apaga com `gh release delete vX.Y.Z --cleanu
 ## O que a versão não traz
 
 - **O firmware pronto:** a senha do Wi-Fi da maquete é de cada um, então o firmware é gravado a partir do código, como no [guia](como-rodar.md).
-- **Um APK assinado para a loja:** o APK é assinado com a chave de depuração do Android, que basta para instalar. Assinar para publicar exigiria uma chave guardada fora do repositório, e isso fica para quando o projeto for publicado de verdade.
+- **Um APK assinado para a loja, nem uma assinatura que se mantenha entre versões:** o APK é assinado com a chave de depuração do Android, que o Gradle cria **a cada compilação** no servidor. Por isso o Android pode recusar instalar uma versão por cima da outra, e quem atualiza tem de desinstalar antes (o histórico do celular se perde). Uma chave fixa resolveria, mas ela precisaria ficar guardada fora do repositório (ou ser uma chave de depuração pública, aceitando que qualquer um pode assinar um APK igual), e isso fica para quando o projeto for publicado de verdade.
