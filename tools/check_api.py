@@ -133,6 +133,11 @@ def main():
 
     status, payload, _ = call(host, "GET", "/api/v1/history")
     check("GET /history answers 200 with a list", status == 200 and isinstance(payload and payload.get("samples"), list), f"status {status}")
+    samples = (payload or {}).get("samples") or []
+    check("every sample says the gas state and whether the dehumidifier was on",
+          bool(samples) and all(set(x.get("states", {})) == {"gas-state", "dehumidifier-power"}
+                                and x["states"]["gas-state"] in ("starting", "normal", "emergency")
+                                and isinstance(x["states"]["dehumidifier-power"], bool) for x in samples))
     status, payload, _ = call(host, "GET", "/api/v1/history?limit=0")
     check("history with limit=0 is invalid-query", status == 400 and error_code(payload) == "invalid-query", f"status {status}")
 

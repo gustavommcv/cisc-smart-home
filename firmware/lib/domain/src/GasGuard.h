@@ -1,11 +1,14 @@
 #pragma once
 
+#include <cstdint>
+
 #include "Settings.h"
 #include "Time.h"
 
 namespace cisc {
 
-enum class GasState { Starting, Normal, Emergency };
+// One byte, so a history sample that carries it does not grow.
+enum class GasState : std::uint8_t { Starting, Normal, Emergency };
 
 // Decides what the gas valve, alarm LED and buzzer do. Pure logic: it is fed
 // readings and the time, and knows nothing about pins.

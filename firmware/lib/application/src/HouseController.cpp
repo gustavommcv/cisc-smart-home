@@ -137,7 +137,8 @@ void HouseController::drive(Output& output, OutputCache& cache, bool value) {
 }
 
 void HouseController::recordSample(Millis now) {
-  history_.push(Sample{now, gasReading_, climate_.temperatureC, climate_.humidityPercent, climate_.valid});
+  history_.push(Sample{now, gasReading_, climate_.temperatureC, climate_.humidityPercent, climate_.valid,
+                       gasGuard_.state(), humidity_.dehumidifierOn()});
 }
 
 }  // namespace cisc

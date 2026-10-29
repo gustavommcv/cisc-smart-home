@@ -227,6 +227,28 @@ void test_history_marks_samples_without_a_valid_climate_reading() {
   TEST_ASSERT_FALSE(rig.controller.history().at(0).climateValid);
 }
 
+void test_history_records_whether_the_dehumidifier_was_on() {
+  Rig rig;
+  rig.climate.reading = {true, 22.0f, 85.0f};
+  rig.controller.begin();
+  rig.run(3000);
+  TEST_ASSERT_TRUE(rig.controller.history().at(2).dehumidifierOn);
+  rig.climate.reading = {true, 22.0f, 40.0f};
+  rig.run(4000);
+  const auto& history = rig.controller.history();
+  TEST_ASSERT_FALSE(history.at(history.size() - 1).dehumidifierOn);
+}
+
+void test_history_records_the_gas_state_of_each_sample() {
+  Rig rig;
+  rig.bootToNormal();
+  rig.gas.value = 150;
+  rig.run(2000);
+  const auto& history = rig.controller.history();
+  TEST_ASSERT_EQUAL(GasState::Emergency, history.at(history.size() - 1).gasState);
+  TEST_ASSERT_TRUE(history.at(0).gasState != GasState::Emergency);
+}
+
 void test_snapshot_uptime_follows_the_last_tick() {
   Rig rig;
   rig.controller.begin();
@@ -496,6 +518,8 @@ int main() {
   RUN_TEST(test_switching_to_manual_keeps_the_current_state);
   RUN_TEST(test_history_records_a_sample_at_each_interval);
   RUN_TEST(test_history_marks_samples_without_a_valid_climate_reading);
+  RUN_TEST(test_history_records_whether_the_dehumidifier_was_on);
+  RUN_TEST(test_history_records_the_gas_state_of_each_sample);
   RUN_TEST(test_snapshot_uptime_follows_the_last_tick);
   RUN_TEST(test_snapshot_reports_gas_only_while_it_is_present);
   RUN_TEST(test_snapshot_reports_when_the_button_is_accepted_again);
