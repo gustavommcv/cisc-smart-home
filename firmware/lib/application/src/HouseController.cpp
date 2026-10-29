@@ -105,6 +105,7 @@ HouseSnapshot HouseController::snapshot() const {
       humidity_.limits().onAtPercent,
       humidity_.limits().offAtPercent,
       buzzerEnabled_,
+      settings_.gas.threshold,
   };
 }
 

@@ -42,7 +42,7 @@ Em [`lib/api/src`](lib/api/src): tudo o que o contrato de [`docs/api.md`](../doc
 
 | Arquivo | O que faz |
 |---|---|
-| `ApiJson` | O JSON do contrato: o estado da casa (cômodos, dispositivos e entidades), uma entidade, o evento de alerta e o histórico |
+| `ApiJson` | O JSON do contrato: o estado da casa (cômodos, dispositivos e entidades), uma entidade, o evento de alerta e o histórico. Os sensores dizem a **classe** (`gas`, `temperature`, `humidity`) e as **linhas de limite** do gráfico, e o limite do alarme do gás vem da configuração da placa (`HouseSnapshot::gasAlarmAt`), não de uma cópia no app |
 | `Api` | O roteador REST: recebe método, caminho, parâmetros e corpo, age na casa e devolve o status e o JSON, com os códigos de erro do contrato |
 | `EventStream` | O que o fluxo SSE envia a cada instante: o estado quando muda (no máximo uma vez por segundo), o alerta de vazamento na hora e um sinal de vida a cada 15 s |
 

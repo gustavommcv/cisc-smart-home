@@ -37,6 +37,24 @@ void addPercentLimit(JsonArray entities, const char* id, const char* name, float
   entity["commandable"] = true;
 }
 
+// What a sensor says it is, so that an app that has never seen the device charts it as it charts the others of its class.
+void addClass(JsonObject sensor, const char* sensorClass) {
+  sensor["class"] = sensorClass;
+}
+
+// A line to draw over the chart of a sensor: the value it has, or the entity whose value it is (a limit the user can change).
+void addLimitValue(JsonObject sensor, const char* kind, int value) {
+  JsonObject limit = sensor["limits"].add<JsonObject>();
+  limit["kind"] = kind;
+  limit["value"] = value;
+}
+
+void addLimitEntity(JsonObject sensor, const char* kind, const char* entityId) {
+  JsonObject limit = sensor["limits"].add<JsonObject>();
+  limit["kind"] = kind;
+  limit["entity"] = entityId;
+}
+
 JsonArray addArea(JsonArray areas, const char* id, const char* name) {
   JsonObject area = areas.add<JsonObject>();
   area["id"] = id;
@@ -67,6 +85,8 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
   JsonObject level = addEntity(gasMonitor, "gas-level", "sensor", "Gas level");
   level["value"] = s.gasReading;
   level["unit"] = "adc";
+  addClass(level, "gas");
+  addLimitValue(level, "alarm", s.gasAlarmAt);
   addEntity(gasMonitor, "gas-state", "sensor", "Gas state")["value"] = toString(s.gasState);
   addEntity(gasMonitor, "gas-alerts", "sensor", "Gas alerts since boot")["value"] = s.gasAlertCount;
   addEntity(gasMonitor, "valve-open", "binary_sensor", "Valve open")["value"] = s.valveOpen;
@@ -84,6 +104,7 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
     temperature["value"] = nullptr;
   }
   temperature["unit"] = "°C";
+  addClass(temperature, "temperature");
   JsonObject humidity = addEntity(closetMonitor, "humidity", "sensor", "Humidity");
   if (s.climateValid) {
     humidity["value"] = oneDecimal(s.humidityPercent);
@@ -91,6 +112,9 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
     humidity["value"] = nullptr;
   }
   humidity["unit"] = "%";
+  addClass(humidity, "humidity");
+  addLimitEntity(humidity, "turns-on", "dehumidifier-on-at");
+  addLimitEntity(humidity, "turns-off", "dehumidifier-off-at");
 
   JsonObject power = addEntity(closetMonitor, "dehumidifier-power", "switch", "Power");
   power["value"] = s.dehumidifierOn;

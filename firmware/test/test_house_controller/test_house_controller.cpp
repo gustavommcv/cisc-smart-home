@@ -362,6 +362,22 @@ void test_changing_a_limit_does_not_touch_the_relay_by_itself() {
   TEST_ASSERT_EQUAL(writes, rig.dehumidifier.writes);
 }
 
+// ---- the limit of the alarm is told, not copied --------------------------------
+
+void test_the_snapshot_carries_the_limit_of_the_gas_alarm_of_the_settings() {
+  cisc::HouseSettings settings = fakes::testSettings();
+  settings.gas.threshold = 200;
+  Rig rig(settings);
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL_INT(200, rig.controller.snapshot().gasAlarmAt);
+}
+
+void test_the_limit_of_the_gas_alarm_is_160_when_nothing_changed_it() {
+  Rig rig{cisc::HouseSettings{}};
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL_INT(160, rig.controller.snapshot().gasAlarmAt);
+}
+
 // ---- the buzzer can be silenced ------------------------------------------------
 
 void test_the_buzzer_is_enabled_until_someone_says_otherwise() {
@@ -494,6 +510,8 @@ int main() {
   RUN_TEST(test_a_limit_that_is_not_valid_changes_nothing_and_saves_nothing);
   RUN_TEST(test_the_new_limit_is_the_one_the_next_reading_is_judged_by);
   RUN_TEST(test_changing_a_limit_does_not_touch_the_relay_by_itself);
+  RUN_TEST(test_the_snapshot_carries_the_limit_of_the_gas_alarm_of_the_settings);
+  RUN_TEST(test_the_limit_of_the_gas_alarm_is_160_when_nothing_changed_it);
   RUN_TEST(test_the_buzzer_is_enabled_until_someone_says_otherwise);
   RUN_TEST(test_a_leak_sounds_the_buzzer_while_it_is_enabled);
   RUN_TEST(test_a_silenced_buzzer_stays_quiet_in_a_leak_and_the_rest_of_the_alarm_goes_on);
