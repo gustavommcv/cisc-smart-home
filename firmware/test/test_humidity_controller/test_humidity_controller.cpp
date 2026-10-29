@@ -109,10 +109,10 @@ void test_automatic_inside_the_band_keeps_what_manual_left() {
 
 // ---- the limits can be changed, within what is allowed ---------------------------
 
-void test_the_default_limits_are_85_and_83_with_a_gap_that_a_whole_percent_reading_respects() {
+void test_the_default_limits_are_the_ideal_for_a_closet_with_a_gap_that_a_whole_percent_reading_respects() {
   const HumiditySettings defaults;
-  TEST_ASSERT_EQUAL_FLOAT(85.0f, defaults.onAtPercent);
-  TEST_ASSERT_EQUAL_FLOAT(83.0f, defaults.offAtPercent);
+  TEST_ASSERT_EQUAL_FLOAT(65.0f, defaults.onAtPercent);
+  TEST_ASSERT_EQUAL_FLOAT(55.0f, defaults.offAtPercent);
   TEST_ASSERT_TRUE(cisc::isValid(defaults));
 }
 
@@ -202,7 +202,7 @@ int main() {
   RUN_TEST(test_switching_to_automatic_keeps_the_state_until_the_next_reading);
   RUN_TEST(test_automatic_rules_apply_again_after_manual);
   RUN_TEST(test_automatic_inside_the_band_keeps_what_manual_left);
-  RUN_TEST(test_the_default_limits_are_85_and_83_with_a_gap_that_a_whole_percent_reading_respects);
+  RUN_TEST(test_the_default_limits_are_the_ideal_for_a_closet_with_a_gap_that_a_whole_percent_reading_respects);
   RUN_TEST(test_the_limits_are_the_ones_the_controller_was_made_with);
   RUN_TEST(test_valid_limits_are_taken);
   RUN_TEST(test_the_new_limits_are_the_ones_the_rule_follows);

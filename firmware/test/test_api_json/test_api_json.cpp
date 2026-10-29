@@ -209,11 +209,11 @@ void test_the_limits_of_the_dehumidifier_are_numbers_with_their_range_and_defaul
   std::string json;
   TEST_ASSERT_TRUE(cisc::api::entityJson(normalHouse(), "dehumidifier-on-at", json));
   TEST_ASSERT_EQUAL_STRING(
-      "{\"id\":\"dehumidifier-on-at\",\"kind\":\"number\",\"name\":\"Turn on at\",\"value\":85,\"unit\":\"%\",\"min\":40,\"max\":95,\"step\":1,\"default\":85,\"commandable\":true}",
+      "{\"id\":\"dehumidifier-on-at\",\"kind\":\"number\",\"name\":\"Turn on at\",\"value\":85,\"unit\":\"%\",\"min\":40,\"max\":95,\"step\":1,\"default\":65,\"commandable\":true}",
       json.c_str());
   TEST_ASSERT_TRUE(cisc::api::entityJson(normalHouse(), "dehumidifier-off-at", json));
   TEST_ASSERT_EQUAL_STRING(
-      "{\"id\":\"dehumidifier-off-at\",\"kind\":\"number\",\"name\":\"Turn off at\",\"value\":83,\"unit\":\"%\",\"min\":40,\"max\":95,\"step\":1,\"default\":83,\"commandable\":true}",
+      "{\"id\":\"dehumidifier-off-at\",\"kind\":\"number\",\"name\":\"Turn off at\",\"value\":83,\"unit\":\"%\",\"min\":40,\"max\":95,\"step\":1,\"default\":55,\"commandable\":true}",
       json.c_str());
 }
 
@@ -225,9 +225,9 @@ void test_the_limits_show_the_values_the_house_has_not_the_defaults() {
   JsonObject on = entity(home, "dehumidifier-on-at");
   JsonObject off = entity(home, "dehumidifier-off-at");
   TEST_ASSERT_EQUAL_INT(90, on["value"].as<int>());
-  TEST_ASSERT_EQUAL_INT(85, on["default"].as<int>());
+  TEST_ASSERT_EQUAL_INT(65, on["default"].as<int>());
   TEST_ASSERT_EQUAL_INT(60, off["value"].as<int>());
-  TEST_ASSERT_EQUAL_INT(83, off["default"].as<int>());
+  TEST_ASSERT_EQUAL_INT(55, off["default"].as<int>());
 }
 
 // The buzzer is a switch of the gas monitor: it silences the sound of the board and nothing else of the alarm.

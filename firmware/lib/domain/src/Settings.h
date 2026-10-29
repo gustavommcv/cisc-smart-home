@@ -18,11 +18,12 @@ struct GasSettings {
 };
 
 struct HumiditySettings {
-  // The dehumidifier turns on at or above this value...
-  float onAtPercent = 85.0f;
-  // ...and turns off at or below this one. The gap avoids a chattering relay: the DHT11 reads whole
-  // percents, so with a gap of one point the relay would follow every flicker between two readings.
-  float offAtPercent = 83.0f;
+  // The dehumidifier turns on at or above this value, which is where a closet starts to invite mold (the ideal is
+  // 40 to 60 %, and above about 65 % mold grows)...
+  float onAtPercent = 65.0f;
+  // ...and turns off at or below this one, well inside the ideal. The gap avoids a chattering relay: the DHT11
+  // reads whole percents, so with a gap of one point the relay would follow every flicker between two readings.
+  float offAtPercent = 55.0f;
 };
 
 // What the user may choose for the two limits above (they can be changed from the app).

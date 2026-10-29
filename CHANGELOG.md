@@ -15,6 +15,7 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ### Firmware
 
+- O **padrão do desumidificador** passa a ser o ideal para um armário: **liga a 65 % e desliga a 55 %** (era 85 % e 83 %). Uma placa que já guardou os limites continua com os dela; no app, o botão de voltar ao padrão a leva a 65/55, e dá para mudar a qualquer hora pela configuração do dispositivo.
 - Cada amostra do **histórico** da placa passa a dizer também o **estado do gás** e se o **desumidificador estava ligado** (`states` em `GET /api/v1/history`). É a base para o app desenhar quando o desumidificador ficou ligado e onde houve vazamento; o app de hoje ignora o campo. A placa precisa ser regravada.
 - O JSON da casa passa a dizer, nos sensores, a **classe** (`gas`, `temperature`, `humidity`) e as **linhas de limite** do gráfico (o limite do alarme do gás, que sai da configuração da placa, e os limites do desumidificador, que são as entidades que o usuário muda). É um acréscimo: o app antigo ignora e a placa antiga continua funcionando com o app novo. **Quem quiser isso precisa gravar o firmware de novo.**
 
