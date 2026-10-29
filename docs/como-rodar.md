@@ -35,6 +35,8 @@ Para conferir que o arquivo não foi alterado, baixe também o `.sha256` da mesm
 sha256sum -c cisc-casa-<versão>.apk.sha256
 ```
 
+**Atualizando:** o APK de cada versão é assinado com uma chave de depuração criada na hora da compilação. Por isso o Android pode recusar instalar por cima de outro APK, com um erro de assinatura (isso também vale para um app que você compilou no seu computador). Nesse caso, **desinstale o app antes**. O histórico que ele guarda no celular é apagado junto, porque só existe lá. O firmware da placa não precisa ser gravado de novo por causa disso.
+
 Se preferir **compilar e instalar por USB**, veja a seção 6.
 
 ## 3. Montar a maquete
