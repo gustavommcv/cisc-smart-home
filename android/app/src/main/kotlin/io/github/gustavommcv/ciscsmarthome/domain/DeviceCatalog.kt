@@ -20,6 +20,12 @@ sealed interface LimitSpec {
   data class OfEntity(override val kind: LimitKind, val entity: EntityId) : LimitSpec
 }
 
+/** What a state the board says is drawn as: a leak over the chart of the gas, or a strip under the chart of the humidity for the time the dehumidifier ran. */
+enum class StateKind { GasEmergency, DehumidifierRunning }
+
+/** A state of an entity that a chart draws: the chart marks the time the entity was in the state [active], as the text the board gives it. */
+data class StateSpec(val entity: EntityId, val active: String, val kind: StateKind)
+
 /** What a chart of a month or a year draws: the least and the greatest of each hour as a line, or the peak of each day as a bar. */
 enum class LongPeriods { Envelope, DailyPeaks }
 
@@ -55,12 +61,16 @@ data class ChartRange(val low: Double, val high: Double) {
   fun fractionOf(value: Double): Float = if (high == low) 0.5f else ((value - low) / (high - low)).toFloat()
 }
 
-/** How the chart of a sensor looks: its [scale], the [limits] drawn over it, whether it is [fillBelow] the line, and what it draws for a month or a year. */
+/**
+ * How the chart of a sensor looks: its [scale], the [limits] drawn over it, whether it is [fillBelow] the line, what it draws for a month or a year, and the
+ * [states] it marks (when the dehumidifier ran, where the gas was in an emergency), which the history keeps only for the last days.
+ */
 data class ChartProfile(
   val scale: ChartScale = ChartScale(),
   val limits: List<LimitSpec> = emptyList(),
   val fillBelow: Boolean = false,
   val longPeriods: LongPeriods = LongPeriods.Envelope,
+  val states: List<StateSpec> = emptyList(),
 )
 
 /** A sensor the history is kept of: what it measures, what it reads in, and how it is charted. */
@@ -125,8 +135,15 @@ object DeviceCatalog {
   /** How a chart of a [kind] of sensor looks, before its limits: this is what makes any device with a sensor of that kind be drawn alike. */
   fun presetOf(kind: SensorKind): ChartProfile =
     when (kind) {
-      SensorKind.Gas -> ChartProfile(scale = ChartScale(atLeast = 0.0..400.0), fillBelow = true, longPeriods = LongPeriods.DailyPeaks)
-      SensorKind.Humidity -> ChartProfile(scale = ChartScale(atLeast = 40.0..100.0))
+      SensorKind.Gas ->
+        ChartProfile(
+          scale = ChartScale(atLeast = 0.0..400.0),
+          fillBelow = true,
+          longPeriods = LongPeriods.DailyPeaks,
+          states = listOf(StateSpec(EntityIds.GasState, "emergency", StateKind.GasEmergency)),
+        )
+      SensorKind.Humidity ->
+        ChartProfile(scale = ChartScale(atLeast = 40.0..100.0), states = listOf(StateSpec(EntityIds.DehumidifierPower, "true", StateKind.DehumidifierRunning)))
       SensorKind.Temperature -> ChartProfile(scale = ChartScale(minSpan = 10.0))
       SensorKind.Generic -> ChartProfile()
     }

@@ -43,6 +43,7 @@ private val PlotPadding = 8.dp
 private const val FILL_ALPHA = 0.18f
 private const val BAND_ALPHA = 0.16f
 private const val LABEL_GROUND_ALPHA = 0.85f
+private const val MARK_ALPHA = 0.32f
 
 /** A line drawn over a chart, with its words: where it is in the range ([fraction], 0 at the bottom to 1 at the top), and what it is. */
 internal data class LimitLine(val fraction: Float, val label: String, val kind: LimitKind)
@@ -89,7 +90,8 @@ private fun DrawScope.drawLimits(limits: List<LimitLine>, colors: ChartColors, m
  * A line chart, drawn by hand: one line, in the [line] color (the color of the app by default), over three lines of grid with the numbers of the bottom and the
  * top of its range. Each stretch the app heard is a line of its own, so the time it heard nothing stays empty, and a stretch of a single reading is a dot.
  * The [limits] are dashed lines over it with their words (unless [limitWords] is false, for a band too small to hold them: the screen says them above it); what the line does above the limit of an alarm is drawn in the color of an alert; the space between
- * the two limits of the dehumidifier is shaded; and with [fillBelow] the space under the line is washed with its color. [description] is what a screen reader says.
+ * the two limits of the dehumidifier is shaded; and with [fillBelow] the space under the line is washed with its color. The [marks] are bands over the whole
+ * height where something was going on (a gas leak). [description] is what a screen reader says.
  */
 @Composable
 internal fun LineChart(
@@ -102,6 +104,7 @@ internal fun LineChart(
   fillBelow: Boolean = false,
   unit: String? = null,
   limitWords: Boolean = true,
+  marks: List<StateSpan> = emptyList(),
 ) {
   val colors = chartColors(line)
   val measurer = rememberTextMeasurer()
@@ -109,6 +112,12 @@ internal fun LineChart(
     val padding = PlotPadding.toPx()
     val plotHeight = size.height - 2 * padding
     fun ChartPoint.place() = Offset(x * size.width, padding + (1 - y) * plotHeight)
+    // The time the gas was in an emergency, behind everything else: a band in the color of an alert across the height of the plot.
+    val least = LeastSpanWidth.toPx()
+    marks.forEach { span ->
+      val width = maxOf((span.to - span.from) * size.width, least)
+      drawRect(colors.alarm.copy(alpha = MARK_ALPHA), Offset((span.from * size.width).coerceAtMost(size.width - width), padding), Size(width, plotHeight))
+    }
     drawGrid(chart.range, colors, measurer, unit, padding, plotHeight)
     // The shade between what the dehumidifier turns on at and off at.
     val on = limits.firstOrNull { it.kind == LimitKind.DehumidifierOn }

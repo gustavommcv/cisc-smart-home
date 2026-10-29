@@ -42,6 +42,18 @@ class HistorySyncTest {
   }
 
   @Test
+  fun `the states of a sample are kept with it`() = runTest {
+    api.history = { _, _ ->
+      BoardResult.Success(HistoryPage(A, listOf(HistorySample(80_000, mapOf(GAS to 80.0), mapOf(EntityId("gas-state") to "emergency")))))
+    }
+    sync.catchUp(A)
+    assertEquals(
+      listOf(StoredSample(A, 80_000, Instant.parse("2026-10-27T11:59:40Z"), mapOf(GAS to 80.0), mapOf(EntityId("gas-state") to "emergency"))),
+      store.saved,
+    )
+  }
+
+  @Test
   fun `it asks only for what is newer than what it has`() = runTest {
     store.save(listOf(StoredSample(A, 70_000, Instant.parse("2026-10-27T11:59:00Z"), mapOf(GAS to 70.0))))
     api.history = { _, _ -> page(A, 80_000) }

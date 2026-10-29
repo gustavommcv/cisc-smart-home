@@ -14,6 +14,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
 import io.github.gustavommcv.ciscsmarthome.domain.NameBook
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -162,16 +163,17 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
     return ticks()
       .flatMapLatest { now ->
         val asked = windowOf(choice.period, choice.page, now, zone)
-        combine(sensors.map { sensor -> sourceOf(sensor.id, asked).map { sensor.id to it } }) { it.toMap() }
+        val sourcesOfSensors = combine(sensors.map { sensor -> sourceOf(sensor.id, asked).map { sensor.id to it } }) { it.toMap() }
+        combine(sourcesOfSensors, statesFor(sensors, asked)) { sources, states -> sources to states }
       }
-      .map { sources ->
+      .map { (sources, states) ->
         // The window ends when the charts are made, so a reading that came after the last tick is in them.
         val window = windowOf(choice.period, choice.page, clock.instant(), zone)
         val gap = if (window.period.isCalendar) ChartRules.HourlyMaxGap else ChartRules.MaxGap
         val readings = sources.mapValues { it.value.readings }
         // The hours are given only for a month or a year, which is when a sensor is drawn by the day.
         val hours = if (window.period.isCalendar) sources.mapValues { it.value.hours.orEmpty() } else emptyMap()
-        stateWith(window, ChartsState.Ready(open.charts.map { panelOf(it, readings, window.since, window.until, gap, choice.limitValues, hours, zone) }))
+        stateWith(window, ChartsState.Ready(open.charts.map { panelOf(it, readings, window.since, window.until, gap, choice.limitValues, hours, zone, states) }))
       }
   }
 
@@ -181,6 +183,14 @@ internal class HistoryViewModel(private val repository: HomeRepository, private 
   private fun sourceOf(sensor: EntityId, window: ChartWindow): Flow<Source> =
     if (window.period.isCalendar) repository.hourly(sensor, window.since, window.until).map { Source(it.points(), it) }
     else repository.series(sensor, window.since).map { Source(it, null) }
+
+  // The states the charts mark (when the dehumidifier ran, where the gas was in an emergency), for the sensors that have any. The history keeps them as long as
+  // the readings and no longer, so a month or a year, which is made of hours, has none.
+  private fun statesFor(sensors: List<ChartSensor>, window: ChartWindow): Flow<Map<EntityId, List<StateReading>>> {
+    val entities = sensors.flatMap { it.profile.states }.map { it.entity }.distinct()
+    if (window.period.isCalendar || entities.isEmpty()) return flowOf(emptyMap())
+    return combine(entities.map { entity -> repository.states(entity, window.since).map { entity to it } }) { it.toMap() }
+  }
 
   // The values the house has now of the entities the limits over the charts are read from (the ones the board points to, and the ones the catalog knows):
   // a limit the user changes is drawn at its new value.

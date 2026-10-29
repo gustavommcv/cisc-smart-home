@@ -15,6 +15,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
 import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateKind
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
 import io.github.gustavommcv.ciscsmarthome.testing.FakeHomeRepository
@@ -189,6 +191,58 @@ class HistoryViewModelTest {
     assertEquals(listOf(20.0 to 22.0, 60.0 to 70.0), compare.lanes.map { it.chart!!.min to it.chart!!.max })
     val humidityOnly = panels(state.value).last()
     assertEquals(60.0, humidityOnly.lanes.single().chart!!.min, 0.0)
+  }
+
+  private fun stateAt(minutesBeforeStart: Long, state: String) = StateReading(start.minus(Duration.ofMinutes(minutesBeforeStart)), state)
+
+  @Test
+  fun `the gas of a device shows the leaks the history kept`() = runTest {
+    repository.home.value = maquette
+    repository.setReadings(gasLevel, listOf(reading(30, 40.0), reading(1, 40.0)))
+    repository.setStates(EntityId("gas-state"), listOf(stateAt(20, "emergency"), stateAt(19, "normal")))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(gasMonitor)
+    assertEquals(listOf(StateKind.GasEmergency), panels(state.value).single().lanes.single().states.map { it.kind })
+  }
+
+  @Test
+  fun `the dehumidifier shows in the band of the humidity, and in the comparison, and the temperature has none`() = runTest {
+    repository.home.value = maquette
+    repository.setReadings(humidity, listOf(reading(30, 60.0)))
+    repository.setReadings(temperature, listOf(reading(30, 20.0)))
+    repository.setStates(EntityId("dehumidifier-power"), listOf(stateAt(20, "true"), stateAt(19, "false")))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(closetMonitor)
+    val compare = panels(state.value).first()
+    assertEquals(emptyList<StateBand>(), compare.lanes[0].states)
+    assertEquals(listOf(StateKind.DehumidifierRunning), compare.lanes[1].states.map { it.kind })
+  }
+
+  @Test
+  fun `the states are asked for once for each entity that is drawn, from the start of the window`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, _) = watched()
+    viewModel.openDevice(closetMonitor)
+    assertEquals(listOf(EntityId("dehumidifier-power")), repository.statesRequests.map { it.first }.distinct())
+    assertEquals(1, repository.statesRequests.size)
+    assertEquals(start.minus(Duration.ofHours(6)), repository.statesRequests.single().second)
+  }
+
+  @Test
+  fun `a list and a device with no states to draw ask for none`() = runTest {
+    repository.home.value = maquette
+    val (_, _) = watched()
+    assertEquals(emptyList<Pair<EntityId, Instant>>(), repository.statesRequests)
+  }
+
+  @Test
+  fun `a month or a year does not ask for the states, which are not kept that long`() = runTest {
+    repository.home.value = maquette
+    val (viewModel, state) = watched()
+    viewModel.choosePeriod(ChartPeriod.Month)
+    viewModel.openDevice(gasMonitor)
+    assertEquals(emptyList<Pair<EntityId, Instant>>(), repository.statesRequests)
+    assertEquals(emptyList<StateBand>(), panels(state.value).single().lanes.single().states)
   }
 
   @Test
