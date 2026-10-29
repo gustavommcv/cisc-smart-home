@@ -4,6 +4,10 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ## Não lançado
 
+### Ferramentas
+
+- `tools/seed_history.py` preenche o histórico do celular com até um ano de dados inventados (temperatura, umidade e gás), para mostrar os gráficos de mês e de ano numa apresentação, e tira tudo de novo com `--remove-before`. Não toca nas horas reais. Veja o [roteiro da maquete](docs/roteiro-maquete.md).
+
 ### Aplicativo (com o firmware novo)
 
 - O histórico mostra **quando o desumidificador ficou ligado** (uma faixa sob o gráfico de umidade) e **onde houve vazamento de gás** (faixas vermelhas sobre o gráfico do gás), nos gráficos de 1 h, 6 h e 24 h. Vem dos estados que a placa passa a dizer em cada amostra; o que o celular ouviu antes não tem estado, e o mês e o ano não os mostram. Precisa do firmware novo.
