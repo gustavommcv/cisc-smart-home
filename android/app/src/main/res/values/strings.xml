@@ -34,6 +34,10 @@
         <item quantity="many">%2$s · %1$d gráficos</item>
     </plurals>
     <string name="history_caption_hours">Cada hora mostra o menor e o maior valor que a placa leu. Os vazios são o tempo em que o app não ouviu a placa.</string>
+    <string name="history_limit_alarm">limite de alarme</string>
+    <string name="history_limit_dehumidifier_on">liga em %1$s</string>
+    <string name="history_limit_dehumidifier_off">desliga em %1$s</string>
+    <string name="history_caption_days">Cada barra é o maior valor que a placa leu naquele dia. Os dias sem barra são o tempo em que o app não ouviu a placa. Em vermelho, os dias que passaram do limite de alarme.</string>
     <string name="history_caption">Cada ponto é uma leitura da placa, guardada no celular. Os vazios são o tempo em que o app não ouviu a placa.</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_connection">Conexão</string>

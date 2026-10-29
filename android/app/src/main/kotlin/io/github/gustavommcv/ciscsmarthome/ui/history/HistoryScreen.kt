@@ -35,7 +35,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.gustavommcv.ciscsmarthome.R
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
 import io.github.gustavommcv.ciscsmarthome.ui.components.CiscCard
 import io.github.gustavommcv.ciscsmarthome.ui.components.IconBadge
 import io.github.gustavommcv.ciscsmarthome.ui.components.Tone
@@ -129,7 +131,13 @@ private fun DeviceCharts(state: HistoryState, device: HistoryDevice, onBack: () 
         is ChartsState.Ready -> charts.panels.forEach { panel -> PanelCard(panel, state.window, state.zone) }
       }
       Text(
-        stringResource(if (state.period.isCalendar) R.string.history_caption_hours else R.string.history_caption),
+        stringResource(
+          when {
+            !state.period.isCalendar -> R.string.history_caption
+            (state.charts as? ChartsState.Ready)?.panels?.any { panel -> panel.lanes.any { it.bars != null } } == true -> R.string.history_caption_days
+            else -> R.string.history_caption_hours
+          },
+        ),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
@@ -182,20 +190,54 @@ private fun LaneBody(lane: Lane, color: Color, window: ChartWindow, zone: ZoneId
   if (showName) {
     Row(modifier = Modifier.padding(top = Spacing.S), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
       Box(Modifier.size(Swatch).background(color, CircleShape))
-      Text(label, style = MaterialTheme.typography.bodyMedium, color = quiet)
+      // A band is too small for the words of its limits over the chart, so they are said here, next to its name.
+      val limitWords = lane.limits.joinToString(", ") { resources.limitText(it) }
+      Text(if (limitWords.isEmpty()) label else "$label · $limitWords", style = MaterialTheme.typography.bodyMedium, color = quiet)
     }
   }
   val chart = lane.chart
-  if (chart == null) {
-    Box(Modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
-      Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.bodyMedium, color = quiet, textAlign = TextAlign.Center)
+  val bars = lane.bars
+  val unit = lane.sensor.unit
+  when {
+    bars != null -> {
+      val limits = lane.limits.map { LimitLine(bars.range.fractionOf(it.value), resources.limitText(it), it.kind) }
+      BarChart(
+        bars,
+        resources.chartDescription(label, window, zone, bars.min, bars.max, unit),
+        bar = color,
+        height = height,
+        limits = limits,
+        limitValue = lane.limits.firstOrNull { it.kind == LimitKind.Alarm }?.value,
+        unit = unit,
+      )
+      MinMaxRow(resources.minText(bars.min, unit), resources.maxText(bars.max, unit))
     }
-    return
+    chart != null -> {
+      val limits = lane.limits.map { LimitLine(chart.range.fractionOf(it.value), resources.limitText(it), it.kind) }
+      LineChart(
+        chart,
+        resources.chartDescription(label, window, zone, chart.min, chart.max, unit),
+        line = color,
+        height = height,
+        limits = limits,
+        fillBelow = DeviceCatalog.chartOf(lane.sensor.id).fillBelow,
+        unit = unit,
+        limitWords = !showName,
+      )
+      MinMaxRow(resources.minText(chart.min, unit), resources.maxText(chart.max, unit))
+    }
+    else ->
+      Box(Modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
+        Text(stringResource(R.string.history_empty), style = MaterialTheme.typography.bodyMedium, color = quiet, textAlign = TextAlign.Center)
+      }
   }
-  LineChart(chart, resources.chartDescription(label, window, zone, chart.min, chart.max, lane.sensor.unit), line = color, height = height)
+}
+
+@Composable
+private fun MinMaxRow(least: String, greatest: String) {
   Row(modifier = Modifier.fillMaxWidth().padding(top = Spacing.Xs), horizontalArrangement = Arrangement.SpaceBetween) {
-    Text(resources.minText(chart.min, lane.sensor.unit), style = MaterialTheme.typography.bodyMedium)
-    Text(resources.maxText(chart.max, lane.sensor.unit), style = MaterialTheme.typography.bodyMedium)
+    Text(least, style = MaterialTheme.typography.bodyMedium)
+    Text(greatest, style = MaterialTheme.typography.bodyMedium)
   }
 }
 

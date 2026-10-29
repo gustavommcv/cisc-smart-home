@@ -3,6 +3,7 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 import android.content.Context
 import android.content.res.Resources
 import androidx.test.core.app.ApplicationProvider
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
 import java.time.Instant
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
@@ -102,5 +103,20 @@ class HistoryTextTest {
   fun `the chart that compares is named by both sensors, the second one in lower case`() {
     assertEquals("Temperatura e umidade", resources.compareTitle("Temperatura", "Umidade"))
     assertEquals("Gás e vento", resources.compareTitle("Gás", "Vento"))
+  }
+
+  @Test
+  fun `the limit of the alarm says what it is, and the ones of the dehumidifier say what it turns on and off at`() {
+    assertEquals("limite de alarme", resources.limitText(ResolvedLimit(LimitKind.Alarm, 160.0)))
+    assertEquals("liga em 85 %", resources.limitText(ResolvedLimit(LimitKind.DehumidifierOn, 85.0)))
+    assertEquals("desliga em 83 %", resources.limitText(ResolvedLimit(LimitKind.DehumidifierOff, 83.0)))
+  }
+
+  @Test
+  fun `the caption of the days says what a bar is`() {
+    assertEquals(
+      "Cada barra é o maior valor que a placa leu naquele dia. Os dias sem barra são o tempo em que o app não ouviu a placa. Em vermelho, os dias que passaram do limite de alarme.",
+      resources.getString(io.github.gustavommcv.ciscsmarthome.R.string.history_caption_days),
+    )
   }
 }

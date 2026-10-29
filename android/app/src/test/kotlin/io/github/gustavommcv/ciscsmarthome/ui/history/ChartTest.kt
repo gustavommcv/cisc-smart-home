@@ -1,5 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.ui.history
 
+import io.github.gustavommcv.ciscsmarthome.domain.ChartRange
+import io.github.gustavommcv.ciscsmarthome.domain.ChartScale
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Duration
 import java.time.Instant
@@ -183,5 +185,41 @@ class ChartTest {
   fun `without a gap given, it is the two minutes of a board that is heard every ten seconds`() {
     val chart = chartOf(listOf(reading(0, 1.0), reading(30 * 60, 2.0)), since, until)!!
     assertEquals(2, chart.lines.size)
+  }
+
+  // ---- the scale ----------------------------------------------------------------------------------
+
+  @Test
+  fun `without a scale, the range is what was read`() {
+    val chart = chart(reading(0, 20.0), reading(10, 25.0))!!
+    assertEquals(ChartRange(20.0, 25.0), chart.range)
+  }
+
+  @Test
+  fun `a scale that must show zero to 400 puts a reading of 44 near the bottom, and the least and the greatest stay what was read`() {
+    val chart = chartOf(listOf(reading(0, 44.0), reading(10, 60.0)), since, until, scale = ChartScale(atLeast = 0.0..400.0))!!
+    assertEquals(ChartRange(0.0, 400.0), chart.range)
+    assertEquals(listOf(0.11f, 0.15f), chart.lines.single().map { Math.round(it.y * 100) / 100f })
+    assertEquals(44.0, chart.min, 0.0)
+    assertEquals(60.0, chart.max, 0.0)
+  }
+
+  @Test
+  fun `a reading above the range that must be shown widens it, and is at the top`() {
+    val chart = chartOf(listOf(reading(0, 44.0), reading(10, 520.0)), since, until, scale = ChartScale(atLeast = 0.0..400.0))!!
+    assertEquals(ChartRange(0.0, 520.0), chart.range)
+    assertEquals(1f, chart.lines.single().last().y, 0f)
+  }
+
+  @Test
+  fun `a limit outside what was read is in the range`() {
+    val chart = chartOf(listOf(reading(0, 60.0), reading(10, 64.0)), since, until, limits = listOf(85.0))!!
+    assertEquals(ChartRange(60.0, 85.0), chart.range)
+  }
+
+  @Test
+  fun `a flat series on a scale that shows more than it is not in the middle, it is where it is`() {
+    val chart = chartOf(listOf(reading(0, 100.0)), since, until, scale = ChartScale(atLeast = 0.0..400.0))!!
+    assertEquals(0.25f, chart.lines.single().single().y, 0.0001f)
   }
 }

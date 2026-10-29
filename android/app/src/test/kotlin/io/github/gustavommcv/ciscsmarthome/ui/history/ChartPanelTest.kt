@@ -1,5 +1,8 @@
 package io.github.gustavommcv.ciscsmarthome.ui.history
 
+import io.github.gustavommcv.ciscsmarthome.domain.ChartRange
+import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Duration
@@ -91,5 +94,73 @@ class ChartPanelTest {
   fun `the panel keeps the spec it was made from`() {
     val spec = ChartSpec.Single(temperature)
     assertEquals(spec, panelOf(spec, emptyMap(), since, until).spec)
+  }
+
+  // ---- what the catalog says of each sensor ------------------------------------------------------
+
+  private val gas = ChartSensor(EntityId("gas-level"), "Gas", "adc")
+
+  @Test
+  fun `the gas is charted on its own scale and with the limit of the alarm`() {
+    val lane = panelOf(ChartSpec.Single(gas), mapOf(gas.id to listOf(reading(30, 44.0), reading(10, 60.0))), since, until).lanes.single()
+    assertEquals(ChartRange(0.0, 400.0), lane.chart!!.range)
+    assertEquals(listOf(ResolvedLimit(LimitKind.Alarm, 160.0)), lane.limits)
+  }
+
+  @Test
+  fun `the humidity limits are the values the house has now, and a limit the house does not have is not drawn`() {
+    val humidity = ChartSensor(EntityId("humidity"), "Humidity", "%")
+    val readings = mapOf(humidity.id to listOf(reading(30, 70.0)))
+    val both = panelOf(ChartSpec.Single(humidity), readings, since, until, limitValues = mapOf(EntityId("dehumidifier-on-at") to 85.0, EntityId("dehumidifier-off-at") to 83.0)).lanes.single()
+    assertEquals(listOf(ResolvedLimit(LimitKind.DehumidifierOn, 85.0), ResolvedLimit(LimitKind.DehumidifierOff, 83.0)), both.limits)
+    val one = panelOf(ChartSpec.Single(humidity), readings, since, until, limitValues = mapOf(EntityId("dehumidifier-on-at") to 85.0)).lanes.single()
+    assertEquals(listOf(ResolvedLimit(LimitKind.DehumidifierOn, 85.0)), one.limits)
+    assertEquals(emptyList<ResolvedLimit>(), panelOf(ChartSpec.Single(humidity), readings, since, until).lanes.single().limits)
+  }
+
+  @Test
+  fun `the limits are in the range of the chart`() {
+    val humidity = ChartSensor(EntityId("humidity"), "Humidity", "%")
+    val lane = panelOf(ChartSpec.Single(humidity), mapOf(humidity.id to listOf(reading(30, 70.0))), since, until, limitValues = mapOf(EntityId("dehumidifier-on-at") to 105.0)).lanes.single()
+    assertEquals(ChartRange(40.0, 105.0), lane.chart!!.range)
+  }
+
+  @Test
+  fun `the temperature is never on a scale narrower than ten degrees`() {
+    val lane = panelOf(ChartSpec.Single(temperature), mapOf(temperature.id to listOf(reading(30, 19.0), reading(10, 21.0))), since, until).lanes.single()
+    assertEquals(ChartRange(15.0, 25.0), lane.chart!!.range)
+  }
+
+  @Test
+  fun `a sensor nobody knows has the range of what it read, and no limits`() {
+    val wind = ChartSensor(EntityId("wind"), "Wind", "km/h")
+    val lane = panelOf(ChartSpec.Single(wind), mapOf(wind.id to listOf(reading(30, 3.0), reading(10, 9.0))), since, until).lanes.single()
+    assertEquals(ChartRange(3.0, 9.0), lane.chart!!.range)
+    assertEquals(emptyList<ResolvedLimit>(), lane.limits)
+  }
+
+  @Test
+  fun `a month of the gas is bars when the hours are given, and a month of the temperature is still a line`() {
+    val hours = mapOf(gas.id to listOf(HourlyReading(until.minusSeconds(7200), 44.0, 218.0)), temperature.id to listOf(HourlyReading(until.minusSeconds(7200), 19.0, 21.0)))
+    val points = mapOf(gas.id to listOf(reading(60, 44.0)), temperature.id to listOf(reading(60, 19.0)))
+    val gasLane = panelOf(ChartSpec.Single(gas), points, since, until, hours = hours, zone = java.time.ZoneOffset.UTC).lanes.single()
+    assertNull(gasLane.chart)
+    assertEquals(listOf(218.0), gasLane.bars!!.bars.map { it.value })
+    val temperatureLane = panelOf(ChartSpec.Single(temperature), points, since, until, hours = hours, zone = java.time.ZoneOffset.UTC).lanes.single()
+    assertNull(temperatureLane.bars)
+    assertNotNull(temperatureLane.chart)
+  }
+
+  @Test
+  fun `a gas chart of the last hours, with no hours given, is a line`() {
+    val lane = panelOf(ChartSpec.Single(gas), mapOf(gas.id to listOf(reading(30, 44.0))), since, until).lanes.single()
+    assertNull(lane.bars)
+    assertNotNull(lane.chart)
+  }
+
+  @Test
+  fun `a band with bars and no line is not empty`() {
+    val hours = mapOf(gas.id to listOf(HourlyReading(until.minusSeconds(7200), 44.0, 218.0)))
+    assertFalse(panelOf(ChartSpec.Single(gas), emptyMap(), since, until, hours = hours, zone = java.time.ZoneOffset.UTC).isEmpty)
   }
 }
