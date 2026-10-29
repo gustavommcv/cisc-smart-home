@@ -4,13 +4,19 @@ Cada versão tem uma tag `vX.Y.Z` no Git e uma [página de versões](https://git
 
 ## Não lançado
 
+### Ferramentas
+
+- `tools/seed_history.py` preenche o histórico do celular com até um ano de dados inventados (temperatura, umidade e gás), para mostrar os gráficos de mês e de ano numa apresentação, e tira tudo de novo com `--remove-before`. Não toca nas horas reais. Veja o [roteiro da maquete](docs/roteiro-maquete.md).
+
 ### Aplicativo (com o firmware novo)
 
+- O histórico mostra **quando o desumidificador ficou ligado** (uma faixa sob o gráfico de umidade) e **onde houve vazamento de gás** (faixas vermelhas sobre o gráfico do gás), nos gráficos de 1 h, 6 h e 24 h. Vem dos estados que a placa passa a dizer em cada amostra; o que o celular ouviu antes não tem estado, e o mês e o ano não os mostram. Precisa do firmware novo.
 - O app **acredita no que a placa diz** de cada sensor (a classe e as linhas de limite do gráfico): o limite do alarme do gás vem da placa, e um dispositivo novo com sensores de gás, temperatura ou umidade é desenhado como os outros desses tipos, sem o app saber dele. Com um firmware antigo, que não diz nada, tudo continua como antes.
 
 ### Firmware
 
 - O **padrão do desumidificador** passa a ser o ideal para um armário: **liga a 65 % e desliga a 55 %** (era 85 % e 83 %). Uma placa que já guardou os limites continua com os dela; no app, o botão de voltar ao padrão a leva a 65/55, e dá para mudar a qualquer hora pela configuração do dispositivo.
+- Cada amostra do **histórico** da placa passa a dizer também o **estado do gás** e se o **desumidificador estava ligado** (`states` em `GET /api/v1/history`). É a base para o app desenhar quando o desumidificador ficou ligado e onde houve vazamento; o app de hoje ignora o campo. A placa precisa ser regravada.
 - O JSON da casa passa a dizer, nos sensores, a **classe** (`gas`, `temperature`, `humidity`) e as **linhas de limite** do gráfico (o limite do alarme do gás, que sai da configuração da placa, e os limites do desumidificador, que são as entidades que o usuário muda). É um acréscimo: o app antigo ignora e a placa antiga continua funcionando com o app novo. **Quem quiser isso precisa gravar o firmware de novo.**
 
 ### Mudou

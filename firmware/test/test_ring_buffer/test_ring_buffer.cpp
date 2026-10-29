@@ -49,8 +49,8 @@ void test_clear_empties_the_buffer() {
 
 void test_stores_samples() {
   RingBuffer<Sample, 2> history;
-  history.push(Sample{1000, 120, 21.5f, 74.0f, true});
-  history.push(Sample{2000, 130, 0.0f, 0.0f, false});
+  history.push(Sample{1000, 120, 21.5f, 74.0f, true, cisc::GasState::Normal, false});
+  history.push(Sample{2000, 130, 0.0f, 0.0f, false, cisc::GasState::Normal, false});
   TEST_ASSERT_EQUAL_UINT32(1000, history.at(0).timestampMs);
   TEST_ASSERT_EQUAL_INT(120, history.at(0).gasReading);
   TEST_ASSERT_EQUAL_FLOAT(74.0f, history.at(0).humidityPercent);

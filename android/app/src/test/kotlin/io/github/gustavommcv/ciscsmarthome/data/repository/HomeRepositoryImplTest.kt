@@ -19,6 +19,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HomeEvent
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
 import io.github.gustavommcv.ciscsmarthome.testing.FakeAlertMemory
 import io.github.gustavommcv.ciscsmarthome.testing.houseOfTheMaquete
@@ -383,6 +384,14 @@ class HomeRepositoryImplTest {
     store.save(listOf(sample))
     val series = repository().series(GAS, Instant.EPOCH).first()
     assertEquals(listOf(Reading(sample.at, 70.0)), series)
+  }
+
+  @Test
+  fun `the states come from the stored history`() = runTest {
+    val at = Instant.parse("2026-10-27T11:59:00Z")
+    store.save(listOf(StoredSample(A, 70_000, at, mapOf(GAS to 70.0), mapOf(EntityId("gas-state") to "emergency", EntityId("dehumidifier-power") to "true"))))
+    assertEquals(listOf(StateReading(at, "emergency")), repository().states(EntityId("gas-state"), Instant.EPOCH).first())
+    assertEquals(listOf(StateReading(at, "true")), repository().states(EntityId("dehumidifier-power"), Instant.EPOCH).first())
   }
 
   // ---- gas leaks ------------------------------------------------------------------------

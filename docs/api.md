@@ -168,14 +168,17 @@ Sem `limit`, a resposta traz **no máximo 100 amostras**, para caber na memória
 {
   "bootId": "5f3a9c21",
   "samples": [
-    { "uptimeMs": 160000, "values": { "gas-level": 142, "temperature": 21.4, "humidity": 74.1 } },
-    { "uptimeMs": 170000, "values": { "gas-level": 140, "temperature": null, "humidity": null } }
+    { "uptimeMs": 160000, "values": { "gas-level": 142, "temperature": 21.4, "humidity": 74.1 },
+      "states": { "gas-state": "normal", "dehumidifier-power": true } },
+    { "uptimeMs": 170000, "values": { "gas-level": 140, "temperature": null, "humidity": null },
+      "states": { "gas-state": "normal", "dehumidifier-power": false } }
   ]
 }
 ```
 
 - As amostras vêm **da mais antiga para a mais nova**.
 - A chave de cada valor é o `id` da entidade. `null` quer dizer que não houve leitura válida.
+- `states` diz **o que estava ligado ou em que estado a placa estava** naquela amostra, com o `id` da entidade como chave e o **mesmo valor** que ela tem em `GET /home`: `gas-state` (`starting`, `normal` ou `emergency`) e `dehumidifier-power` (`true` ou `false`). Sem leitura válida do clima, o desumidificador conta como desligado. É o que permite desenhar *quando* o desumidificador ficou ligado e onde houve vazamento. O campo é **aditivo**: um app que não o conhece o ignora.
 - O ESP32 guarda um número fixo de amostras na memória (uma hora). Ao reiniciar, **perde tudo**. O app guarda a sua própria cópia e, para ela não ter buracos, busca o que é novo **com frequência**, não só ao conectar (veja "Como o app se conecta").
 - Para saber se já tem uma amostra, o app usa o par (`bootId`, `uptimeMs`).
 

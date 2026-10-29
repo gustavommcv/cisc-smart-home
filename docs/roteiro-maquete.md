@@ -124,6 +124,21 @@ python3 -c "import sqlite3,time;c=sqlite3.connect('/tmp/h.db');t=c.execute(\"sel
 
 Repita o comando depois de um minuto, sem tocar no app.
 
+## Encher o histórico para uma apresentação
+
+O gráfico de mês e de ano só fica cheio depois de meses de uso. Para mostrar o app antes disso, o script [`tools/seed_history.py`](../tools/seed_history.py) **preenche o passado** do histórico no celular com até um ano de horas inventadas dos três sensores: a temperatura segue o dia e a estação, a umidade sobe e desce com o desumidificador, e o gás fica quieto, com os picos de cozinhar e uns poucos vazamentos.
+
+```bash
+python3 tools/seed_history.py            # preenche um ano para trás
+python3 tools/seed_history.py --dry-run  # só diz o que escreveria, sem mexer em nada
+```
+
+- Precisa do celular com **depuração USB** e do app de depuração (o script abre o banco do app com `run-as`). O app é fechado enquanto o banco muda e aberto de novo no fim.
+- **Nada que o celular ouviu de verdade é tocado.** Só se preenche o tempo **anterior à primeira hora real**, e uma hora que já tem leitura nunca é sobrescrita.
+- Para **tirar tudo** o que foi inventado, rode o comando que o script imprime no fim, no formato `python3 tools/seed_history.py --remove-before <número>`. Funciona porque nada que a placa diga depois pode ser mais antigo que a primeira hora real.
+- As **linhas do gráfico de umidade** (quando o desumidificador liga e desliga) são as que a placa tem **agora**, não as da época: mude-as na tela do dispositivo se quiser que combinem com o que se vê.
+- O mesmo número (`--seed`) gera sempre o mesmo passado.
+
 ## Anotar
 
 Se algum passo falhar, anote o número do passo e copie 3 ou 4 linhas do monitor perto do problema. Com isso dá para saber se a causa é o fio, o sensor ou o código.

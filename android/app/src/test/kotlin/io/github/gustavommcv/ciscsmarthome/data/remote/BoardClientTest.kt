@@ -442,6 +442,21 @@ class BoardClientTest {
   }
 
   @Test
+  fun `the states of a sample are kept as text by entity, and a sample without them has none`() {
+    reply(
+      200,
+      """{"bootId":"5f3a9c21","samples":[
+        {"uptimeMs":160000,"values":{"gas-level":142},"states":{"gas-state":"emergency","dehumidifier-power":true}},
+        {"uptimeMs":170000,"values":{"gas-level":140},"states":{"gas-state":null,"dehumidifier-power":false}},
+        {"uptimeMs":180000,"values":{"gas-level":140}}]}""",
+    )
+    val samples = runBlocking { client.getHistory() }.value().samples
+    assertEquals(mapOf(EntityId("gas-state") to "emergency", EntityId("dehumidifier-power") to "true"), samples[0].states)
+    assertEquals("a state that is null is left out", mapOf(EntityId("dehumidifier-power") to "false"), samples[1].states)
+    assertEquals(emptyMap<EntityId, String>(), samples[2].states)
+  }
+
+  @Test
   fun `an empty history is an empty list`() {
     reply(200, """{"bootId":"b1","samples":[]}""")
     assertEquals(emptyList<Any>(), runBlocking { client.getHistory() }.value().samples)

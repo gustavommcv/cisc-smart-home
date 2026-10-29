@@ -74,7 +74,16 @@ private fun EntityDto.numberEntity(entityId: EntityId): Entity? {
 }
 
 internal fun HistoryDto.toDomain(): HistoryPage =
-  HistoryPage(BootId(bootId), samples.map { sample -> HistorySample(sample.uptimeMs, sample.values.mapKeys { EntityId(it.key) }) })
+  HistoryPage(
+    BootId(bootId),
+    samples.map { sample ->
+      HistorySample(
+        sample.uptimeMs,
+        sample.values.mapKeys { EntityId(it.key) },
+        sample.states.filterValues { it !is JsonNull }.map { (id, state) -> EntityId(id) to state.content }.toMap(),
+      )
+    },
+  )
 
 private fun primitive(value: JsonElement?): JsonPrimitive? = (value as? JsonPrimitive)?.takeIf { it !is JsonNull }
 
