@@ -12,7 +12,7 @@ Em [`lib/domain/src`](lib/domain/src):
 | `HumidityController` | Liga e desliga o desumidificador com dois limites. Modo Automático ou Manual. Os limites **podem ser mudados** (`setLimits`) dentro do que `Settings.h` permite: números inteiros de 40 a 95 %, com o de desligar pelo menos 2 pontos abaixo do de ligar |
 | `ButtonDebouncer` | Transforma o sinal do botão, que tremula, em um único evento por aperto |
 | `RingBuffer` e `Sample` | O histórico: um buffer de tamanho fixo que sobrescreve o dado mais antigo |
-| `Settings.h` | Todos os limites e tempos, em um só lugar, para calibrar com o sensor real. Os valores de fábrica dos limites de umidade são **85 % (liga) e 83 % (desliga)**, e a regra do que se pode escolher (`isValid`) mora aqui também |
+| `Settings.h` | Todos os limites e tempos, em um só lugar, para calibrar com o sensor real. Os valores de fábrica dos limites de umidade são **65 % (liga) e 55 % (desliga)**, o ideal para um armário, e a regra do que se pode escolher (`isValid`) mora aqui também |
 | `Time.h` | Comparação de tempo que continua certa quando o `millis()` dá a volta |
 
 O código é C++ puro, sem `Arduino.h`, sem exceções e sem alocação dinâmica. Compila também com o compilador do ESP32.

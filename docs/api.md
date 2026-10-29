@@ -63,10 +63,10 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
             { "id": "dehumidifier-power", "kind": "switch", "name": "Power", "value": false, "commandable": true },
             { "id": "dehumidifier-mode", "kind": "select", "name": "Mode", "value": "automatic",
               "options": ["automatic", "manual"], "commandable": true },
-            { "id": "dehumidifier-on-at", "kind": "number", "name": "Turn on at", "value": 85, "unit": "%",
-              "min": 40, "max": 95, "step": 1, "default": 85, "commandable": true },
-            { "id": "dehumidifier-off-at", "kind": "number", "name": "Turn off at", "value": 83, "unit": "%",
-              "min": 40, "max": 95, "step": 1, "default": 83, "commandable": true }
+            { "id": "dehumidifier-on-at", "kind": "number", "name": "Turn on at", "value": 65, "unit": "%",
+              "min": 40, "max": 95, "step": 1, "default": 65, "commandable": true },
+            { "id": "dehumidifier-off-at", "kind": "number", "name": "Turn off at", "value": 55, "unit": "%",
+              "min": 40, "max": 95, "step": 1, "default": 55, "commandable": true }
           ]
         }
       ]
@@ -118,8 +118,8 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 | | | `humidity` | `sensor` | porcentagem, ou `null`. Classe `humidity` e duas linhas, `turns-on` e `turns-off`, que são os valores de `dehumidifier-on-at` e `dehumidifier-off-at` |
 | | | `dehumidifier-power` | `switch` | ligado ou desligado |
 | | | `dehumidifier-mode` | `select` | `automatic` ou `manual` |
-| | | `dehumidifier-on-at` | `number` | a umidade a partir da qual o desumidificador liga no modo automático: 40 a 95 %, de 1 em 1, padrão 85 |
-| | | `dehumidifier-off-at` | `number` | a umidade até a qual ele desliga: 40 a 95 %, de 1 em 1, padrão 83 |
+| | | `dehumidifier-on-at` | `number` | a umidade a partir da qual o desumidificador liga no modo automático: 40 a 95 %, de 1 em 1, padrão 65 |
+| | | `dehumidifier-off-at` | `number` | a umidade até a qual ele desliga: 40 a 95 %, de 1 em 1, padrão 55 |
 
 Um **dispositivo** é a unidade que se compra e se instala, como o monitor de gás ou o monitor do armário, e as **entidades** são o que ele lê e o que ele controla. O sensor, a válvula e o relé não são dispositivos: são partes de um. Na maquete, um ESP32 só roda os dois dispositivos porque o trabalho pede; numa casa real, cada um seria uma placa. O app não precisa saber disso: ele só vê cômodos, dispositivos e entidades.
 
