@@ -3,6 +3,11 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 import io.github.gustavommcv.ciscsmarthome.domain.Area
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
 import io.github.gustavommcv.ciscsmarthome.domain.BootId
+import io.github.gustavommcv.ciscsmarthome.domain.ChartProfile
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
+import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
+import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
 import io.github.gustavommcv.ciscsmarthome.domain.Device
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
@@ -146,5 +151,46 @@ class HistoryDevicesTest {
     val keys = historyDevices(house("bedroom" to listOf(closetMonitor))).single().charts.map { it.id }
     assertEquals(keys.size, keys.toSet().size)
     assertNull(keys.firstOrNull { it.isBlank() })
+  }
+
+  // ---- what the board says of the sensors -----------------------------------------------------------
+
+  private fun declared(id: String, unit: String, kind: SensorKind?, limits: List<LimitSpec> = emptyList()) = Entity.Sensor(EntityId(id), "Name of $id", SensorValue.Number(1.0), unit, kind, limits)
+
+  @Test
+  fun `a device nobody knows with a temperature and a humidity that say so has the chart that compares them`() {
+    val garage = device("garage-monitor", declared("garage-temp", "°C", SensorKind.Temperature), declared("garage-humidity", "%", SensorKind.Humidity))
+    val charts = historyDevices(house("garage" to listOf(garage))).single().charts
+    assertEquals(listOf("compare:garage-temp+garage-humidity", "single:garage-temp", "single:garage-humidity"), charts.map { it.id })
+  }
+
+  @Test
+  fun `a device nobody knows with sensors that say nothing is a line for each`() {
+    val garage = device("garage-monitor", declared("garage-temp", "°C", null), declared("garage-humidity", "%", null))
+    assertEquals(listOf("single:garage-temp", "single:garage-humidity"), historyDevices(house("garage" to listOf(garage))).single().charts.map { it.id })
+  }
+
+  @Test
+  fun `a sensor carries the profile the board gave it`() {
+    val limits = listOf<LimitSpec>(LimitSpec.Fixed(LimitKind.Alarm, 90.0))
+    val garage = device("garage-monitor", declared("co-level", "ppm", SensorKind.Gas, limits))
+    val sensor = (historyDevices(house("garage" to listOf(garage))).single().charts.single() as ChartSpec.Single).sensor
+    assertEquals(SensorKind.Gas, sensor.kind)
+    assertEquals(limits, sensor.profile.limits)
+    assertEquals(0.0..400.0, sensor.profile.scale.atLeast)
+  }
+
+  @Test
+  fun `a sensor of the maquette that the board does not describe has the profile of the catalog`() {
+    val sensor = (historyDevices(house("kitchen" to listOf(gasMonitor))).single().charts.single() as ChartSpec.Single).sensor
+    assertEquals(DeviceCatalog.chartOf(EntityId("gas-level")), sensor.profile)
+    assertEquals(SensorKind.Gas, sensor.kind)
+  }
+
+  @Test
+  fun `a sensor with no class and no catalog is a plain line`() {
+    val sensor = (historyDevices(house("room" to listOf(device("weather", declared("wind", "km/h", null))))).single().charts.single() as ChartSpec.Single).sensor
+    assertEquals(SensorKind.Generic, sensor.kind)
+    assertEquals(ChartProfile(), sensor.profile)
   }
 }

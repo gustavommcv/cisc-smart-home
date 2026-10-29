@@ -57,7 +57,18 @@ sealed interface Entity {
   /** Whether the app may send a command to it. Only switches, selects and numbers can say yes. */
   val commandable: Boolean
 
-  data class Sensor(override val id: EntityId, override val name: String, val value: SensorValue, val unit: String? = null) : Entity {
+  /**
+   * What a sensor reads. The board may also say what the sensor is ([sensorClass]) and the [limits] to draw over its chart; one that says nothing
+   * is drawn by what the app knows of its id, and one nobody knows is a plain line.
+   */
+  data class Sensor(
+    override val id: EntityId,
+    override val name: String,
+    val value: SensorValue,
+    val unit: String? = null,
+    val sensorClass: SensorKind? = null,
+    val limits: List<LimitSpec> = emptyList(),
+  ) : Entity {
     override val commandable: Boolean get() = false
   }
 

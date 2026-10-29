@@ -3,6 +3,9 @@ package io.github.gustavommcv.ciscsmarthome.ui.history
 import io.github.gustavommcv.ciscsmarthome.domain.ChartRange
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
+import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
+import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
+import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import java.time.Duration
@@ -162,5 +165,13 @@ class ChartPanelTest {
   fun `a band with bars and no line is not empty`() {
     val hours = mapOf(gas.id to listOf(HourlyReading(until.minusSeconds(7200), 44.0, 218.0)))
     assertFalse(panelOf(ChartSpec.Single(gas), emptyMap(), since, until, hours = hours, zone = java.time.ZoneOffset.UTC).isEmpty)
+  }
+
+  @Test
+  fun `a band is drawn by the profile of its sensor, which may be one the board gave`() {
+    val co = ChartSensor(EntityId("co-level"), "CO", "ppm", SensorKind.Gas, DeviceCatalog.profileOf(EntityId("co-level"), SensorKind.Gas, listOf(LimitSpec.Fixed(LimitKind.Alarm, 90.0))))
+    val lane = panelOf(ChartSpec.Single(co), mapOf(co.id to listOf(reading(30, 12.0))), since, until).lanes.single()
+    assertEquals(listOf(ResolvedLimit(LimitKind.Alarm, 90.0)), lane.limits)
+    assertEquals(ChartRange(0.0, 400.0), lane.chart!!.range)
   }
 }

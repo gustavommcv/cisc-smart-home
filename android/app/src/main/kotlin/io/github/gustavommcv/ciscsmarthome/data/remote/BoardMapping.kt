@@ -10,6 +10,9 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.HistoryPage
 import io.github.gustavommcv.ciscsmarthome.domain.HistorySample
 import io.github.gustavommcv.ciscsmarthome.domain.Home
+import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
+import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
+import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
 import io.github.gustavommcv.ciscsmarthome.domain.SensorValue
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -29,12 +32,36 @@ private fun AreaDto.toDomain(): Area =
 internal fun EntityDto.toDomain(): Entity? {
   val entityId = EntityId(id)
   return when (kind) {
-    "sensor" -> Entity.Sensor(entityId, name, sensorValue(value), unit)
+    "sensor" -> Entity.Sensor(entityId, name, sensorValue(value), unit, sensorKind(sensorClass), limits.orEmpty().mapNotNull { it.toDomain() })
     "binary_sensor" -> Entity.BinarySensor(entityId, name, flag(value))
     "switch" -> Entity.Switch(entityId, name, flag(value), commandable)
     "select" -> Entity.Select(entityId, name, text(value), options.orEmpty(), commandable)
     // A number the board gave no range or step for cannot be drawn, so it is left out like a kind the app does not know.
     "number" -> numberEntity(entityId)
+    else -> null
+  }
+}
+
+// A class or a kind of limit the app does not know is left out, and the sensor is drawn by what the app knows of it.
+private fun sensorKind(name: String?): SensorKind? =
+  when (name) {
+    "gas" -> SensorKind.Gas
+    "temperature" -> SensorKind.Temperature
+    "humidity" -> SensorKind.Humidity
+    else -> null
+  }
+
+private fun LimitDto.toDomain(): LimitSpec? {
+  val limitKind =
+    when (kind) {
+      "alarm" -> LimitKind.Alarm
+      "turns-on" -> LimitKind.DehumidifierOn
+      "turns-off" -> LimitKind.DehumidifierOff
+      else -> return null
+    }
+  return when {
+    value != null -> LimitSpec.Fixed(limitKind, value)
+    entity != null -> LimitSpec.OfEntity(limitKind, EntityId(entity))
     else -> null
   }
 }

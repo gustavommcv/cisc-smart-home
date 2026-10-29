@@ -1,6 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.ui.history
 
 import io.github.gustavommcv.ciscsmarthome.domain.AreaId
+import io.github.gustavommcv.ciscsmarthome.domain.ChartProfile
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceCatalog
 import io.github.gustavommcv.ciscsmarthome.domain.DeviceId
 import io.github.gustavommcv.ciscsmarthome.domain.Entity
@@ -8,8 +9,17 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
 
-/** A sensor the chart can show: the [name] is the board's, and the [unit] is what it reads in. */
-internal data class ChartSensor(val id: EntityId, val name: String, val unit: String)
+/**
+ * A sensor the chart can show: the [name] is the board's, the [unit] is what it reads in, the [kind] is what it is and the [profile] is how its chart looks.
+ * The kind and the profile are what the board said of it, and without that, what the app knows of its id.
+ */
+internal data class ChartSensor(
+  val id: EntityId,
+  val name: String,
+  val unit: String,
+  val kind: SensorKind = DeviceCatalog.kindOf(id),
+  val profile: ChartProfile = DeviceCatalog.profileOf(id, kind, emptyList()),
+)
 
 /** A chart of a device: the [id] tells it from the others of the same device. */
 internal sealed interface ChartSpec {
@@ -48,7 +58,12 @@ internal fun historyDevices(home: Home?): List<HistoryDevice> {
   }
   return home.areas.flatMap { area ->
     area.devices.mapNotNull { device ->
-      val sensors = device.entities.filterIsInstance<Entity.Sensor>().mapNotNull { sensor -> sensor.unit?.let { ChartSensor(sensor.id, sensor.name, it) } }
+      val sensors =
+        device.entities.filterIsInstance<Entity.Sensor>().mapNotNull { sensor ->
+          sensor.unit?.let {
+            ChartSensor(sensor.id, sensor.name, it, DeviceCatalog.kindOf(sensor.id, sensor.sensorClass), DeviceCatalog.profileOf(sensor.id, sensor.sensorClass, sensor.limits))
+          }
+        }
       if (sensors.isEmpty()) null else HistoryDevice(device.id, device.name, area.id, area.name, chartsOf(sensors))
     }
   }
@@ -56,8 +71,8 @@ internal fun historyDevices(home: Home?): List<HistoryDevice> {
 
 // Temperature and humidity of one device are drawn also together, the temperature above, and that chart comes first: it is what they are looked at for.
 private fun chartsOf(sensors: List<ChartSensor>): List<ChartSpec> {
-  val temperature = sensors.firstOrNull { DeviceCatalog.kindOf(it.id) == SensorKind.Temperature }
-  val humidity = sensors.firstOrNull { DeviceCatalog.kindOf(it.id) == SensorKind.Humidity }
+  val temperature = sensors.firstOrNull { it.kind == SensorKind.Temperature }
+  val humidity = sensors.firstOrNull { it.kind == SensorKind.Humidity }
   val together = if (temperature != null && humidity != null) listOf(ChartSpec.Compare(temperature, humidity)) else emptyList()
   return together + sensors.map { ChartSpec.Single(it) }
 }

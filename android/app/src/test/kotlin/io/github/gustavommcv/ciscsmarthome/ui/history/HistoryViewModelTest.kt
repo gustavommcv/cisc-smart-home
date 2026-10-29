@@ -11,6 +11,8 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.LimitKind
+import io.github.gustavommcv.ciscsmarthome.domain.SensorKind
+import io.github.gustavommcv.ciscsmarthome.domain.LimitSpec
 import io.github.gustavommcv.ciscsmarthome.domain.Names
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
 import io.github.gustavommcv.ciscsmarthome.domain.RoomIcon
@@ -656,5 +658,15 @@ class HistoryViewModelTest {
     val lane = panels(state.value).single().lanes.single()
     assertNull(lane.bars)
     assertEquals(0.11f, Math.round(lane.chart!!.lines.single().single().y * 100) / 100f, 0.0001f)
+  }
+
+  @Test
+  fun `the limits a sensor of an unknown device points to are followed too`() = runTest {
+    val garageHumidity = Entity.Sensor(EntityId("garage-humidity"), "Humidity", SensorValue.Number(60.0), "%", SensorKind.Humidity, listOf(LimitSpec.OfEntity(LimitKind.DehumidifierOn, EntityId("garage-limit"))))
+    val garageLimit = Entity.Number(EntityId("garage-limit"), "Limit", 70.0, "%", 40.0, 95.0, 1.0, 70.0, commandable = true)
+    repository.home.value = maquette.copy(areas = maquette.areas + Area(AreaId("garage"), "Garage", listOf(Device(DeviceId("garage-monitor"), "Garage", listOf(garageHumidity, garageLimit)))))
+    val (viewModel, state) = watched()
+    viewModel.openDevice(DeviceId("garage-monitor"))
+    assertEquals(listOf(ResolvedLimit(LimitKind.DehumidifierOn, 70.0)), panels(state.value).single().lanes.single().limits)
   }
 }
