@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GasGuard.h"
 #include "Time.h"
 
 namespace cisc {
@@ -11,6 +12,8 @@ struct Sample {
   float temperatureC;     // meaningless when !climateValid
   float humidityPercent;  // meaningless when !climateValid
   bool climateValid;      // false when the DHT11 failed to answer
+  GasState gasState;      // what the gas guard was doing when the sample was taken
+  bool dehumidifierOn;    // whether the dehumidifier was running
 };
 
 }  // namespace cisc

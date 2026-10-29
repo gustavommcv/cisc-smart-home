@@ -179,6 +179,9 @@ std::string historyJson(const HouseController::History& history, const std::stri
       values["temperature"] = nullptr;
       values["humidity"] = nullptr;
     }
+    JsonObject states = entry["states"].to<JsonObject>();
+    states["gas-state"] = toString(sample.gasState);
+    states["dehumidifier-power"] = sample.dehumidifierOn;
   }
   std::string json;
   serializeJson(document, json);

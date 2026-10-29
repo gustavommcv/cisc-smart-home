@@ -336,6 +336,32 @@ void test_samples_without_a_valid_climate_reading_have_null_values() {
   TEST_ASSERT_EQUAL_INT(50, last["values"]["gas-level"].as<int>());
 }
 
+void test_samples_say_the_gas_state_and_whether_the_dehumidifier_was_on() {
+  HistoryFixture f(1);
+  f.rig.climate.reading = {true, 22.0f, 85.0f};
+  f.rig.gas.value = 150;
+  f.rig.run(600);
+  JsonDocument body = history(f.api, "");
+  JsonObject last = body["samples"][body["samples"].as<JsonArray>().size() - 1];
+  TEST_ASSERT_EQUAL_STRING("emergency", last["states"]["gas-state"].as<const char*>());
+  TEST_ASSERT_TRUE(last["states"]["dehumidifier-power"].as<bool>());
+  JsonObject first = body["samples"][0];
+  TEST_ASSERT_TRUE(first["states"]["gas-state"].is<const char*>());
+  TEST_ASSERT_TRUE(first["states"]["dehumidifier-power"].is<bool>());
+  TEST_ASSERT_FALSE(first["states"]["dehumidifier-power"].as<bool>());
+  TEST_ASSERT_EQUAL_UINT(2, last["states"].as<JsonObject>().size());
+}
+
+void test_a_sample_without_a_valid_climate_reading_says_the_dehumidifier_was_off() {
+  HistoryFixture f(1);
+  f.rig.climate.reading = {false, 0.0f, 0.0f};
+  f.rig.run(600);
+  JsonDocument body = history(f.api, "");
+  JsonObject last = body["samples"][body["samples"].as<JsonArray>().size() - 1];
+  TEST_ASSERT_TRUE(last["states"]["dehumidifier-power"].is<bool>());
+  TEST_ASSERT_FALSE(last["states"]["dehumidifier-power"].as<bool>());
+}
+
 void test_after_returns_only_newer_samples() {
   HistoryFixture f(5);
   JsonDocument body = history(f.api, "after=30");
@@ -418,6 +444,8 @@ int main() {
   RUN_TEST(test_an_empty_history_is_an_empty_list);
   RUN_TEST(test_samples_come_oldest_first_with_values_by_entity_id);
   RUN_TEST(test_samples_without_a_valid_climate_reading_have_null_values);
+  RUN_TEST(test_samples_say_the_gas_state_and_whether_the_dehumidifier_was_on);
+  RUN_TEST(test_a_sample_without_a_valid_climate_reading_says_the_dehumidifier_was_off);
   RUN_TEST(test_after_returns_only_newer_samples);
   RUN_TEST(test_limit_keeps_the_oldest_samples_of_the_filter);
   RUN_TEST(test_a_response_without_limit_has_at_most_one_hundred_samples);
