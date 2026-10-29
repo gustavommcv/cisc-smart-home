@@ -10,7 +10,7 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 
 | Início | Cômodo | Histórico |
 |:---:|:---:|:---:|
-| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador, a escolha entre automático e manual e os limites de umidade (liga a partir de 85 % e desliga até 83 %, cada um com menos e mais), um lápis para editar o cômodo e o dispositivo, e os cartões bloqueados Adicionar dispositivo e Excluir cômodo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico do monitor do armário: o gráfico que compara a temperatura e a umidade, uma faixa sobre a outra, cada uma na sua escala e na sua cor, e depois um gráfico só da temperatura; no alto, a escolha do período (1 h, 6 h ou 24 h)"> |
+| <img src="../docs/imagens/inicio-claro.png" width="250" alt="A tela de início: o resumo da casa (tudo certo) e um cartão para a cozinha e outro para o quarto, com a barra de baixo"> | <img src="../docs/imagens/comodo-quarto.png" width="250" alt="O quarto: o cartão do monitor do armário, com temperatura, umidade, o interruptor do desumidificador, a escolha entre automático e manual e os limites de umidade (liga a partir de 85 % e desliga até 83 %, cada um com menos e mais), um lápis para editar o cômodo e o dispositivo, e os cartões bloqueados Adicionar dispositivo e Excluir cômodo"> | <img src="../docs/imagens/historico.png" width="250" alt="O histórico do monitor do armário: o gráfico que compara a temperatura e a umidade, uma faixa sobre a outra, cada uma na sua escala e na sua cor, com a faixa em que o desumidificador liga e desliga sobre a umidade, e depois um gráfico só da temperatura; no alto, a escolha do período"> |
 
 | Vazamento de gás (tema escuro) | Ajustes | Editar o cômodo |
 |:---:|:---:|:---:|
@@ -20,9 +20,9 @@ As telas, tiradas de um celular de verdade (um Moto G85) ligado à maquete.
 |:---:|:---:|:---:|
 | <img src="../docs/imagens/comodo-cozinha.png" width="250" alt="A cozinha: o cartão do monitor de gás, com o nível de gás, os vazamentos, a válvula, o interruptor do buzzer da placa e o aviso no celular, com três escolhas: Alarme (marcada), Notificação e Desligado"> | <img src="../docs/imagens/desligar-aviso.png" width="250" alt="A pergunta ao desligar o aviso: O celular não vai avisar de um vazamento de gás neste cômodo. A placa continua apitando e fechando a válvula, com os botões Cancelar e Desligar"> | <img src="../docs/imagens/historico-lista.png" width="250" alt="A aba Histórico: a lista dos dispositivos que têm leituras, o monitor de gás (Cozinha, 1 gráfico) e o monitor do armário (Quarto, 3 gráficos), cada um num cartão que se toca para abrir seus gráficos"> |
 
-| Histórico: o mês |
-|:---:|
-| <img src="../docs/imagens/historico-mes.png" width="250" alt="O histórico do monitor do armário no período Mês: duas setas e o nome do mês, Outubro de 2026, a comparação da temperatura e da umidade em duas faixas, de 1 out. a 31 out., e depois o gráfico só da temperatura; só há dois dias de leituras, por isso as linhas são estreitas"> |
+| Histórico: o mês | Histórico: o gás |
+|:---:|:---:|
+| <img src="../docs/imagens/historico-mes.png" width="250" alt="O histórico do monitor de gás no período Mês: duas setas e o nome do mês, Outubro de 2026, e uma barra por dia com o maior valor, vermelhas nos dias que passaram da linha tracejada do limite de alarme; só há três dias de leituras"> | <img src="../docs/imagens/historico-gas.png" width="250" alt="O histórico do monitor de gás nas últimas 6 horas: a escala de 0 a 400, a linha tracejada do limite de alarme, a área sob a linha e, em vermelho, o pico que passou do limite"> |
 
 As imagens mostram só o app: a barra de status do celular foi cortada. Para refazê-las, com o celular em modo de depuração e ligado à maquete, use `adb exec-out screencap -p > tela.png` e corte os primeiros 110 pixels de cima.
 

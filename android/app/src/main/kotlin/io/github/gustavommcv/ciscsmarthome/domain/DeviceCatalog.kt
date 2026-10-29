@@ -1,5 +1,7 @@
 package io.github.gustavommcv.ciscsmarthome.domain
 
+import kotlin.math.floor
+
 /** What a sensor measures. The charts are chosen by it, not by the device the sensor is in, so a new device with a temperature sensor is charted as the others are. */
 enum class SensorKind { Gas, Temperature, Humidity, Generic }
 
@@ -33,8 +35,15 @@ data class ChartScale(val atLeast: ClosedFloatingPointRange<Double>? = null, val
     }
     if (minSpan != null && high - low < minSpan) {
       val middle = (low + high) / 2
-      low = middle - minSpan / 2
-      high = middle + minSpan / 2
+      // The numbers of the scale are whole when they can be (15 to 25, not 15.2 to 25.2), as long as the readings still fit in them.
+      val whole = floor(middle - minSpan / 2)
+      if (whole <= low && whole + minSpan >= high) {
+        low = whole
+        high = whole + minSpan
+      } else {
+        low = middle - minSpan / 2
+        high = middle + minSpan / 2
+      }
     }
     return ChartRange(low, high)
   }

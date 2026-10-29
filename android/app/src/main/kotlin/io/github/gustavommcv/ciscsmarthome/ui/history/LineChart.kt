@@ -42,16 +42,17 @@ private val PlotPadding = 8.dp
 
 private const val FILL_ALPHA = 0.18f
 private const val BAND_ALPHA = 0.16f
+private const val LABEL_GROUND_ALPHA = 0.85f
 
 /** A line drawn over a chart, with its words: where it is in the range ([fraction], 0 at the bottom to 1 at the top), and what it is. */
 internal data class LimitLine(val fraction: Float, val label: String, val kind: LimitKind)
 
 /** The colors of the chart: the line, the one for what is over the limit of an alarm, and a quiet one for the other limits, which are not the color of a line. */
-private class ChartColors(val line: Color, val alarm: Color, val limit: Color, val grid: Color, val text: Color)
+private class ChartColors(val line: Color, val alarm: Color, val limit: Color, val grid: Color, val text: Color, val ground: Color)
 
 @Composable
 private fun chartColors(line: Color): ChartColors =
-  MaterialTheme.colorScheme.let { ChartColors(line, it.error, it.onSurfaceVariant, it.outlineVariant, it.onSurfaceVariant) }
+  MaterialTheme.colorScheme.let { ChartColors(line, it.error, it.onSurfaceVariant, it.outlineVariant, it.onSurfaceVariant, it.surface) }
 
 private fun LimitLine.isAlarm() = kind == LimitKind.Alarm
 
@@ -68,22 +69,26 @@ private fun DrawScope.drawGrid(range: ChartRange, colors: ChartColors, measurer:
   drawText(low, topLeft = Offset(0f, padding + plotHeight - low.size.height))
 }
 
-private fun DrawScope.drawLimits(limits: List<LimitLine>, colors: ChartColors, measurer: TextMeasurer, padding: Float, plotHeight: Float) {
+private fun DrawScope.drawLimits(limits: List<LimitLine>, colors: ChartColors, measurer: TextMeasurer, padding: Float, plotHeight: Float, withLines: Boolean = true, withWords: Boolean = true) {
   limits.forEach { limit ->
     val y = padding + (1 - limit.fraction) * plotHeight
     val color = if (limit.isAlarm()) colors.alarm else colors.limit
-    drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = LimitWidth.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+    if (withLines) drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = LimitWidth.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+    if (!withWords) return@forEach
     val text = measurer.measure(limit.label, TextStyle(color = color, fontSize = LabelSize))
-    // The words sit over the line, at the right; the limit that is the upper one of two has them over it and the other one under it, so they do not overlap.
+    // The words sit at the left, where the recent readings (and the peaks) are not; the limit that is the upper one of two has them over it and the other one under it.
     val above = limit.kind != LimitKind.DehumidifierOff
-    drawText(text, topLeft = Offset(size.width - text.size.width, if (above) y - text.size.height else y))
+    val top = if (above) y - text.size.height else y
+    // The words have the color of the card behind them, so a line of readings near the limit does not cross them out.
+    drawRect(colors.ground.copy(alpha = LABEL_GROUND_ALPHA), Offset(0f, top), Size(text.size.width.toFloat(), text.size.height.toFloat()))
+    drawText(text, topLeft = Offset(0f, top))
   }
 }
 
 /**
  * A line chart, drawn by hand: one line, in the [line] color (the color of the app by default), over three lines of grid with the numbers of the bottom and the
  * top of its range. Each stretch the app heard is a line of its own, so the time it heard nothing stays empty, and a stretch of a single reading is a dot.
- * The [limits] are dashed lines over it with their words; what the line does above the limit of an alarm is drawn in the color of an alert; the space between
+ * The [limits] are dashed lines over it with their words (unless [limitWords] is false, for a band too small to hold them: the screen says them above it); what the line does above the limit of an alarm is drawn in the color of an alert; the space between
  * the two limits of the dehumidifier is shaded; and with [fillBelow] the space under the line is washed with its color. [description] is what a screen reader says.
  */
 @Composable
@@ -96,6 +101,7 @@ internal fun LineChart(
   limits: List<LimitLine> = emptyList(),
   fillBelow: Boolean = false,
   unit: String? = null,
+  limitWords: Boolean = true,
 ) {
   val colors = chartColors(line)
   val measurer = rememberTextMeasurer()
@@ -122,7 +128,7 @@ internal fun LineChart(
         drawPath(area, colors.line.copy(alpha = FILL_ALPHA))
       }
     }
-    drawLimits(limits, colors, measurer, padding, plotHeight)
+    drawLimits(limits, colors, measurer, padding, plotHeight, withLines = true, withWords = false)
     val alarmY = limits.firstOrNull { it.isAlarm() }?.let { padding + (1 - it.fraction) * plotHeight }
     fun DrawScope.strokes(color: Color) {
       chart.lines.forEach { points ->
@@ -138,6 +144,8 @@ internal fun LineChart(
     strokes(colors.line)
     // What is over the limit of an alarm is drawn again, in the color of an alert, clipped to the part of the chart above the limit.
     if (alarmY != null) clipRect(left = 0f, top = 0f, right = size.width, bottom = alarmY) { strokes(colors.alarm) }
+    // The words come last, over the line, with the color of the card behind them, so a line of readings near the limit does not cross them out.
+    drawLimits(limits, colors, measurer, padding, plotHeight, withLines = false, withWords = limitWords)
   }
 }
 

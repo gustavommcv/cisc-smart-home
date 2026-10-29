@@ -33,6 +33,18 @@ class ChartScaleTest {
   }
 
   @Test
+  fun `the numbers of a widened scale are whole, so the readings are in 15 to 25 and not in 15,2 to 25,2`() {
+    assertEquals(ChartRange(15.0, 25.0), range(ChartScale(minSpan = 10.0), 17.5, 22.9))
+  }
+
+  @Test
+  fun `the numbers are not made whole when the readings would not fit in them`() {
+    val range = range(ChartScale(minSpan = 10.0), 14.9, 24.8)
+    assertEquals(14.85, range.low, 0.0001)
+    assertEquals(24.85, range.high, 0.0001)
+  }
+
+  @Test
   fun `a span that is wide enough is left as it is`() {
     assertEquals(ChartRange(12.0, 30.0), range(ChartScale(minSpan = 10.0), 12.0, 30.0))
   }

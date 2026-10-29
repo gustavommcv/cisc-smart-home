@@ -190,7 +190,9 @@ private fun LaneBody(lane: Lane, color: Color, window: ChartWindow, zone: ZoneId
   if (showName) {
     Row(modifier = Modifier.padding(top = Spacing.S), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.S)) {
       Box(Modifier.size(Swatch).background(color, CircleShape))
-      Text(label, style = MaterialTheme.typography.bodyMedium, color = quiet)
+      // A band is too small for the words of its limits over the chart, so they are said here, next to its name.
+      val limitWords = lane.limits.joinToString(", ") { resources.limitText(it) }
+      Text(if (limitWords.isEmpty()) label else "$label · $limitWords", style = MaterialTheme.typography.bodyMedium, color = quiet)
     }
   }
   val chart = lane.chart
@@ -220,6 +222,7 @@ private fun LaneBody(lane: Lane, color: Color, window: ChartWindow, zone: ZoneId
         limits = limits,
         fillBelow = DeviceCatalog.chartOf(lane.sensor.id).fillBelow,
         unit = unit,
+        limitWords = !showName,
       )
       MinMaxRow(resources.minText(chart.min, unit), resources.maxText(chart.max, unit))
     }
