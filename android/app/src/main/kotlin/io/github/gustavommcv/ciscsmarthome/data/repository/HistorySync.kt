@@ -20,7 +20,7 @@ class HistorySync(private val api: BoardApi, private val store: HistoryStore, pr
       val page = (api.getHistory(after, PAGE_SIZE) as? BoardResult.Success)?.value ?: return
       // The board restarted in between: the connection drops with it, and the next one catches up on the new boot.
       if (page.bootId != bootId || page.samples.isEmpty()) return
-      store.save(page.samples.mapNotNull { sample -> deviceClock.toInstant(bootId, sample.uptimeMs)?.let { StoredSample(bootId, sample.uptimeMs, it, sample.values) } })
+      store.save(page.samples.mapNotNull { sample -> deviceClock.toInstant(bootId, sample.uptimeMs)?.let { StoredSample(bootId, sample.uptimeMs, it, sample.values, sample.states) } })
       val last = page.samples.last().uptimeMs
       // A short page is the end. So is a page that does not go past where we are, which a board that works never sends.
       if (page.samples.size < PAGE_SIZE || last <= (after ?: Long.MIN_VALUE)) return

@@ -8,6 +8,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.BootId
 import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
 import java.io.File
 import java.time.Instant
@@ -50,7 +51,7 @@ class HistoryMigrationTest {
   }
 
   private fun migrated(): RoomHistoryStore {
-    database = Room.databaseBuilder(context, HistoryDatabase::class.java, file.absolutePath).addMigrations(MIGRATION_1_2).allowMainThreadQueries().build()
+    database = Room.databaseBuilder(context, HistoryDatabase::class.java, file.absolutePath).addMigrations(*HISTORY_MIGRATIONS).allowMainThreadQueries().build()
     return RoomHistoryStore(database!!)
   }
 
@@ -104,6 +105,42 @@ class HistoryMigrationTest {
       store.save(listOf(StoredSample(BootId("aaaa1111"), 2_000, Instant.ofEpochMilli(2_000), mapOf(EntityId("gas-level") to 12.0))))
     }
     assertEquals(listOf(HourlyReading(Instant.EPOCH, 5.0, 12.0)), hourly(store, EntityId("gas-level")))
+  }
+
+  /** A database exactly as version 2 made it (see schemas/.../2.json): the readings and the hours, no states. */
+  private fun version2() {
+    val raw = SQLiteDatabase.openOrCreateDatabase(file, null)
+    raw.execSQL("CREATE TABLE IF NOT EXISTS `reading` (`bootId` TEXT NOT NULL, `uptimeMs` INTEGER NOT NULL, `entityId` TEXT NOT NULL, `atMs` INTEGER NOT NULL, `value` REAL, PRIMARY KEY(`bootId`, `uptimeMs`, `entityId`))")
+    raw.execSQL("CREATE INDEX IF NOT EXISTS `index_reading_entityId_atMs` ON `reading` (`entityId`, `atMs`)")
+    raw.execSQL("CREATE TABLE IF NOT EXISTS `reading_hour` (`entityId` TEXT NOT NULL, `hourMs` INTEGER NOT NULL, `lowest` REAL NOT NULL, `highest` REAL NOT NULL, PRIMARY KEY(`entityId`, `hourMs`))")
+    raw.execSQL("INSERT INTO reading VALUES ('aaaa1111', 1000, 'gas-level', 1000, 5.0)")
+    raw.execSQL("INSERT INTO reading_hour VALUES ('gas-level', 0, 5.0, 5.0)")
+    raw.version = 2
+    raw.close()
+  }
+
+  private fun migratedFrom2(): RoomHistoryStore {
+    database = Room.databaseBuilder(context, HistoryDatabase::class.java, file.absolutePath).addMigrations(*HISTORY_MIGRATIONS).allowMainThreadQueries().build()
+    return RoomHistoryStore(database!!)
+  }
+
+  @Test
+  fun `a phone of version 2 keeps its readings and its hours and has no states yet`() {
+    version2()
+    val store = migratedFrom2()
+    val gas = EntityId("gas-level")
+    assertEquals(listOf(Reading(Instant.ofEpochMilli(1_000), 5.0)), runBlocking { store.series(gas, Instant.EPOCH).first() })
+    assertEquals(listOf(HourlyReading(Instant.EPOCH, 5.0, 5.0)), hourly(store, gas))
+    assertEquals(emptyList<StateReading>(), runBlocking { store.states(EntityId("gas-state"), Instant.EPOCH).first() })
+  }
+
+  @Test
+  fun `states can be saved after the migration of version 2`() {
+    version2()
+    val store = migratedFrom2()
+    val sample = StoredSample(BootId("aaaa1111"), 2_000, Instant.ofEpochMilli(2_000), mapOf(EntityId("gas-level") to 6.0), mapOf(EntityId("gas-state") to "normal"))
+    runBlocking { store.save(listOf(sample)) }
+    assertEquals(listOf(StateReading(Instant.ofEpochMilli(2_000), "normal")), runBlocking { store.states(EntityId("gas-state"), Instant.EPOCH).first() })
   }
 
   private companion object {

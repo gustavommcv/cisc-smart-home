@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 /** The JSON of docs/api.md, as it travels. They are mapped to the domain before anything else sees them. */
 internal val BoardJson = Json { ignoreUnknownKeys = true }
@@ -40,7 +41,8 @@ internal data class EntityDto(
 
 @Serializable internal data class HistoryDto(val bootId: String, val samples: List<SampleDto>)
 
-@Serializable internal data class SampleDto(val uptimeMs: Long, val values: Map<String, Double?>)
+@Serializable
+internal data class SampleDto(val uptimeMs: Long, val values: Map<String, Double?>, val states: Map<String, JsonPrimitive> = emptyMap())
 
 @Serializable internal data class AlertDto(val type: String, val areaId: String, val entityId: String, val count: Long, val uptimeMs: Long)
 

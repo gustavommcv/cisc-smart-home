@@ -5,6 +5,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.EntityId
 import io.github.gustavommcv.ciscsmarthome.domain.HistoryStore
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,11 @@ class RoomHistoryStore(database: HistoryDatabase) : HistoryStore {
       samples.flatMap { sample ->
         sample.values.map { (entity, value) -> ReadingRow(sample.bootId.value, sample.uptimeMs, entity.value, sample.at.toEpochMilli(), value) }
       }
-    if (rows.isNotEmpty()) dao.saveWithHours(rows)
+    val states =
+      samples.flatMap { sample ->
+        sample.states.map { (entity, state) -> StateRow(sample.bootId.value, sample.uptimeMs, entity.value, sample.at.toEpochMilli(), state) }
+      }
+    if (rows.isNotEmpty() || states.isNotEmpty()) dao.saveWithHours(rows, states)
   }
 
   override suspend fun latestUptime(bootId: BootId): Long? = dao.latestUptime(bootId.value)
@@ -35,6 +40,12 @@ class RoomHistoryStore(database: HistoryDatabase) : HistoryStore {
       // The database says "something changed" for any save, even of another entity: only a real change goes on.
       .distinctUntilChanged()
 
+  override fun states(entityId: EntityId, since: Instant): Flow<List<StateReading>> =
+    dao
+      .states(entityId.value, since.toEpochMilli())
+      .map { rows -> rows.map { StateReading(Instant.ofEpochMilli(it.atMs), it.state) } }
+      .distinctUntilChanged()
+
   override fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>> =
     dao
       .hourly(entityId.value, since.toEpochMilli(), until.toEpochMilli())
@@ -43,5 +54,5 @@ class RoomHistoryStore(database: HistoryDatabase) : HistoryStore {
 
   override fun firstHour(): Flow<Instant?> = dao.firstHour().map { hourMs -> hourMs?.let(Instant::ofEpochMilli) }.distinctUntilChanged()
 
-  override suspend fun forgetReadingsBefore(before: Instant) = dao.deleteReadingsBefore(before.toEpochMilli())
+  override suspend fun forgetReadingsBefore(before: Instant) = dao.deleteBefore(before.toEpochMilli())
 }

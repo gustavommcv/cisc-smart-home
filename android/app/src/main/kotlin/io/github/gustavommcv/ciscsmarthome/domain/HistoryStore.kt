@@ -7,7 +7,16 @@ import kotlinx.coroutines.flow.Flow
  * A sample the app keeps: what the board read, on which boot and at which uptime (the pair that
  * names it), and when that was on the phone's clock (see [DeviceClock]), which is what a chart needs.
  */
-data class StoredSample(val bootId: BootId, val uptimeMs: Long, val at: Instant, val values: Map<EntityId, Double?>)
+data class StoredSample(
+  val bootId: BootId,
+  val uptimeMs: Long,
+  val at: Instant,
+  val values: Map<EntityId, Double?>,
+  val states: Map<EntityId, String> = emptyMap(),
+)
+
+/** The state an entity was in at one moment, as text: "emergency" for the gas, "true" for a dehumidifier that was on. */
+data class StateReading(val at: Instant, val state: String)
 
 /** One reading of one entity; a null [value] means the entity had no valid reading. */
 data class Reading(val at: Instant, val value: Double?)
@@ -29,12 +38,15 @@ interface HistoryStore {
   /** The readings of [entityId] taken at [since] or later, oldest first, sent again when they change. */
   fun series(entityId: EntityId, since: Instant): Flow<List<Reading>>
 
+  /** The states of [entityId] at [since] or later, oldest first, sent again when they change. It is what says *when* the dehumidifier was on. */
+  fun states(entityId: EntityId, since: Instant): Flow<List<StateReading>>
+
   /** The hours of [entityId] that start at [since] or later and before [until], oldest first, sent again when they change. */
   fun hourly(entityId: EntityId, since: Instant, until: Instant): Flow<List<HourlyReading>>
 
   /** The start of the earliest hour kept, of any entity, or null when there is none; sent again when it changes. It says how far back the history goes. */
   fun firstHour(): Flow<Instant?>
 
-  /** Lets go of the readings taken before [before]. What was kept of each hour stays: it is what a month or a year is read from. */
+  /** Lets go of the readings, and the states, taken before [before]. What was kept of each hour stays: it is what a month or a year is read from. */
   suspend fun forgetReadingsBefore(before: Instant)
 }

@@ -14,6 +14,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.HistoryStore
 import io.github.gustavommcv.ciscsmarthome.domain.HourlyReading
 import io.github.gustavommcv.ciscsmarthome.domain.Home
 import io.github.gustavommcv.ciscsmarthome.domain.Reading
+import io.github.gustavommcv.ciscsmarthome.domain.StateReading
 import io.github.gustavommcv.ciscsmarthome.domain.StoredSample
 import java.io.IOException
 import java.time.Clock
@@ -124,6 +125,11 @@ internal class FakeHistoryStore : HistoryStore {
     }
 
   override suspend fun latestUptime(bootId: BootId): Long? = kept.keys.filter { it.first == bootId }.maxOfOrNull { it.second }
+
+  override fun states(entityId: EntityId, since: Instant): Flow<List<StateReading>> =
+    changes.map {
+      kept.values.filter { sample -> sample.at >= since && entityId in sample.states }.sortedBy { it.at }.map { StateReading(it.at, it.states.getValue(entityId)) }
+    }
 
   override fun series(entityId: EntityId, since: Instant): Flow<List<Reading>> =
     changes.map {
