@@ -59,6 +59,18 @@ struct Display : cisc::Display {
 
 // The settings the user changed, kept in memory: what was saved, and what is there when the house starts.
 struct SettingsStore : cisc::SettingsStore {
+  bool hasGas = false;
+  int gasThreshold = 160;
+  int gasSaves = 0;
+  bool loadGasThreshold(int& out) override {
+    if (hasGas) out = gasThreshold;
+    return hasGas;
+  }
+  void saveGasThreshold(int threshold) override {
+    gasThreshold = threshold;
+    hasGas = true;
+    ++gasSaves;
+  }
   bool has = false;
   cisc::HumiditySettings humidity;
   int saves = 0;

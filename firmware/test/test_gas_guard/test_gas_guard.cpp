@@ -171,8 +171,41 @@ void test_timing_survives_millis_wraparound() {
   TEST_ASSERT_EQUAL(GasState::Normal, guard.state());
 }
 
+void test_threshold_range_and_non_finite_values() {
+  GasGuard guard = normalGuard();
+  TEST_ASSERT_FALSE(guard.setThreshold(-1));
+  TEST_ASSERT_FALSE(guard.setThreshold(1023));
+  TEST_ASSERT_FALSE(guard.setThreshold(100.5f));
+  TEST_ASSERT_FALSE(guard.setThreshold(NAN));
+  TEST_ASSERT_FALSE(guard.setThreshold(INFINITY));
+  TEST_ASSERT_EQUAL_INT(100, guard.threshold());
+  TEST_ASSERT_TRUE(guard.setThreshold(0));
+  guard.update(0, false, 1100);
+  TEST_ASSERT_FALSE(guard.gasDetected());
+  guard.update(1, false, 1200);
+  TEST_ASSERT_TRUE(guard.gasDetected());
+  TEST_ASSERT_TRUE(guard.setThreshold(1022));
+  guard.update(1023, false, 1300);
+  TEST_ASSERT_TRUE(guard.gasDetected());
+}
+
+void test_new_threshold_requires_a_new_clean_air_wait() {
+  GasGuard guard = normalGuard();
+  guard.update(150, false, 1100);
+  guard.update(50, false, 1200);
+  TEST_ASSERT_TRUE(guard.canRearm(1500));
+  TEST_ASSERT_TRUE(guard.setThreshold(200));
+  TEST_ASSERT_FALSE(guard.canRearm(1500));
+  guard.update(50, true, 1500);
+  TEST_ASSERT_EQUAL(GasState::Emergency, guard.state());
+  guard.update(50, true, 1700);
+  TEST_ASSERT_EQUAL(GasState::Normal, guard.state());
+}
+
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_threshold_range_and_non_finite_values);
+  RUN_TEST(test_new_threshold_requires_a_new_clean_air_wait);
   RUN_TEST(test_starts_with_valve_closed_and_alarm_off);
   RUN_TEST(test_stays_starting_during_warm_up_in_clean_air);
   RUN_TEST(test_becomes_normal_after_warm_up_in_clean_air);

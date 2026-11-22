@@ -193,4 +193,6 @@
     <string name="value_no">não</string>
     <string name="value_on">ligado</string>
     <string name="value_off">desligado</string>
+    <string name="label_gas_alarm_at">Emergência acima de</string>
+    <string name="hint_gas_limit">Escala do sensor de 0 a 1023. O limite fica salvo na placa. Após uma emergência, o rearme continua pelo botão físico.</string>
 </resources>

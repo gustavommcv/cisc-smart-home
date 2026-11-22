@@ -2,6 +2,14 @@
 
 namespace cisc {
 
+bool GasGuard::setThreshold(float value) {
+  if (!isWholeNumber(value) || value < gas_limits::kMin || value > gas_limits::kMax) return false;
+  settings_.threshold = static_cast<int>(value);
+  // A different limit starts a new clean-air observation on the next update.
+  countingCleanAir_ = false;
+  return true;
+}
+
 void GasGuard::begin(Millis now) {
   state_ = GasState::Starting;
   gasDetected_ = false;

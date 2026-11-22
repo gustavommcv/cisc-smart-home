@@ -19,6 +19,9 @@ void HouseController::begin() {
   HumiditySettings saved;
   if (hardware_.settingsStore.loadHumidity(saved)) humidity_.setLimits(saved.onAtPercent, saved.offAtPercent);
 
+  int savedThreshold;
+  if (hardware_.settingsStore.loadGasThreshold(savedThreshold)) gasGuard_.setThreshold(savedThreshold);
+
   gasGuard_.begin(now_);
   button_.begin(hardware_.button.isPressed(), now_);
 
@@ -73,6 +76,12 @@ void HouseController::setBuzzerEnabled(bool enabled) {
   applyOutputs();
 }
 
+bool HouseController::setGasAlarmAt(float value) {
+  if (!gasGuard_.setThreshold(value)) return false;
+  hardware_.settingsStore.saveGasThreshold(gasGuard_.threshold());
+  return true;
+}
+
 bool HouseController::setDehumidifierOnAt(float percent) {
   return changeLimits(percent, humidity_.limits().offAtPercent);
 }
@@ -105,7 +114,7 @@ HouseSnapshot HouseController::snapshot() const {
       humidity_.limits().onAtPercent,
       humidity_.limits().offAtPercent,
       buzzerEnabled_,
-      settings_.gas.threshold,
+      gasGuard_.threshold(),
   };
 }
 

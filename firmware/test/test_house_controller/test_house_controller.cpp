@@ -495,8 +495,45 @@ void test_the_buzzer_output_is_touched_only_when_it_changes() {
   TEST_ASSERT_EQUAL(writes, rig.buzzer.writes);
 }
 
+void test_gas_limit_is_loaded_at_boot_and_invalid_saved_value_is_ignored() {
+  Rig rig;
+  rig.store.hasGas = true;
+  rig.store.gasThreshold = 40;
+  rig.controller.begin();
+  TEST_ASSERT_EQUAL_INT(40, rig.controller.snapshot().gasAlarmAt);
+  TEST_ASSERT_EQUAL(GasState::Emergency, rig.controller.snapshot().gasState);
+  TEST_ASSERT_EQUAL_INT(0, rig.store.gasSaves);
+  Rig invalid;
+  invalid.store.hasGas = true;
+  invalid.store.gasThreshold = 1023;
+  invalid.controller.begin();
+  TEST_ASSERT_EQUAL_INT(100, invalid.controller.snapshot().gasAlarmAt);
+}
+
+void test_lowering_gas_limit_triggers_alarm_and_raising_it_does_not_rearm() {
+  Rig rig;
+  rig.bootToNormal();
+  TEST_ASSERT_TRUE(rig.controller.setGasAlarmAt(49));
+  rig.run(10);
+  TEST_ASSERT_EQUAL(GasState::Emergency, rig.controller.snapshot().gasState);
+  TEST_ASSERT_FALSE(rig.valve.value);
+  TEST_ASSERT_TRUE(rig.buzzer.value);
+  TEST_ASSERT_TRUE(rig.controller.setGasAlarmAt(200));
+  rig.run(1000);
+  TEST_ASSERT_FALSE(rig.buzzer.value);
+  TEST_ASSERT_FALSE(rig.valve.value);
+  TEST_ASSERT_EQUAL(GasState::Emergency, rig.controller.snapshot().gasState);
+  TEST_ASSERT_EQUAL_UINT32(1, rig.controller.snapshot().gasAlertCount);
+  rig.button.pressed = true;
+  rig.run(30);
+  TEST_ASSERT_EQUAL(GasState::Normal, rig.controller.snapshot().gasState);
+}
+
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_gas_limit_is_loaded_at_boot_and_invalid_saved_value_is_ignored);
+  RUN_TEST(test_lowering_gas_limit_triggers_alarm_and_raising_it_does_not_rearm);
+
   RUN_TEST(test_begin_puts_every_output_in_a_safe_state);
   RUN_TEST(test_begin_takes_a_first_gas_reading);
   RUN_TEST(test_starting_in_gas_raises_the_alarm_right_away);

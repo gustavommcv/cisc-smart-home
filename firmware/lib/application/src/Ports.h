@@ -53,6 +53,8 @@ class SettingsStore {
  public:
   virtual ~SettingsStore() = default;
   // Fills `out` with the limits that were saved and says true, or says false when none were.
+  virtual bool loadGasThreshold(int& out) = 0;
+  virtual void saveGasThreshold(int threshold) = 0;
   virtual bool loadHumidity(HumiditySettings& out) = 0;
   virtual void saveHumidity(const HumiditySettings& settings) = 0;
 };

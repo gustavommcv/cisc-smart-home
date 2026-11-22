@@ -16,6 +16,16 @@ class BoardMappingTest {
   private fun sensorWith(extra: String) = sensor("""{"id":"gas-level","kind":"sensor","name":"Gas level","value":142,"unit":"adc"$extra}""")
 
   @Test
+  fun `the gas alarm line follows the adjustable threshold entity`() {
+    val limits = sensorWith(""","limits":[{"kind":"alarm","entity":"gas-alarm-at"}]""").limits
+    assertEquals(listOf<LimitSpec>(LimitSpec.OfEntity(LimitKind.Alarm, EntityId("gas-alarm-at"))), limits)
+    val limit = BoardJson.decodeFromString<EntityDto>("""{"id":"gas-alarm-at","kind":"number","name":"Gas alarm above","value":200,"unit":"adc","min":0,"max":1022,"step":1,"default":160,"commandable":true}""").toDomain() as Entity.Number
+    assertEquals(200.0, limit.value)
+    assertEquals(160.0, limit.default)
+    assertEquals(true, limit.commandable)
+  }
+
+  @Test
   fun `a sensor that says nothing of itself has no class and no limits`() {
     val sensor = sensorWith("")
     assertNull(sensor.sensorClass)

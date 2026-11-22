@@ -15,6 +15,7 @@ import io.github.gustavommcv.ciscsmarthome.domain.GasStates
 @StringRes
 internal fun EntityId.labelRes(): Int? =
   when (this) {
+    EntityIds.GasAlarmAt -> R.string.label_gas_alarm_at
     EntityIds.GasLevel -> R.string.label_gas_level
     EntityIds.GasState -> R.string.label_gas_state
     EntityIds.GasAlerts -> R.string.label_gas_alerts

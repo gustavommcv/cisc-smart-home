@@ -24,6 +24,9 @@ class GasGuard {
   void begin(Millis now);
   void update(int reading, bool rearmPressed, Millis now);
 
+  bool setThreshold(float value);
+  int threshold() const { return settings_.threshold; }
+
   GasState state() const { return state_; }
   bool gasDetected() const { return gasDetected_; }
   bool valveOpen() const { return state_ == GasState::Normal; }

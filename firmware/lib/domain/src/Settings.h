@@ -17,6 +17,13 @@ struct GasSettings {
   Millis clearAirMs = 2000;
 };
 
+// The top ADC value is excluded: a threshold of 1023 would prevent every alarm.
+namespace gas_limits {
+constexpr int kMin = 0;
+constexpr int kMax = 1022;
+constexpr int kStep = 1;
+}  // namespace gas_limits
+
 struct HumiditySettings {
   // The dehumidifier turns on at or above this value, which is where a closet starts to invite mold (the ideal is
   // 40 to 60 %, and above about 65 % mold grows)...

@@ -241,6 +241,17 @@ private fun DeviceCard(
       HorizontalDivider(thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outlineVariant)
       LeakModeRow(leakMode, onChooseLeakMode)
     }
+    device.entities.filterIsInstance<Entity.Number>().firstOrNull { it.id == EntityIds.GasAlarmAt }?.let { gasLimit ->
+      Column(modifier = Modifier.padding(bottom = Spacing.S), verticalArrangement = Arrangement.spacedBy(Spacing.Xs)) {
+        Text(stringResource(R.string.hint_gas_limit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val default = gasLimit.default
+        if (default != null && gasLimit.value != default) {
+          TextButton(onClick = { onCommand(gasLimit.id, CommandValue.Number(default)) }, enabled = gasLimit.controlEnabled(connection, pending)) {
+            Text(stringResource(R.string.limits_restore))
+          }
+        }
+      }
+    }
     if (limits != null) {
       val limitIds = setOf(EntityIds.DehumidifierOnAt, EntityIds.DehumidifierOffAt)
       LimitsFooter(

@@ -22,6 +22,7 @@ class ContractTest {
     assertInContract(
       "entity",
       listOf(
+        EntityIds.GasAlarmAt,
         EntityIds.GasLevel,
         EntityIds.GasState,
         EntityIds.GasAlerts,

@@ -142,6 +142,10 @@ Response Api::command(const std::string& entityId, const std::string& body) {
   } else if (entityId == "buzzer-enabled") {
     if (!value.is<bool>()) return error(400, "invalid-value", "The value of a switch must be true or false");
     house_.setBuzzerEnabled(value.as<bool>());
+  } else if (entityId == "gas-alarm-at") {
+    if (!value.is<float>() || !house_.setGasAlarmAt(value.as<float>())) {
+      return error(400, "invalid-value", "The gas limit must be a whole number from 0 to 1022");
+    }
   } else if (entityId == "dehumidifier-on-at" || entityId == "dehumidifier-off-at") {
     if (!value.is<float>()) return error(400, "invalid-value", kLimitMessage);
     const float percent = value.as<float>();

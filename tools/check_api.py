@@ -117,16 +117,20 @@ def main():
     found = entities(home)
     check("home has the version, the boot id and both rooms",
           home.get("apiVersion") == 1 and bool(boot_id) and [a["id"] for a in home["areas"]] == ["kitchen", "bedroom"])
-    check("home has the eleven entities of the maquete", len(found) == 11, f"found {sorted(found)}")
-    check("only the buzzer and the dehumidifier are commandable",
+    check("home has the twelve entities of the maquete", len(found) == 12, f"found {sorted(found)}")
+    check("only the gas limit, buzzer and dehumidifier controls are commandable",
           {i for i, e in found.items() if e.get("commandable")}
-          == {"buzzer-enabled", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at"})
+          == {"gas-alarm-at", "buzzer-enabled", "dehumidifier-power", "dehumidifier-mode", "dehumidifier-on-at", "dehumidifier-off-at"})
     check("the three sensors with a chart say their class",
           {i: e.get("class") for i, e in found.items() if "class" in e}
           == {"gas-level": "gas", "temperature": "temperature", "humidity": "humidity"})
-    check("the gas alarm is a value and the humidity limits point to entities that exist",
+    check("the gas and humidity limits point to adjustable entities",
           found["gas-level"].get("limits", [{}])[0].get("kind") == "alarm"
-          and isinstance(found["gas-level"]["limits"][0].get("value"), int)
+          and found["gas-level"]["limits"][0].get("entity") == "gas-alarm-at"
+          and found.get("gas-alarm-at", {}).get("kind") == "number"
+          and found["gas-alarm-at"].get("min") == 0
+          and found["gas-alarm-at"].get("max") == 1022
+          and found["gas-alarm-at"].get("default") == 160
           and [(l.get("kind"), l.get("entity")) for l in found["humidity"].get("limits", [])]
           == [("turns-on", "dehumidifier-on-at"), ("turns-off", "dehumidifier-off-at")])
     print(f"      (home answered in {elapsed * 1000:.0f} ms, boot id {boot_id})")

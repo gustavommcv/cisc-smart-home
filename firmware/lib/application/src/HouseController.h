@@ -46,6 +46,8 @@ class HouseController {
   void turnDehumidifier(bool on);
   // Automatic hands control back to the humidity rule. Manual keeps the current state.
   void setDehumidifierMode(ControlMode mode);
+  // Saves the gas limit and applies it on the next tick; an emergency still requires the physical rearm button.
+  bool setGasAlarmAt(float value);
   // Change the limits of the automatic mode. Each says whether the new value was allowed (a whole
   // percent in the range, the lower limit far enough below the upper one); if not, nothing
   // changes. A change is kept for the next time the board starts.

@@ -39,11 +39,13 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
           "name": "Gas monitor",
           "entities": [
             { "id": "gas-level", "kind": "sensor", "name": "Gas level", "value": 142, "unit": "adc",
-              "class": "gas", "limits": [ { "kind": "alarm", "value": 160 } ] },
+              "class": "gas", "limits": [ { "kind": "alarm", "entity": "gas-alarm-at" } ] },
             { "id": "gas-state", "kind": "sensor", "name": "Gas state", "value": "normal" },
             { "id": "gas-alerts", "kind": "sensor", "name": "Gas alerts since boot", "value": 0 },
             { "id": "valve-open", "kind": "binary_sensor", "name": "Valve open", "value": true },
-            { "id": "buzzer-enabled", "kind": "switch", "name": "Buzzer", "value": true, "commandable": true }
+            { "id": "buzzer-enabled", "kind": "switch", "name": "Buzzer", "value": true, "commandable": true },
+            { "id": "gas-alarm-at", "kind": "number", "name": "Gas alarm above", "value": 160, "unit": "adc",
+              "min": 0, "max": 1022, "step": 1, "default": 160, "commandable": true }
           ]
         }
       ]
@@ -109,11 +111,12 @@ As escolhas por trás dele estão nas decisões [0001](decisoes/0001-esp32-como-
 
 | Cômodo | Dispositivo | Entidade | Tipo | Valores |
 |---|---|---|---|---|
-| `kitchen` | `gas-monitor` | `gas-level` | `sensor` | 0 a 1023, unidade `adc`. Classe `gas` e uma linha `alarm` com o limite do alarme (160): é a placa que diz, o app não o copia |
+| `kitchen` | `gas-monitor` | `gas-level` | `sensor` | 0 a 1023, unidade `adc`. Classe `gas` e uma linha `alarm` que aponta para `gas-alarm-at`: é a placa que diz, o app não o copia |
 | | | `gas-state` | `sensor` | `starting`, `normal` ou `emergency` |
 | | | `gas-alerts` | `sensor` | quantos vazamentos desde que o ESP32 ligou |
 | | | `valve-open` | `binary_sensor` | `true` quando aberta. **Somente leitura**: só o botão físico a reabre |
 | | | `buzzer-enabled` | `switch` | `true` quando o buzzer da placa pode soar num vazamento; `false` quando foi silenciado |
+| | | `gas-alarm-at` | `number` | limite de emergência: 0 a 1022 `adc`, de 1 em 1, padrão 160. Gás **estritamente acima** do limite dispara o alarme |
 | `bedroom` | `closet-monitor` | `temperature` | `sensor` | graus Celsius, ou `null`. Classe `temperature` |
 | | | `humidity` | `sensor` | porcentagem, ou `null`. Classe `humidity` e duas linhas, `turns-on` e `turns-off`, que são os valores de `dehumidifier-on-at` e `dehumidifier-off-at` |
 | | | `dehumidifier-power` | `switch` | ligado ou desligado |
@@ -148,6 +151,7 @@ A resposta `200` traz a entidade **como ficou**, no mesmo formato de `/home`:
 | `dehumidifier-mode` = `"automatic"` | Devolve o controle à regra de umidade. O estado atual vale até a próxima leitura |
 | `dehumidifier-mode` = `"manual"` | Passa para manual **mantendo** o estado atual |
 | `buzzer-enabled` = `false` ou `true` | **Silencia** o buzzer da placa, ou o deixa soar de novo. **Só o buzzer**: o LED de alarme, a válvula e o evento `alert` são os mesmos de qualquer jeito. Vale na hora, no meio de um vazamento também. **Não fica guardado**: se a placa reiniciar, o buzzer volta ligado, para uma queda de energia nunca deixar a placa muda sem ninguém saber |
+| `gas-alarm-at` = número | Muda o limite de gás e guarda na NVS. Vale no próximo ciclo. Não rearma uma emergência: o botão físico e o período de ar limpo continuam obrigatórios |
 | `dehumidifier-on-at` = número | Muda a umidade em que o modo automático **liga**. Não muda o modo nem o estado: o novo limite vale a partir da próxima leitura |
 | `dehumidifier-off-at` = número | Muda a umidade em que o modo automático **desliga**, do mesmo jeito |
 

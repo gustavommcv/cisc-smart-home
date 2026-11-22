@@ -42,13 +42,6 @@ void addClass(JsonObject sensor, const char* sensorClass) {
   sensor["class"] = sensorClass;
 }
 
-// A line to draw over the chart of a sensor: the value it has, or the entity whose value it is (a limit the user can change).
-void addLimitValue(JsonObject sensor, const char* kind, int value) {
-  JsonObject limit = sensor["limits"].add<JsonObject>();
-  limit["kind"] = kind;
-  limit["value"] = value;
-}
-
 void addLimitEntity(JsonObject sensor, const char* kind, const char* entityId) {
   JsonObject limit = sensor["limits"].add<JsonObject>();
   limit["kind"] = kind;
@@ -86,13 +79,22 @@ void buildHome(JsonDocument& home, const HouseSnapshot& s, const std::string& bo
   level["value"] = s.gasReading;
   level["unit"] = "adc";
   addClass(level, "gas");
-  addLimitValue(level, "alarm", s.gasAlarmAt);
+  addLimitEntity(level, "alarm", "gas-alarm-at");
   addEntity(gasMonitor, "gas-state", "sensor", "Gas state")["value"] = toString(s.gasState);
   addEntity(gasMonitor, "gas-alerts", "sensor", "Gas alerts since boot")["value"] = s.gasAlertCount;
   addEntity(gasMonitor, "valve-open", "binary_sensor", "Valve open")["value"] = s.valveOpen;
   JsonObject buzzer = addEntity(gasMonitor, "buzzer-enabled", "switch", "Buzzer");
   buzzer["value"] = s.buzzerEnabled;
   buzzer["commandable"] = true;
+
+  JsonObject gasLimit = addEntity(gasMonitor, "gas-alarm-at", "number", "Gas alarm above");
+  gasLimit["value"] = s.gasAlarmAt;
+  gasLimit["unit"] = "adc";
+  gasLimit["min"] = gas_limits::kMin;
+  gasLimit["max"] = gas_limits::kMax;
+  gasLimit["step"] = gas_limits::kStep;
+  gasLimit["default"] = GasSettings{}.threshold;
+  gasLimit["commandable"] = true;
 
   JsonArray bedroom = addArea(areas, "bedroom", "Bedroom");
 

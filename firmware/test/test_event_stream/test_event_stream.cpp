@@ -218,8 +218,20 @@ void test_a_stream_created_after_a_leak_does_not_repeat_the_old_alert() {
   TEST_ASSERT_EQUAL(-1, indexOf(stream.poll(), "alert"));
 }
 
+void test_gas_limit_change_is_sent_even_when_the_reading_and_state_do_not_change() {
+  Fixture f;
+  f.rig.controller.setGasAlarmAt(200);
+  f.rig.run(100);
+  const auto events = f.stream.poll();
+  TEST_ASSERT_TRUE(indexOf(events, "home") >= 0);
+  TEST_ASSERT_EQUAL_INT(-1, indexOf(events, "alert"));
+  TEST_ASSERT_TRUE(contains(events[indexOf(events, "home")].data, "gas-alarm-at"));
+}
+
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_gas_limit_change_is_sent_even_when_the_reading_and_state_do_not_change);
+
   RUN_TEST(test_a_new_client_gets_the_whole_state_as_a_home_event);
   RUN_TEST(test_nothing_is_sent_while_nothing_happens);
   RUN_TEST(test_a_change_is_sent_as_a_home_event);

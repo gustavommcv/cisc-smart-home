@@ -410,8 +410,29 @@ void test_the_event_route_asks_for_an_event_stream_client() {
   assertError(Api::notAcceptable(), 406, "not-acceptable");
 }
 
+void test_gas_limit_command_validates_and_persists() {
+  Fixture f;
+  const Response response = put(f.api, "gas-alarm-at", "{\"value\":200}");
+  TEST_ASSERT_EQUAL_INT(200, response.status);
+  JsonDocument entity = parse(response.body);
+  TEST_ASSERT_EQUAL_STRING("number", entity["kind"].as<const char*>());
+  TEST_ASSERT_EQUAL_INT(200, entity["value"].as<int>());
+  TEST_ASSERT_EQUAL_INT(0, entity["min"].as<int>());
+  TEST_ASSERT_EQUAL_INT(1022, entity["max"].as<int>());
+  TEST_ASSERT_EQUAL_INT(1, entity["step"].as<int>());
+  TEST_ASSERT_EQUAL_INT(160, entity["default"].as<int>());
+  TEST_ASSERT_EQUAL_INT(200, f.rig.store.gasThreshold);
+  const char* invalid[] = {"{\"value\":-1}", "{\"value\":1023}", "{\"value\":1.5}",
+                           "{\"value\":true}", "{\"value\":\"200\"}", "{\"value\":1e100}"};
+  for (const char* body : invalid) assertError(put(f.api, "gas-alarm-at", body), 400, "invalid-value");
+  TEST_ASSERT_EQUAL_INT(200, f.rig.controller.snapshot().gasAlarmAt);
+  TEST_ASSERT_EQUAL_INT(1, f.rig.store.gasSaves);
+}
+
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_gas_limit_command_validates_and_persists);
+
   RUN_TEST(test_home_returns_the_state_of_the_house);
   RUN_TEST(test_turning_the_dehumidifier_on_runs_the_relay_and_returns_the_entity);
   RUN_TEST(test_turning_the_dehumidifier_off_stops_the_relay);

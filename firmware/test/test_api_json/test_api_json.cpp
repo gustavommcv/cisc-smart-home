@@ -114,7 +114,7 @@ std::string idsOf(JsonArray entities) {
 
 void test_a_device_holds_everything_its_unit_senses_and_controls() {
   JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
-  TEST_ASSERT_EQUAL_STRING("gas-level,gas-state,gas-alerts,valve-open,buzzer-enabled", idsOf(home["areas"][0]["devices"][0]["entities"]).c_str());
+  TEST_ASSERT_EQUAL_STRING("gas-level,gas-state,gas-alerts,valve-open,buzzer-enabled,gas-alarm-at", idsOf(home["areas"][0]["devices"][0]["entities"]).c_str());
   TEST_ASSERT_EQUAL_STRING("temperature,humidity,dehumidifier-power,dehumidifier-mode,dehumidifier-on-at,dehumidifier-off-at", idsOf(home["areas"][1]["devices"][0]["entities"]).c_str());
 }
 
@@ -126,7 +126,7 @@ void test_every_entity_id_is_unique_across_the_house() {
     ids.insert(item["id"].as<const char*>());
     ++total;
   });
-  TEST_ASSERT_EQUAL_UINT(11, total);
+  TEST_ASSERT_EQUAL_UINT(12, total);
   TEST_ASSERT_EQUAL_UINT(total, ids.size());
 }
 
@@ -244,11 +244,11 @@ void test_a_silenced_buzzer_shows_as_off() {
   TEST_ASSERT_FALSE(entity(home, "buzzer-enabled")["value"].as<bool>());
 }
 
-void test_only_the_dehumidifier_entities_are_commandable() {
+void test_only_controls_are_commandable() {
   JsonDocument home = parse(cisc::api::homeJson(normalHouse(), "x"));
   forEachEntity(home, [](JsonObject item) {
     const std::string id = item["id"].as<const char*>();
-    const bool expected = id == "dehumidifier-power" || id == "dehumidifier-mode" || id == "dehumidifier-on-at" || id == "dehumidifier-off-at" || id == "buzzer-enabled";
+    const bool expected = id == "dehumidifier-power" || id == "dehumidifier-mode" || id == "dehumidifier-on-at" || id == "dehumidifier-off-at" || id == "buzzer-enabled" || id == "gas-alarm-at";
     TEST_ASSERT_EQUAL_MESSAGE(expected, item["commandable"].as<bool>(), id.c_str());
   });
 }
@@ -264,15 +264,15 @@ void test_the_gas_level_says_it_is_gas_and_gives_the_limit_of_the_alarm() {
   JsonArray limits = level["limits"];
   TEST_ASSERT_EQUAL_UINT(1, limits.size());
   TEST_ASSERT_EQUAL_STRING("alarm", limits[0]["kind"].as<const char*>());
-  TEST_ASSERT_EQUAL_INT(160, limits[0]["value"].as<int>());
-  TEST_ASSERT_FALSE(limits[0]["entity"].is<const char*>());
+  TEST_ASSERT_EQUAL_STRING("gas-alarm-at", limits[0]["entity"].as<const char*>());
+  TEST_ASSERT_TRUE(limits[0]["value"].isNull());
 }
 
 void test_the_limit_of_the_alarm_is_the_one_the_house_has_not_a_copy() {
   HouseSnapshot snapshot = normalHouse();
   snapshot.gasAlarmAt = 200;
   JsonDocument home = parse(cisc::api::homeJson(snapshot, "x"));
-  TEST_ASSERT_EQUAL_INT(200, entity(home, "gas-level")["limits"][0]["value"].as<int>());
+  TEST_ASSERT_EQUAL_INT(200, entity(home, "gas-alarm-at")["value"].as<int>());
 }
 
 void test_the_temperature_says_it_is_temperature_and_has_no_limits() {
@@ -326,7 +326,7 @@ void test_a_single_gas_level_comes_with_its_class_and_limits_too() {
   TEST_ASSERT_TRUE(cisc::api::entityJson(normalHouse(), "gas-level", json));
   TEST_ASSERT_EQUAL_STRING(
       "{\"id\":\"gas-level\",\"kind\":\"sensor\",\"name\":\"Gas level\",\"value\":142,\"unit\":\"adc\",\"class\":\"gas\","
-      "\"limits\":[{\"kind\":\"alarm\",\"value\":160}]}",
+      "\"limits\":[{\"kind\":\"alarm\",\"entity\":\"gas-alarm-at\"}]}",
       json.c_str());
 }
 
@@ -369,7 +369,7 @@ int main() {
   RUN_TEST(test_the_limits_show_the_values_the_house_has_not_the_defaults);
   RUN_TEST(test_the_buzzer_is_a_switch_of_the_gas_monitor);
   RUN_TEST(test_a_silenced_buzzer_shows_as_off);
-  RUN_TEST(test_only_the_dehumidifier_entities_are_commandable);
+  RUN_TEST(test_only_controls_are_commandable);
   RUN_TEST(test_the_gas_level_says_it_is_gas_and_gives_the_limit_of_the_alarm);
   RUN_TEST(test_the_limit_of_the_alarm_is_the_one_the_house_has_not_a_copy);
   RUN_TEST(test_the_temperature_says_it_is_temperature_and_has_no_limits);

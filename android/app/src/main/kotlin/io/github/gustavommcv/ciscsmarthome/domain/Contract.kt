@@ -5,6 +5,7 @@ package io.github.gustavommcv.ciscsmarthome.domain
 
 /** The entities of the maquete ("As entidades da maquete"). */
 object EntityIds {
+  val GasAlarmAt = EntityId("gas-alarm-at")
   val GasLevel = EntityId("gas-level")
   val GasState = EntityId("gas-state")
   val GasAlerts = EntityId("gas-alerts")

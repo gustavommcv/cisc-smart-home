@@ -119,7 +119,7 @@ Se o celular já estiver na rede `cisc-smart-home` (você entrou à mão, ou por
 O que dá para fazer, para ver tudo funcionando:
 
 - Em **Quarto**, ligar o desumidificador (passa para o modo manual) e mudar os limites de umidade.
-- Em **Cozinha**, escolher como o vazamento avisa (alarme, notificação ou desligado) e silenciar o buzzer.
+- Em **Cozinha**, ajustar o limite de emergência do gás, restaurar o padrão e escolher como o vazamento avisa (alarme, notificação ou desligado) e silenciar o buzzer.
 - Aproximar um isqueiro (sem acender) do MQ-2: a válvula fecha, o buzzer toca e o app avisa. O botão da maquete reabre, depois de uns 2 segundos de ar limpo.
 - Na aba **Histórico**, escolher um dispositivo e ver os gráficos, também por mês e por ano.
 
@@ -131,7 +131,7 @@ O que dá para fazer, para ver tudo funcionando:
 | Não consegui entrar no Wi-Fi cisc-smart-home | A placa está ligada e perto? A senha é a mesma de `WifiSecrets.h`? Você aceitou o aviso do Android? |
 | Sem conexão com a placa | O celular precisa estar no Wi-Fi `cisc-smart-home`; se não conectar, desligue os dados móveis e tente de novo |
 
-No ar limpo, o MQ-2 desta maquete costuma ler entre **44 e 60**, parado. Não é defeito: é o piso de leitura do conversor do ESP32. O alarme dispara acima de 160.
+No ar limpo, o MQ-2 desta maquete costuma ler entre **44 e 60**, parado. Não é defeito: é o piso de leitura do conversor do ESP32. Por padrão, o alarme dispara acima de 160; esse limite pode ser ajustado no app e fica salvo na placa.
 
 ## 6. Compilar o aplicativo
 

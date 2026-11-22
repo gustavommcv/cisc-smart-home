@@ -7,10 +7,27 @@ namespace adapters {
 namespace {
 
 constexpr const char* kNamespace = "cisc";
+constexpr const char* kGasThreshold = "gasAlarmAt";
 constexpr const char* kHumidityOnAt = "humOn";
 constexpr const char* kHumidityOffAt = "humOff";
 
 }  // namespace
+
+bool NvsSettingsStore::loadGasThreshold(int& out) {
+  Preferences preferences;
+  if (!preferences.begin(kNamespace, true)) return false;
+  const bool saved = preferences.isKey(kGasThreshold);
+  if (saved) out = preferences.getUShort(kGasThreshold);
+  preferences.end();
+  return saved;
+}
+
+void NvsSettingsStore::saveGasThreshold(int threshold) {
+  Preferences preferences;
+  if (!preferences.begin(kNamespace, false)) return;
+  preferences.putUShort(kGasThreshold, static_cast<uint16_t>(threshold));
+  preferences.end();
+}
 
 bool NvsSettingsStore::loadHumidity(cisc::HumiditySettings& out) {
   Preferences preferences;
